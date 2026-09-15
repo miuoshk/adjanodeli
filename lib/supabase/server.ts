@@ -1,9 +1,12 @@
 import { createServerClient as createSupabaseServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 
 import type { Database } from "@/lib/supabase/database.types";
 
 export async function createServerClient() {
+  await connection();
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
