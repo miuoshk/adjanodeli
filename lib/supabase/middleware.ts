@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { getSupabasePublicEnv } from "@/lib/supabase/env";
 import type { Database } from "@/lib/supabase/database.types";
 
 function isProtectedPath(pathname: string) {
@@ -21,12 +22,11 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !anonKey) {
+  const env = getSupabasePublicEnv();
+  if (!env) {
     return supabaseResponse;
   }
+  const { url, anonKey } = env;
 
   const supabase = createServerClient<Database>(url, anonKey, {
     cookies: {

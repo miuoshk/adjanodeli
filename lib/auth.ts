@@ -8,43 +8,51 @@ export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type AppRole = "staff" | "owner";
 
 export async function getSession() {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const supabase = await createServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (!user) {
+    if (!user) {
+      return null;
+    }
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    return session;
+  } catch {
     return null;
   }
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  return session;
 }
 
 export async function getProfile(): Promise<Profile | null> {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const supabase = await createServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (!user) {
+    if (!user) {
+      return null;
+    }
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      return null;
+    }
+
+    return data;
+  } catch {
     return null;
   }
-
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (error) {
-    return null;
-  }
-
-  return data;
 }
 
 export async function requireUser(next = "/") {
