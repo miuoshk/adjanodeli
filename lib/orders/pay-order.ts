@@ -3,7 +3,7 @@
 import { z } from "zod";
 
 import { requireUser } from "@/lib/auth";
-import { stripe } from "@/lib/stripe/client";
+import { getStripe } from "@/lib/stripe/client";
 import { createClient } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/supabase/database.types";
@@ -46,7 +46,7 @@ function isPayable(order: PayableOrder): boolean {
 
 async function existingOpenUrl(sessionId: string): Promise<string | null> {
   try {
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const session = await getStripe().checkout.sessions.retrieve(sessionId);
     if (session.status === "open" && session.url) {
       return session.url;
     }
@@ -87,7 +87,7 @@ export async function payOrder(orderId: string): Promise<PayOrderResult> {
 
   try {
     const base = appUrl();
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       mode: "payment",
       locale: "pl",
       currency: "pln",
