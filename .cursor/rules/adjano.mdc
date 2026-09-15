@@ -1,0 +1,16 @@
+---
+description: Zasady projektu AdjanoDeli — zawsze obowiązują
+alwaysApply: true
+---
+- Przed każdym zadaniem przeczytaj docs/SPEC.md. Jest źródłem prawdy o modelu danych, statusach, regułach biznesowych i nazwach. Jeśli zadanie jest sprzeczne ze SPEC, powiedz o tym i zatrzymaj się.
+- Stack: Next.js 15 App Router, TypeScript strict, Tailwind v4, shadcn/ui, Supabase (@supabase/ssr), Stripe Checkout, Resend, zod. Nie dodawaj innych bibliotek bez wyraźnego polecenia.
+- Kod, nazwy plików, tabel, kolumn, funkcji: angielski. Wszystkie teksty widoczne dla użytkownika: polski, naturalny, krótki, bez korpomowy i bez fraz typu "Odkryj", "Wyjątkowe doświadczenie", "Z pasją". Piszemy jak piekarnia do sąsiada, nie jak agencja.
+- Ceny zawsze w groszach (integer). Formatowanie do PLN wyłącznie przez lib/format.ts (formatPrice).
+- Daty i cutoff liczy baza (funkcje SQL w strefie Europe/Warsaw). Klient nigdy nie decyduje, czy zamówienie jest "na czas".
+- Rezerwacja limitów dziennych odbywa się wyłącznie przez funkcję SQL create_order (atomowo). Nigdy nie sprawdzaj limitów w JS.
+- Server Actions do mutacji i odczytów z klienta. Route handlers tylko dla webhooków, cron i eksportów plików (CSV). Klient Supabase z service_role używany wyłącznie w lib/supabase/admin.ts i tylko w kodzie serwerowym (webhook, cron, e-mail).
+- Każda nowa tabela dostaje RLS enabled i polityki. Brak polityki = brak dostępu. To jest zamierzone.
+- Nie używaj any. Typy bazy z lib/supabase/database.types.ts (generowane), nie ręczne.
+- Komponenty serwerowe domyślnie. "use client" tylko tam, gdzie jest interakcja.
+- Nie zmieniaj niczego poza zakresem bieżącego zadania. Nie refaktoruj "przy okazji". Nie zmieniaj nazw z SPEC.
+- Po zakończeniu zadania wypisz zmienione pliki i jedno zdanie, jak przetestować.
