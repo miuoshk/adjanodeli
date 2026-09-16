@@ -8,9 +8,10 @@ import { cn } from "@/lib/utils";
 type DayPickerProps = {
   dates: string[];
   selected: string;
+  basePath?: string;
 };
 
-export function DayPicker({ dates, selected }: DayPickerProps) {
+export function DayPicker({ dates, selected, basePath = "/sklep" }: DayPickerProps) {
   const router = useRouter();
 
   return (
@@ -21,7 +22,7 @@ export function DayPicker({ dates, selected }: DayPickerProps) {
           <button
             key={date}
             type="button"
-            onClick={() => router.push(`/?dzien=${date}`, { scroll: false })}
+            onClick={() => router.push(`${basePath}?dzien=${date}`, { scroll: false })}
             className={cn(
               "min-h-12 shrink-0 rounded-full px-4 text-sm font-medium whitespace-nowrap",
               isSelected

@@ -8,7 +8,7 @@ export default function ForbiddenPage() {
       <h1 className="text-3xl font-semibold">Brak dostępu</h1>
       <p className="text-sm leading-relaxed">Nie masz dostępu do tej strony.</p>
       <Button asChild size="lg" className="min-h-12">
-        <Link href="/">Wróć do menu</Link>
+        <Link href="/sklep">Wróć do menu</Link>
       </Button>
     </div>
   );

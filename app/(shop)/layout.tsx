@@ -1,4 +1,5 @@
 import { SiteFooter } from "@/components/shop/site-footer";
+import { ShopMain } from "@/components/shop/shop-main";
 import { SiteHeader } from "@/components/shop/site-header";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ export default function ShopLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">{children}</main>
+      <ShopMain>{children}</ShopMain>
       <SiteFooter />
     </div>
   );

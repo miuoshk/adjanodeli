@@ -14,6 +14,8 @@ type ExportOrder = Pick<
   | "pickup_date"
   | "status"
   | "total_grosze"
+  | "discount_grosze"
+  | "discount_code_id"
   | "invoice_requested"
   | "invoice_nip"
   | "invoice_company"
@@ -56,7 +58,7 @@ export async function buildOrdersCsv(filters: {
   let query = supabase
     .from("orders")
     .select(
-      "order_number, customer_name, customer_email, customer_phone, pickup_date, status, total_grosze, invoice_requested, invoice_nip, invoice_company, invoice_address, pickup_points(name)",
+      "order_number, customer_name, customer_email, customer_phone, pickup_date, status, total_grosze, discount_grosze, discount_code_id, invoice_requested, invoice_nip, invoice_company, invoice_address, pickup_points(name)",
     )
     .order("pickup_date", { ascending: true })
     .order("order_number", { ascending: true });
@@ -99,6 +101,8 @@ export async function buildOrdersCsv(filters: {
     "dzien",
     "status",
     "suma",
+    "rabat",
+    "zrodlo_rabatu",
     "faktura",
     "nip",
     "firma",
@@ -117,6 +121,8 @@ export async function buildOrdersCsv(filters: {
         formatDatePl(parseDateOnly(order.pickup_date)),
         orderStatusMeta(order.status).label,
         formatPrice(order.total_grosze),
+        order.discount_grosze > 0 ? formatPrice(order.discount_grosze) : "",
+        order.discount_grosze > 0 ? (order.discount_code_id ? "kod" : "voucher") : "",
         order.invoice_requested ? "tak" : "nie",
         order.invoice_nip ?? "",
         order.invoice_company ?? "",

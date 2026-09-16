@@ -1,27 +1,3 @@
-export const ALLERGENS = [
-  { value: "gluten", label: "gluten" },
-  { value: "mleko", label: "mleko" },
-  { value: "jaja", label: "jaja" },
-  { value: "orzechy", label: "orzechy" },
-  { value: "orzeszki ziemne", label: "orzeszki ziemne" },
-  { value: "sezam", label: "sezam" },
-  { value: "soja", label: "soja" },
-  { value: "ryby", label: "ryby" },
-  { value: "skorupiaki", label: "skorupiaki" },
-  { value: "seler", label: "seler" },
-  { value: "gorczyca", label: "gorczyca" },
-  { value: "łubin", label: "łubin" },
-  { value: "mięczaki", label: "mięczaki" },
-  { value: "siarczyny", label: "siarczyny" },
-] as const;
-
-export const PRODUCT_TAGS = [
-  { value: "keto", label: "keto" },
-  { value: "wege", label: "wege" },
-  { value: "bez laktozy", label: "bez laktozy" },
-  { value: "ostre", label: "ostre" },
-] as const;
-
 export const WEEKDAYS = [
   { value: 1, label: "pon" },
   { value: 2, label: "wt" },

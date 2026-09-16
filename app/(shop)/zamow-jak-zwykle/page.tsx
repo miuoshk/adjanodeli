@@ -20,7 +20,7 @@ export default async function OrderAsUsualPage({ searchParams }: PageProps) {
         <h1 className="text-3xl font-semibold">Nie da się złożyć koszyka</h1>
         <p>Brakuje stałego zamówienia albo dnia.</p>
         <p>
-          <Link href="/" className="underline underline-offset-4">
+          <Link href="/sklep" className="underline underline-offset-4">
             Do menu
           </Link>
         </p>
@@ -35,7 +35,7 @@ export default async function OrderAsUsualPage({ searchParams }: PageProps) {
         <h1 className="text-3xl font-semibold">Nie da się złożyć koszyka</h1>
         <p>{result.message}</p>
         <p>
-          <Link href="/" className="underline underline-offset-4">
+          <Link href="/sklep" className="underline underline-offset-4">
             Do menu
           </Link>
         </p>
@@ -49,7 +49,7 @@ export default async function OrderAsUsualPage({ searchParams }: PageProps) {
         <h1 className="text-3xl font-semibold">Nic nie zostało na ten dzień</h1>
         {result.skipped.length > 0 ? <p>Pominięte: {result.skipped.join(", ")}.</p> : null}
         <p>
-          <Link href="/" className="underline underline-offset-4">
+          <Link href="/sklep" className="underline underline-offset-4">
             Do menu
           </Link>
         </p>

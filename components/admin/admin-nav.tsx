@@ -21,19 +21,17 @@ const staffLinks = [
   { href: "/admin/wydawanie", label: "Wydawanie" },
 ] as const;
 
-const ownerLinks = [
-  { href: "/admin/produkty", label: "Produkty" },
-  { href: "/admin/limity", label: "Limity" },
-  { href: "/admin/punkty-odbioru", label: "Punkty odbioru" },
-  { href: "/admin/statystyki", label: "Statystyki" },
+const catalogLinks = [
+  { href: "/admin/kategorie", label: "Kategorie", ownerOnly: true },
+  { href: "/admin/produkty", label: "Produkty", ownerOnly: true },
+  { href: "/admin/limity", label: "Limity", ownerOnly: true },
+  { href: "/admin/kody-rabatowe", label: "Promocje i kody", ownerOnly: true },
+  { href: "/admin/punkty-odbioru", label: "Punkty odbioru", ownerOnly: true },
+  { href: "/admin/slowniki", label: "Słowniki", ownerOnly: true },
+  { href: "/admin/zamowienia-specjalne", label: "Zamówienia specjalne", ownerOnly: false },
+  { href: "/admin/statystyki", label: "Statystyki", ownerOnly: true },
+  { href: "/admin/ustawienia", label: "Ustawienia", ownerOnly: true },
 ] as const;
-
-const specialLink = {
-  href: "/admin/zamowienia-specjalne",
-  label: "Zamówienia specjalne",
-} as const;
-
-const settingsLink = { href: "/admin/ustawienia", label: "Ustawienia" } as const;
 
 function NavLink({
   href,
@@ -83,31 +81,17 @@ export function AdminNav({ isOwner, firstName, roleLabel, onNavigate }: AdminNav
           />
         ))}
         <div className="my-2 h-px bg-[var(--adj-gold)]" aria-hidden />
-        {isOwner
-          ? ownerLinks.map((item) => (
-              <NavLink
-                key={item.href}
-                href={item.href}
-                label={item.label}
-                active={isActive(item.href)}
-                onNavigate={onNavigate}
-              />
-            ))
-          : null}
-        <NavLink
-          href={specialLink.href}
-          label={specialLink.label}
-          active={isActive(specialLink.href)}
-          onNavigate={onNavigate}
-        />
-        {isOwner ? (
-          <NavLink
-            href={settingsLink.href}
-            label={settingsLink.label}
-            active={isActive(settingsLink.href)}
-            onNavigate={onNavigate}
-          />
-        ) : null}
+        {catalogLinks
+          .filter((item) => !item.ownerOnly || isOwner)
+          .map((item) => (
+            <NavLink
+              key={item.href}
+              href={item.href}
+              label={item.label}
+              active={isActive(item.href)}
+              onNavigate={onNavigate}
+            />
+          ))}
       </nav>
       <div className="space-y-2 border-t border-[var(--adj-gold)] px-3 py-4">
         <p className="truncate text-sm font-medium">{firstName}</p>
@@ -121,7 +105,7 @@ export function AdminNav({ isOwner, firstName, roleLabel, onNavigate }: AdminNav
           </button>
         </form>
         <Link
-          href="/"
+          href="/sklep"
           onClick={onNavigate}
           className="flex min-h-12 items-center text-base underline-offset-4 hover:underline"
         >

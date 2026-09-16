@@ -18,7 +18,7 @@ export default function NotFound() {
         Tej strony nie ma. Ale kanapki są.
       </p>
       <Button asChild size="lg" className="min-h-12">
-        <Link href="/">Wróć do menu</Link>
+        <Link href="/sklep">Wróć do menu</Link>
       </Button>
     </div>
   );

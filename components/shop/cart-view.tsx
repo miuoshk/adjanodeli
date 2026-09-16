@@ -16,9 +16,13 @@ import {
 import { isCompleteInvoice, type InvoiceDefaults } from "@/lib/orders/invoice";
 import type { LoyaltyVoucher } from "@/lib/loyalty/status";
 import { isValidNip } from "@/lib/validation/nip";
+import { checkDiscountCode } from "@/lib/orders/check-discount-code";
 import { getAvailability, type ProductAvailability } from "@/lib/orders/availability";
+import { blockingLeadItem, cartEarliestDate } from "@/lib/orders/lead-time";
 import { placeOrder } from "@/lib/orders/place-order";
+import type { UnlockedPickupPoint } from "@/lib/pickup/unlock-point";
 import { selectSubtotal, useCart, type CartItem } from "@/lib/store/cart";
+import { UnlockPointForm } from "@/components/shop/unlock-point-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -94,6 +98,12 @@ export function CartView({
   const defaultVoucherId = [...vouchers].sort((a, b) => voucherRank(b) - voucherRank(a))[0]?.id ?? null;
   const [useVoucher, setUseVoucher] = useState(vouchers.length > 0);
   const [voucherId, setVoucherId] = useState<string | null>(defaultVoucherId);
+  const [codeOpen, setCodeOpen] = useState(false);
+  const [codeInput, setCodeInput] = useState("");
+  const [codeChecking, setCodeChecking] = useState(false);
+  const [codeMessage, setCodeMessage] = useState<string | null>(null);
+  const [appliedCode, setAppliedCode] = useState<{ code: string; discountGrosze: number } | null>(null);
+  const [unlockedPoints, setUnlockedPoints] = useState<CartPickupPoint[]>([]);
 
   const items = useCart((state) => state.items);
   const day = useCart((state) => state.day);
@@ -150,28 +160,61 @@ export function CartView({
     };
   }, [hydrated, day]);
 
+  const leadItems = useMemo(
+    () =>
+      items.map((item) => {
+        const stock = availability.get(item.productId);
+        return {
+          productId: item.productId,
+          name: item.name,
+          leadDays: stock?.lead_days ?? 1,
+          earliestDate: stock?.earliest_date ?? null,
+        };
+      }),
+    [items, availability],
+  );
+  const cartEarliest = cartEarliestDate(leadItems);
+  const leadBlock = blockingLeadItem(leadItems, day);
+
+  const allowedDates = useMemo(
+    () => pickupDates.filter((value) => !cartEarliest || value >= cartEarliest),
+    [pickupDates, cartEarliest],
+  );
+
   const dayOptions = useMemo(() => {
-    const values = [...pickupDates];
+    const values = [...allowedDates];
     if (day && !values.includes(day)) {
       values.unshift(day);
     }
     return values;
-  }, [pickupDates, day]);
+  }, [allowedDates, day]);
 
   const dayExpired = Boolean(day && !pickupDates.includes(day));
   const weekday = day ? isoWeekday(day) : null;
-  const selectedPoint = pickupPoints.find((point) => point.id === pickupPointId) ?? null;
+  const visiblePoints = useMemo(() => {
+    const map = new Map(pickupPoints.map((point) => [point.id, point]));
+    for (const point of unlockedPoints) {
+      if (!map.has(point.id)) {
+        map.set(point.id, point);
+      }
+    }
+    return [...map.values()];
+  }, [pickupPoints, unlockedPoints]);
+
+  const selectedPoint = visiblePoints.find((point) => point.id === pickupPointId) ?? null;
   const pointServesDay =
     selectedPoint && weekday !== null ? selectedPoint.weekdays.includes(weekday) : false;
 
   const selectedVoucher = vouchers.find((voucher) => voucher.id === voucherId) ?? null;
-  const discountGrosze =
-    useVoucher && selectedVoucher
+  const usingCode = Boolean(appliedCode) && !useVoucher;
+  const voucherDiscount =
+    useVoucher && selectedVoucher && !usingCode
       ? computeDiscount(
           selectedVoucher.type,
           items.map((item) => ({ unitPriceGrosze: item.unitPriceGrosze, qty: item.qty })),
         )
       : 0;
+  const discountGrosze = usingCode ? (appliedCode?.discountGrosze ?? 0) : voucherDiscount;
   const payableGrosze = subtotal - discountGrosze;
   const belowMinimum = useVoucher && discountGrosze > 0 && payableGrosze < STRIPE_MIN_GROSZE;
 
@@ -200,6 +243,7 @@ export function CartView({
     items.length > 0 &&
     Boolean(day) &&
     !dayExpired &&
+    !leadBlock &&
     pointServesDay &&
     availabilityReady &&
     overstock.size === 0 &&
@@ -210,7 +254,7 @@ export function CartView({
   function handleDayChange(nextDay: string) {
     setDay(nextDay);
     const nextWeekday = isoWeekday(nextDay);
-    const current = pickupPoints.find((point) => point.id === pickupPointId);
+    const current = visiblePoints.find((point) => point.id === pickupPointId);
     if (current && !current.weekdays.includes(nextWeekday)) {
       setPickupPoint(null);
     }
@@ -237,6 +281,28 @@ export function CartView({
     setQty(item.productId, nextQty);
   }
 
+  async function applyCode() {
+    setCodeChecking(true);
+    setCodeMessage(null);
+    try {
+      const result = await checkDiscountCode({
+        code: codeInput,
+        subtotalGrosze: subtotal,
+        pickupPointId,
+      });
+      if (!result.ok) {
+        setAppliedCode(null);
+        setCodeMessage(result.message);
+        return;
+      }
+      setAppliedCode({ code: result.code, discountGrosze: result.discountGrosze });
+      setUseVoucher(false);
+      setCodeMessage(null);
+    } finally {
+      setCodeChecking(false);
+    }
+  }
+
   function handlePay() {
     if (!day || !pickupPointId || !termsAccepted) {
       return;
@@ -252,7 +318,21 @@ export function CartView({
         const remaining = remainingFor(fresh, item.productId);
         return remaining !== null && item.qty > remaining;
       });
-      if (stillOver || !pickupDates.includes(day) || !pointServesDay) {
+      const freshLead = items.map((item) => {
+        const stock = fresh.get(item.productId);
+        return {
+          productId: item.productId,
+          name: item.name,
+          leadDays: stock?.lead_days ?? 1,
+          earliestDate: stock?.earliest_date ?? null,
+        };
+      });
+      if (
+        stillOver ||
+        !pickupDates.includes(day) ||
+        !pointServesDay ||
+        blockingLeadItem(freshLead, day)
+      ) {
         return;
       }
 
@@ -261,7 +341,8 @@ export function CartView({
         pickupDate: day,
         items: items.map((item) => ({ productId: item.productId, qty: item.qty })),
         note,
-        voucherId: useVoucher ? voucherId : null,
+        voucherId: useVoucher && !usingCode ? voucherId : null,
+        discountCode: usingCode ? appliedCode?.code ?? null : null,
         invoice: {
           requested: wantInvoice,
           nip: invoiceNip,
@@ -273,6 +354,15 @@ export function CartView({
       if (result.ok) {
         clear();
         window.location.href = result.url;
+        return;
+      }
+
+      if (result.code === "LEAD_TIME") {
+        const name =
+          items.find((item) => item.productId === result.productId)?.name ?? "ten produkt";
+        toast(
+          `Masz w koszyku ${name}, który pieczemy na zamówienie. Najbliższy możliwy odbiór: ${formatDatePl(parseDateOnly(result.earliestDate))}.`,
+        );
         return;
       }
 
@@ -313,7 +403,7 @@ export function CartView({
           Koszyk jest pusty. Janosz czeka.
         </p>
         <Button asChild size="lg" className="min-h-12">
-          <Link href="/">Do menu</Link>
+          <Link href="/sklep">Do menu</Link>
         </Button>
       </div>
     );
@@ -327,6 +417,27 @@ export function CartView({
         <p className="rounded-xl border border-primary bg-primary/10 px-4 py-3 text-sm leading-relaxed">
           Minął czas zamówień na {formatDatePl(parseDateOnly(day))}. Wybierz inny dzień.
         </p>
+      ) : null}
+
+      {leadBlock?.earliestDate ? (
+        <div className="space-y-3 rounded-xl border border-primary bg-primary/10 px-4 py-3">
+          <p className="text-sm leading-relaxed">
+            Masz w koszyku {leadBlock.name}, który pieczemy na zamówienie. Najbliższy możliwy
+            odbiór: {formatDatePl(parseDateOnly(leadBlock.earliestDate))}.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              className="min-h-12"
+              onClick={() => handleDayChange(leadBlock.earliestDate as string)}
+            >
+              Zmień na {formatDatePl(parseDateOnly(leadBlock.earliestDate))}
+            </Button>
+            <Button type="button" variant="outline" className="min-h-12" onClick={() => remove(leadBlock.productId)}>
+              Usuń {leadBlock.name}
+            </Button>
+          </div>
+        </div>
       ) : null}
 
       <ul className="space-y-3">
@@ -420,7 +531,7 @@ export function CartView({
               <SelectValue placeholder="Wybierz punkt" />
             </SelectTrigger>
             <SelectContent>
-              {pickupPoints.map((point) => {
+              {visiblePoints.map((point) => {
                 const disabled = weekday !== null && !point.weekdays.includes(weekday);
                 return (
                   <SelectItem key={point.id} value={point.id} disabled={disabled}>
@@ -437,6 +548,20 @@ export function CartView({
               {selectedPoint.description ? `, ${selectedPoint.description}` : ""}
             </p>
           ) : null}
+        </div>
+
+        <div className="space-y-2 pt-1">
+          <p className="text-sm text-muted-foreground">Odbierasz w pracy? Wpisz kod od pracodawcy</p>
+          <UnlockPointForm
+            isLoggedIn={isLoggedIn}
+            next="/koszyk"
+            onUnlocked={(point: UnlockedPickupPoint) => {
+              setUnlockedPoints((current) =>
+                current.some((item) => item.id === point.id) ? current : [...current, point],
+              );
+              setPickupPoint(point.id);
+            }}
+          />
         </div>
 
         <div className="space-y-2">
@@ -501,6 +626,69 @@ export function CartView({
       </section>
 
       <div className="space-y-3">
+        <div className="rounded-xl border border-[var(--adj-cream-dark)] bg-card px-4 py-3">
+          <button
+            type="button"
+            className="min-h-12 text-left text-sm underline-offset-4 hover:underline"
+            onClick={() => setCodeOpen((open) => !open)}
+          >
+            Masz kod rabatowy?
+          </button>
+          {codeOpen ? (
+            <div className="space-y-3 pb-1 pt-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  value={codeInput}
+                  onChange={(event) => setCodeInput(event.target.value.toUpperCase())}
+                  placeholder="KOD"
+                  className="h-12 min-h-12 text-base uppercase"
+                  autoCapitalize="characters"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-h-12"
+                  disabled={codeChecking || codeInput.trim().length === 0}
+                  onClick={() => void applyCode()}
+                >
+                  {codeChecking ? "Sprawdzam…" : "Zastosuj"}
+                </Button>
+              </div>
+              {codeMessage ? <p className="text-sm text-primary">{codeMessage}</p> : null}
+              {appliedCode ? (
+                <p className="text-sm leading-relaxed">
+                  Kod {appliedCode.code}: −{formatPrice(appliedCode.discountGrosze)}
+                </p>
+              ) : null}
+              {appliedCode && vouchers.length > 0 && selectedVoucher ? (
+                <div className="space-y-2 text-sm leading-relaxed">
+                  <p>
+                    Kod zastąpi Twój voucher {voucherLabel(selectedVoucher.type)}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      className="min-h-12"
+                      variant={usingCode ? "default" : "outline"}
+                      onClick={() => setUseVoucher(false)}
+                    >
+                      Użyj kodu
+                    </Button>
+                    <Button
+                      type="button"
+                      className="min-h-12"
+                      variant={useVoucher ? "default" : "outline"}
+                      onClick={() => setUseVoucher(true)}
+                    >
+                      Zostaw voucher
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
         {vouchers.length > 0 && selectedVoucher ? (
           <div className="space-y-2 rounded-xl border border-[var(--adj-cream-dark)] bg-card px-4 py-3">
             <label className="flex items-start gap-3 text-sm leading-relaxed">

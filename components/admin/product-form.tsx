@@ -19,9 +19,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ALLERGENS, PRICE_RE, PRODUCT_TAGS, WEEKDAYS, groszeToPriceInput, slugifyName } from "@/lib/admin/catalog";
+import { PRICE_RE, WEEKDAYS, groszeToPriceInput, priceToGrosze, slugifyName } from "@/lib/admin/catalog";
 import { createProduct, updateProduct } from "@/lib/admin/owner-actions";
-import type { OwnerCategory, OwnerProduct } from "@/lib/admin/owner-queries";
+import type { OwnerCategory, OwnerDictionaryOption, OwnerProduct } from "@/lib/admin/owner-queries";
 import { productPublicUrl } from "@/lib/products/image";
 import { deleteProductImage, uploadProductImage } from "@/lib/products/upload";
 
@@ -41,16 +41,63 @@ const schema = z.object({
   isActive: z.boolean(),
   isNew: z.boolean(),
   weekdays: z.array(z.number()).min(1, "Zaznacz przynajmniej jeden dzień."),
+  leadDays: z.enum(["", "1", "2", "3", "5", "7"]),
+  promoPrice: z.string(),
+  promoFrom: z.string(),
+  promoTo: z.string(),
+}).superRefine((values, ctx) => {
+  const hasPromo =
+    values.promoPrice.trim().length > 0 ||
+    values.promoFrom.trim().length > 0 ||
+    values.promoTo.trim().length > 0;
+  if (!hasPromo) {
+    return;
+  }
+  if (!PRICE_RE.test(values.promoPrice)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["promoPrice"], message: "Cena jak 12,50." });
+    return;
+  }
+  if (PRICE_RE.test(values.price) && priceToGrosze(values.promoPrice) >= priceToGrosze(values.price)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["promoPrice"],
+      message: "Ma być niższa od zwykłej ceny.",
+    });
+  }
+  if (!values.promoFrom || !values.promoTo) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["promoFrom"], message: "Podaj od i do." });
+    return;
+  }
+  if (values.promoFrom > values.promoTo) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["promoFrom"], message: "Od nie może być po do." });
+  }
 });
 
 type FormValues = z.infer<typeof schema>;
 
 type ProductFormProps = {
   categories: OwnerCategory[];
+  allergens: OwnerDictionaryOption[];
+  tags: OwnerDictionaryOption[];
   product?: OwnerProduct;
 };
 
-export function ProductForm({ categories, product }: ProductFormProps) {
+function visibleOptions(items: OwnerDictionaryOption[], selected: string[]) {
+  return items.filter((item) => item.is_active || selected.includes(item.name));
+}
+
+function productLeadChoice(product?: OwnerProduct): FormValues["leadDays"] {
+  const value =
+    product && "lead_days" in product
+      ? (product as OwnerProduct & { lead_days?: number | null }).lead_days
+      : null;
+  if (value === 1 || value === 2 || value === 3 || value === 5 || value === 7) {
+    return String(value) as FormValues["leadDays"];
+  }
+  return "";
+}
+
+export function ProductForm({ categories, allergens, tags, product }: ProductFormProps) {
   const router = useRouter();
   const slugTouched = useRef(Boolean(product));
   const [imagePath, setImagePath] = useState(product?.image_path ?? null);
@@ -75,6 +122,10 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       isActive: product?.is_active ?? true,
       isNew: product?.is_new ?? false,
       weekdays: product?.weekdays ?? [1, 2, 3, 4, 5, 6, 7],
+      leadDays: productLeadChoice(product),
+      promoPrice: product?.promo_price_grosze != null ? groszeToPriceInput(product.promo_price_grosze) : "",
+      promoFrom: product?.promo_from ? product.promo_from.slice(0, 10) : "",
+      promoTo: product?.promo_to ? product.promo_to.slice(0, 10) : "",
     },
   });
 
@@ -104,14 +155,19 @@ export function ProductForm({ categories, product }: ProductFormProps) {
     return { ok: true as const, path: imagePath };
   }
 
+  function toPayload(values: FormValues, imagePathValue: string | null) {
+    return {
+      ...values,
+      leadDays: values.leadDays === "" ? null : Number(values.leadDays),
+      imagePath: imagePathValue,
+    };
+  }
+
   async function onSubmit(values: FormValues) {
     setSaving(true);
     try {
       if (!product) {
-        const created = await createProduct({
-          ...values,
-          imagePath: null,
-        });
+        const created = await createProduct(toPayload(values, null));
         if (!created.ok) {
           toast(created.message);
           return;
@@ -123,7 +179,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
           return;
         }
         if (image.path) {
-          const updated = await updateProduct(created.id, { ...values, imagePath: image.path });
+          const updated = await updateProduct(created.id, toPayload(values, image.path));
           if (!updated.ok) {
             toast(updated.message);
           }
@@ -138,7 +194,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
         toast(image.message);
         return;
       }
-      const result = await updateProduct(product.id, { ...values, imagePath: image.path });
+      const result = await updateProduct(product.id, toPayload(values, image.path));
       if (!result.ok) {
         toast(result.message);
         return;
@@ -255,68 +311,131 @@ export function ProductForm({ categories, product }: ProductFormProps) {
           )}
         />
 
+        <fieldset className="space-y-3 rounded-xl border border-[var(--adj-cream-dark)] bg-card p-4">
+          <legend className="px-1 text-sm font-medium">Promocja</legend>
+          <FormField
+            control={form.control}
+            name="promoPrice"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Cena promocyjna (zł)</FormLabel>
+                <FormControl>
+                  <Input {...field} inputMode="decimal" placeholder="9,90" className="min-h-12 text-base" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="promoFrom"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Od</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="date" className="min-h-12 text-base" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="promoTo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Do</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="date" className="min-h-12 text-base" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </fieldset>
+
         <FormField
           control={form.control}
           name="allergens"
-          render={({ field }) => (
+          render={({ field }) => {
+            const options = visibleOptions(allergens, field.value);
+            return (
             <FormItem>
               <FormLabel>Alergeny</FormLabel>
+              {options.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Brak alergenów w słowniku. Dodaj je w Słownikach.
+                </p>
+              ) : (
               <div className="flex flex-wrap gap-2">
-                {ALLERGENS.map((item) => (
+                {options.map((item) => (
                   <label
-                    key={item.value}
+                    key={item.name}
                     className="flex min-h-12 items-center gap-2 rounded-md border border-[var(--adj-cream-dark)] bg-card px-3 text-sm"
                   >
                     <input
                       type="checkbox"
-                      checked={field.value.includes(item.value)}
+                      checked={field.value.includes(item.name)}
                       onChange={(event) => {
                         field.onChange(
                           event.target.checked
-                            ? [...field.value, item.value]
-                            : field.value.filter((value) => value !== item.value),
+                            ? [...field.value, item.name]
+                            : field.value.filter((value) => value !== item.name),
                         );
                       }}
                     />
-                    {item.label}
+                    {item.name}
                   </label>
                 ))}
               </div>
+              )}
               <FormMessage />
             </FormItem>
-          )}
+            );
+          }}
         />
 
         <FormField
           control={form.control}
           name="tags"
-          render={({ field }) => (
+          render={({ field }) => {
+            const options = visibleOptions(tags, field.value);
+            return (
             <FormItem>
               <FormLabel>Tagi</FormLabel>
+              {options.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Brak tagów w słowniku. Dodaj je w Słownikach.
+                </p>
+              ) : (
               <div className="flex flex-wrap gap-2">
-                {PRODUCT_TAGS.map((item) => (
+                {options.map((item) => (
                   <label
-                    key={item.value}
+                    key={item.name}
                     className="flex min-h-12 items-center gap-2 rounded-md border border-[var(--adj-cream-dark)] bg-card px-3 text-sm"
                   >
                     <input
                       type="checkbox"
-                      checked={field.value.includes(item.value)}
+                      checked={field.value.includes(item.name)}
                       onChange={(event) => {
                         field.onChange(
                           event.target.checked
-                            ? [...field.value, item.value]
-                            : field.value.filter((value) => value !== item.value),
+                            ? [...field.value, item.name]
+                            : field.value.filter((value) => value !== item.name),
                         );
                       }}
                     />
-                    {item.label}
+                    {item.name}
                   </label>
                 ))}
               </div>
+              )}
               <FormMessage />
             </FormItem>
-          )}
+            );
+          }}
         />
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -347,6 +466,30 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="leadDays"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Najwcześniejszy odbiór</FormLabel>
+              <FormControl>
+                <select
+                  {...field}
+                  className="min-h-12 w-full rounded-md border border-input bg-card px-3 text-base"
+                >
+                  <option value="">jak kategoria</option>
+                  <option value="1">za 1 dzień</option>
+                  <option value="2">za 2 dni</option>
+                  <option value="3">za 3 dni</option>
+                  <option value="5">za 5 dni</option>
+                  <option value="7">za 7 dni</option>
+                </select>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

@@ -21,6 +21,7 @@ const placeOrderSchema = z.object({
     .max(30),
   note: z.string().max(200).default(""),
   voucherId: z.string().uuid().nullable().optional(),
+  discountCode: z.string().min(1).max(40).nullable().optional(),
   invoice: z
     .object({
       requested: z.boolean(),
@@ -36,14 +37,17 @@ export type PlaceOrderInput = z.infer<typeof placeOrderSchema>;
 export type PlaceOrderResult =
   | { ok: true; orderId: string; url: string }
   | { ok: false; code: "OUT_OF_STOCK"; productId: string; remaining: number }
+  | { ok: false; code: "LEAD_TIME"; productId: string; earliestDate: string; message: string }
   | {
       ok: false;
       code:
         | "DATE_NOT_AVAILABLE"
         | "POINT_NOT_AVAILABLE"
+        | "POINT_FORBIDDEN"
         | "INVALID_ITEMS"
         | "NOT_AUTHENTICATED"
         | "VOUCHER_INVALID"
+        | "DISCOUNT_INVALID"
         | "TOTAL_BELOW_MINIMUM"
         | "INVALID_INVOICE"
         | "UNKNOWN";
@@ -53,9 +57,11 @@ export type PlaceOrderResult =
 const errorMessages = {
   DATE_NOT_AVAILABLE: "Ten dzień nie jest już dostępny. Wybierz inny.",
   POINT_NOT_AVAILABLE: "Ten punkt nie obsługuje wybranego dnia.",
+  POINT_FORBIDDEN: "Nie masz dostępu do tego punktu.",
   INVALID_ITEMS: "Sprawdź pozycje w koszyku.",
   NOT_AUTHENTICATED: "Zaloguj się, żeby zamówić.",
   VOUCHER_INVALID: "Ten voucher już nie działa. Wybierz inny albo zamów bez.",
+  DISCOUNT_INVALID: "Ten kod już nie działa. Sprawdź go albo zamów bez.",
   TOTAL_BELOW_MINIMUM: "Po rabacie zamówienie musi mieć min. 2,00 zł. Dodaj jeszcze produkt.",
   INVALID_INVOICE: "Sprawdź NIP, nazwę i adres do faktury.",
   UNKNOWN: "Nie udało się złożyć zamówienia. Spróbuj jeszcze raz.",
@@ -72,11 +78,25 @@ function parseRpcError(text: string): PlaceOrderResult {
     };
   }
 
+  const leadTime = text.match(/LEAD_TIME:([0-9a-f-]{36}):(\d{4}-\d{2}-\d{2})/i);
+  if (leadTime) {
+    return {
+      ok: false,
+      code: "LEAD_TIME",
+      productId: leadTime[1],
+      earliestDate: leadTime[2],
+      message: `Ten produkt pieczemy na zamówienie. Najbliższy odbiór: ${leadTime[2]}.`,
+    };
+  }
+
   if (text.includes("DATE_NOT_AVAILABLE")) {
     return { ok: false, code: "DATE_NOT_AVAILABLE", message: errorMessages.DATE_NOT_AVAILABLE };
   }
   if (text.includes("POINT_NOT_AVAILABLE")) {
     return { ok: false, code: "POINT_NOT_AVAILABLE", message: errorMessages.POINT_NOT_AVAILABLE };
+  }
+  if (text.includes("POINT_FORBIDDEN")) {
+    return { ok: false, code: "POINT_FORBIDDEN", message: errorMessages.POINT_FORBIDDEN };
   }
   if (text.includes("INVALID_ITEMS")) {
     return { ok: false, code: "INVALID_ITEMS", message: errorMessages.INVALID_ITEMS };
@@ -86,6 +106,9 @@ function parseRpcError(text: string): PlaceOrderResult {
   }
   if (text.includes("VOUCHER_INVALID")) {
     return { ok: false, code: "VOUCHER_INVALID", message: errorMessages.VOUCHER_INVALID };
+  }
+  if (text.includes("DISCOUNT_INVALID")) {
+    return { ok: false, code: "DISCOUNT_INVALID", message: errorMessages.DISCOUNT_INVALID };
   }
   if (text.includes("TOTAL_BELOW_MINIMUM")) {
     return { ok: false, code: "TOTAL_BELOW_MINIMUM", message: errorMessages.TOTAL_BELOW_MINIMUM };
@@ -123,7 +146,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
       qty: item.qty,
     })),
     p_note: parsed.data.note,
-    p_voucher_id: parsed.data.voucherId ?? undefined,
+    p_discount: parsed.data.discountCode
+      ? { code: parsed.data.discountCode }
+      : parsed.data.voucherId
+        ? { voucher_id: parsed.data.voucherId }
+        : null,
     p_invoice: pInvoice ?? undefined,
   });
 

@@ -93,11 +93,11 @@ export async function verifyOtp(email: string, token: string, next?: string) {
 
   const parsedToken = z
     .string()
-    .regex(/^\d{6}$/, "Kod ma 6 cyfr.")
-    .safeParse(token);
+    .regex(/^\d{6,8}$/, "Wpisz cały kod z maila.")
+    .safeParse(token.trim());
 
   if (!parsedToken.success) {
-    return { error: parsedToken.error.issues[0]?.message ?? "Kod ma 6 cyfr." };
+    return { error: parsedToken.error.issues[0]?.message ?? "Wpisz cały kod z maila." };
   }
 
   const supabase = await createServerClient();
@@ -118,6 +118,8 @@ export async function verifyOtp(email: string, token: string, next?: string) {
   const nextPath = safeNextPath(next);
 
   if (user) {
+    await supabase.rpc("sync_domain_access", { p_user_id: user.id });
+
     const { data: profile } = await supabase
       .from("profiles")
       .select("full_name")

@@ -88,13 +88,13 @@ export function LoginForm({ next }: LoginFormProps) {
               inputMode="numeric"
               autoComplete="one-time-code"
               autoFocus
-              maxLength={6}
-              pattern="\d{6}"
+              maxLength={8}
+              pattern="\d{6,8}"
               required
               className="min-h-12 tracking-[0.3em]"
               value={code}
               onChange={(event) => {
-                setCode(event.target.value.replace(/\D/g, "").slice(0, 6));
+                setCode(event.target.value.replace(/\D/g, "").slice(0, 8));
               }}
             />
           </div>

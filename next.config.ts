@@ -13,8 +13,23 @@ const nextConfig: NextConfig = {
             hostname: supabaseHost,
             pathname: "/storage/v1/object/public/products/**",
           },
+          {
+            protocol: "https",
+            hostname: supabaseHost,
+            pathname: "/storage/v1/object/public/categories/**",
+          },
         ]
       : [],
+  },
+  async redirects() {
+    return [
+      {
+        source: "/",
+        has: [{ type: "query", key: "dzien", value: "(?<d>.*)" }],
+        destination: "/sklep?dzien=:d",
+        permanent: false,
+      },
+    ];
   },
 };
 

@@ -1,6 +1,38 @@
 -- Startowe kategorie, produkty i punkty odbioru.
 -- Idempotentne: on conflict (slug) do update.
 
+insert into public.allergens (name, sort_order)
+values
+  ('gluten', 1),
+  ('skorupiaki', 2),
+  ('jaja', 3),
+  ('ryby', 4),
+  ('orzeszki ziemne', 5),
+  ('soja', 6),
+  ('mleko', 7),
+  ('orzechy', 8),
+  ('seler', 9),
+  ('gorczyca', 10),
+  ('sezam', 11),
+  ('dwutlenek siarki i siarczyny', 12),
+  ('łubin', 13),
+  ('mięczaki', 14)
+on conflict (name) do update
+set sort_order = excluded.sort_order;
+
+insert into public.product_tags (name, slug, color, sort_order)
+values
+  ('keto', 'keto', 'gold', 1),
+  ('wege', 'wege', 'khaki', 2),
+  ('bez laktozy', 'bez-laktozy', 'gold', 3),
+  ('ostre', 'ostre', 'red', 4),
+  ('nowość', 'nowosc', 'gold', 5)
+on conflict (name) do update
+set
+  slug = excluded.slug,
+  color = excluded.color,
+  sort_order = excluded.sort_order;
+
 insert into public.categories (name, slug, sort_order, is_active)
 values
   ('Kanapki', 'kanapki', 1, true),
@@ -340,6 +372,7 @@ set
   sort_order = excluded.sort_order;
 
 -- Adresy sądu i urzędu są placeholderami do potwierdzenia.
+-- Kody access_code są przykładowe — zmienić przed produkcją.
 insert into public.pickup_points (
   name,
   slug,
@@ -349,7 +382,10 @@ insert into public.pickup_points (
   pickup_to,
   weekdays,
   is_active,
-  sort_order
+  sort_order,
+  visibility,
+  access_code,
+  allowed_email_domains
 )
 values
   (
@@ -361,7 +397,10 @@ values
     '09:00',
     '{1,2,3,4,5}',
     true,
-    1
+    1,
+    'restricted',
+    'SADMIK26',
+    '{mikolow.sr.gov.pl}'
   ),
   (
     'Urząd Miasta Mikołów',
@@ -372,7 +411,10 @@ values
     '09:15',
     '{1,2,3,4,5}',
     true,
-    2
+    2,
+    'restricted',
+    'URMIASTO',
+    '{}'
   ),
   (
     'Piekarnia Adjano',
@@ -383,7 +425,10 @@ values
     '17:00',
     '{1,2,3,4,5,6}',
     true,
-    3
+    3,
+    'public',
+    null,
+    '{}'
   )
 on conflict (slug) do update
 set
@@ -394,4 +439,7 @@ set
   pickup_to = excluded.pickup_to,
   weekdays = excluded.weekdays,
   is_active = excluded.is_active,
-  sort_order = excluded.sort_order;
+  sort_order = excluded.sort_order,
+  visibility = excluded.visibility,
+  access_code = excluded.access_code,
+  allowed_email_domains = excluded.allowed_email_domains;

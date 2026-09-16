@@ -31,7 +31,7 @@ export function ReorderButton({ firstDay, items }: ReorderButtonProps) {
           add(item, firstDay);
         }
         setDay(firstDay);
-        router.push("/koszyk");
+        router.push("/sklep");
       }}
     >
       Zamów ponownie

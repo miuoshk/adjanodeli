@@ -39,11 +39,41 @@ export type Database = {
   }
   public: {
     Tables: {
-      categories: {
+      allergens: {
         Row: {
           created_at: string
           id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image_path: string | null
           is_active: boolean | null
+          lead_days: number
           name: string
           slug: string
           sort_order: number | null
@@ -51,8 +81,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
+          image_path?: string | null
           is_active?: boolean | null
+          lead_days?: number
           name: string
           slug: string
           sort_order?: number | null
@@ -60,8 +93,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
           id?: string
+          image_path?: string | null
           is_active?: boolean | null
+          lead_days?: number
           name?: string
           slug?: string
           sort_order?: number | null
@@ -103,6 +139,117 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discount_code_uses: {
+        Row: {
+          code_id: string
+          created_at: string
+          id: string
+          order_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          code_id: string
+          created_at?: string
+          id?: string
+          order_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          code_id?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_code_uses_code_id_fkey"
+            columns: ["code_id"]
+            isOneToOne: false
+            referencedRelation: "discount_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discount_code_uses_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discount_code_uses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discount_codes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          max_discount_grosze: number | null
+          max_uses: number | null
+          min_order_grosze: number
+          per_user_once: boolean
+          pickup_point_id: string | null
+          type: string
+          updated_at: string
+          uses_count: number
+          valid_from: string | null
+          valid_to: string | null
+          value: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_discount_grosze?: number | null
+          max_uses?: number | null
+          min_order_grosze?: number
+          per_user_once?: boolean
+          pickup_point_id?: string | null
+          type: string
+          updated_at?: string
+          uses_count?: number
+          valid_from?: string | null
+          valid_to?: string | null
+          value: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_discount_grosze?: number | null
+          max_uses?: number | null
+          min_order_grosze?: number
+          per_user_once?: boolean
+          pickup_point_id?: string | null
+          type?: string
+          updated_at?: string
+          uses_count?: number
+          valid_from?: string | null
+          valid_to?: string | null
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_codes_pickup_point_id_fkey"
+            columns: ["pickup_point_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_points"
             referencedColumns: ["id"]
           },
         ]
@@ -320,6 +467,7 @@ export type Database = {
           customer_name: string
           customer_phone: string | null
           delivered_at: string | null
+          discount_code_id: string | null
           discount_grosze: number
           expires_at: string | null
           id: string
@@ -350,6 +498,7 @@ export type Database = {
           customer_name: string
           customer_phone?: string | null
           delivered_at?: string | null
+          discount_code_id?: string | null
           discount_grosze?: number
           expires_at?: string | null
           id?: string
@@ -380,6 +529,7 @@ export type Database = {
           customer_name?: string
           customer_phone?: string | null
           delivered_at?: string | null
+          discount_code_id?: string | null
           discount_grosze?: number
           expires_at?: string | null
           id?: string
@@ -405,6 +555,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "orders_discount_code_id_fkey"
+            columns: ["discount_code_id"]
+            isOneToOne: false
+            referencedRelation: "discount_codes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "orders_pickup_point_id_fkey"
             columns: ["pickup_point_id"]
             isOneToOne: false
@@ -420,9 +577,82 @@ export type Database = {
           },
         ]
       }
+      pickup_point_access: {
+        Row: {
+          created_at: string
+          granted_at: string
+          granted_via: string
+          id: string
+          pickup_point_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_at?: string
+          granted_via: string
+          id?: string
+          pickup_point_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_at?: string
+          granted_via?: string
+          id?: string
+          pickup_point_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pickup_point_access_pickup_point_id_fkey"
+            columns: ["pickup_point_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pickup_point_access_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pickup_point_unlock_attempts: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pickup_point_unlock_attempts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pickup_points: {
         Row: {
+          access_code: string | null
           address: string
+          allowed_email_domains: string[]
           created_at: string
           description: string | null
           id: string
@@ -433,10 +663,13 @@ export type Database = {
           slug: string
           sort_order: number
           updated_at: string
+          visibility: string
           weekdays: number[]
         }
         Insert: {
+          access_code?: string | null
           address: string
+          allowed_email_domains?: string[]
           created_at?: string
           description?: string | null
           id?: string
@@ -447,10 +680,13 @@ export type Database = {
           slug: string
           sort_order?: number
           updated_at?: string
+          visibility?: string
           weekdays?: number[]
         }
         Update: {
+          access_code?: string | null
           address?: string
+          allowed_email_domains?: string[]
           created_at?: string
           description?: string | null
           id?: string
@@ -461,6 +697,7 @@ export type Database = {
           slug?: string
           sort_order?: number
           updated_at?: string
+          visibility?: string
           weekdays?: number[]
         }
         Relationships: []
@@ -503,6 +740,39 @@ export type Database = {
           },
         ]
       }
+      product_tags: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           allergens: string[]
@@ -514,8 +784,12 @@ export type Database = {
           image_path: string | null
           is_active: boolean
           is_new: boolean
+          lead_days: number | null
           name: string
           price_grosze: number
+          promo_from: string | null
+          promo_price_grosze: number | null
+          promo_to: string | null
           slug: string
           sort_order: number
           tags: string[]
@@ -532,8 +806,12 @@ export type Database = {
           image_path?: string | null
           is_active?: boolean
           is_new?: boolean
+          lead_days?: number | null
           name: string
           price_grosze: number
+          promo_from?: string | null
+          promo_price_grosze?: number | null
+          promo_to?: string | null
           slug: string
           sort_order?: number
           tags?: string[]
@@ -550,8 +828,12 @@ export type Database = {
           image_path?: string | null
           is_active?: boolean
           is_new?: boolean
+          lead_days?: number | null
           name?: string
           price_grosze?: number
+          promo_from?: string | null
+          promo_price_grosze?: number | null
+          promo_to?: string | null
           slug?: string
           sort_order?: number
           tags?: string[]
@@ -754,15 +1036,17 @@ export type Database = {
     }
     Functions: {
       admin_login_email: { Args: { p_login: string }; Returns: string }
-      available_pickup_dates: { Args: never; Returns: string[] }
+      available_pickup_dates:
+        | { Args: never; Returns: string[] }
+        | { Args: { p_lead_days: number }; Returns: string[] }
       create_order: {
         Args: {
+          p_discount?: Json
           p_invoice?: Json
           p_items: Json
           p_note: string
           p_pickup_date: string
           p_pickup_point_id: string
-          p_voucher_id?: string
         }
         Returns: string
       }
@@ -770,12 +1054,26 @@ export type Database = {
         Args: { p_order_id: string }
         Returns: undefined
       }
+      discount_code_amount: {
+        Args: {
+          p_max_discount_grosze: number
+          p_subtotal: number
+          p_type: string
+          p_value: number
+        }
+        Returns: number
+      }
       expire_order: { Args: { p_order_id: string }; Returns: undefined }
       expire_pending_orders: { Args: never; Returns: number }
+      grant_pickup_point_access: {
+        Args: { p_email: string; p_pickup_point_id: string }
+        Returns: undefined
+      }
       grant_stamps_for_order: {
         Args: { p_order_id: string }
         Returns: undefined
       }
+      has_pickup_point_access: { Args: { p_id: string }; Returns: boolean }
       is_owner: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
       is_valid_nip: { Args: { p_nip: string }; Returns: boolean }
@@ -785,11 +1083,16 @@ export type Database = {
         Returns: undefined
       }
       mark_order_refunded: { Args: { p_order_id: string }; Returns: undefined }
+      pickup_point_visible: { Args: { p_id: string }; Returns: boolean }
       product_availability: {
         Args: { p_day: string }
         Returns: {
           cap: number
+          earliest_date: string
+          effective_price_grosze: number
           is_available: boolean
+          is_promo: boolean
+          lead_days: number
           product_id: string
           remaining: number
           reserved: number
@@ -805,8 +1108,25 @@ export type Database = {
         }[]
       }
       release_order_stock: { Args: { p_order_id: string }; Returns: undefined }
+      rename_allergen: {
+        Args: { p_new: string; p_old: string }
+        Returns: undefined
+      }
+      rename_tag: { Args: { p_new: string; p_old: string }; Returns: undefined }
+      restore_discount_for_order: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
       restore_loyalty_for_order: {
         Args: { p_order_id: string }
+        Returns: undefined
+      }
+      revoke_pickup_point_access: {
+        Args: { p_pickup_point_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      revoke_pickup_point_code_access: {
+        Args: { p_pickup_point_id: string }
         Returns: undefined
       }
       set_order_status: {
@@ -874,6 +1194,37 @@ export type Database = {
           sellout_days: number
           sellout_pct: number
         }[]
+      }
+      sync_domain_access: { Args: { p_user_id: string }; Returns: undefined }
+      unlock_pickup_point: {
+        Args: { p_code: string }
+        Returns: {
+          access_code: string | null
+          address: string
+          allowed_email_domains: string[]
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          pickup_from: string
+          pickup_to: string
+          slug: string
+          sort_order: number
+          updated_at: string
+          visibility: string
+          weekdays: number[]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pickup_points"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      validate_discount_code: {
+        Args: { p_code: string; p_pickup_point_id: string; p_subtotal: number }
+        Returns: Json
       }
       warsaw_now: { Args: never; Returns: string }
     }

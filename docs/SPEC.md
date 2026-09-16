@@ -47,9 +47,27 @@ Tworzony triggerem handle_new_user po insercie do auth.users.
 - weekdays int[] not null default '{1,2,3,4,5}'
 - is_active boolean not null default true
 - sort_order int not null default 0
+- visibility text not null default 'public' check (visibility in ('public','restricted'))
+- access_code text null — uppercase, 6–12 znaków; unikalny gdy niepusty
+- allowed_email_domains text[] not null default '{}' (np. '{mikolow.sr.gov.pl}')
+
+### pickup_point_access
+- user_id uuid references profiles
+- pickup_point_id uuid references pickup_points
+- granted_via text not null check (granted_via in ('code','domain','admin'))
+- granted_at timestamptz not null default now()
+- unique (user_id, pickup_point_id)
+
+### pickup_point_unlock_attempts
+- user_id uuid references profiles
+- created_at timestamptz not null default now()
+Licznik nieudanych prób odblokowania kodem (limit 5 / 15 min).
 
 ### categories
 - name text not null, slug text unique not null, sort_order int default 0, is_active boolean default true
+- image_path text (ścieżka w bucket "categories")
+- description text
+- lead_days int not null default 1 — min. liczba dni między zamówieniem a odbiorem. 1 = na jutro, 2 = na pojutrze. Kategoria "Torty" może mieć 2.
 
 ### products
 - category_id uuid references categories
@@ -58,13 +76,29 @@ Tworzony triggerem handle_new_user po insercie do auth.users.
 - description text
 - price_grosze int not null check (price_grosze >= 0)
 - image_path text (ścieżka w bucket "products")
-- allergens text[] not null default '{}'
-- tags text[] not null default '{}' (np. 'keto', 'wege')
+- allergens text[] not null default '{}' — nazwy z tabeli allergens
+- tags text[] not null default '{}' — nazwy z tabeli product_tags (np. 'keto', 'wege')
 - daily_cap_default int not null default 20 — domyślny dzienny limit
 - weekdays int[] not null default '{1,2,3,4,5,6,7}' — dni tygodnia, w które produkt jest w sprzedaży
 - is_new boolean default false
 - is_active boolean not null default true
 - sort_order int not null default 0
+- lead_days int null — null = użyj categories.lead_days; efektywny lead = coalesce(products.lead_days, categories.lead_days)
+- promo_price_grosze int null, promo_from date null, promo_to date null — cena promocyjna, gdy dziś ∈ [promo_from, promo_to]
+
+### allergens
+- name text unique not null
+- sort_order int not null default 0
+- is_active boolean not null default true
+Słownik 14 alergenów (rozporządzenie 1169/2011). UI produktu wybiera z tej tabeli; products.allergens przechowuje nazwy.
+
+### product_tags
+- name text unique not null
+- slug text unique not null
+- color text not null default 'gold' check (color in ('gold','khaki','red'))
+- sort_order int not null default 0
+- is_active boolean not null default true
+Słownik tagów (keto, wege, bez laktozy, ostre, nowość). UI produktu wybiera z tej tabeli; products.tags przechowuje nazwy.
 
 ### product_day_overrides
 - product_id uuid references products on delete cascade
@@ -100,7 +134,26 @@ Tworzony triggerem handle_new_user po insercie do auth.users.
 - invoice_nip text
 - invoice_company text
 - invoice_address text
+- discount_code_id uuid null references discount_codes
 - unique (pickup_date, pickup_code)
+
+### discount_codes
+- code text unique not null — uppercase, bez spacji
+- type text not null check (type in ('percent','amount'))
+- value int not null — procent 1–100 albo kwota w groszach
+- min_order_grosze int not null default 0
+- max_discount_grosze int null
+- valid_from date, valid_to date
+- max_uses int null, uses_count int not null default 0
+- per_user_once boolean not null default true
+- pickup_point_id uuid null — kod tylko dla tego punktu
+- is_active boolean not null default true
+
+### discount_code_uses
+- code_id uuid references discount_codes on delete cascade
+- user_id uuid references profiles
+- order_id uuid references orders
+- unique (code_id, order_id)
 
 ### order_items
 - order_id uuid references orders on delete cascade
@@ -117,13 +170,18 @@ Tworzony triggerem handle_new_user po insercie do auth.users.
 
 ## 4. Funkcje SQL (single source of truth)
 - warsaw_now() returns timestamptz — now() w strefie Europe/Warsaw (do użycia w innych funkcjach).
-- available_pickup_dates() returns setof date — zwraca daty, na które można teraz zamawiać: zaczynając od jutra (jeśli teraz < cutoff) lub pojutrza (jeśli teraz >= cutoff), przez max_days_ahead dni, tylko dni z order_weekdays, z pominięciem closed_dates. Zwraca tylko daty, dla których istnieje co najmniej jeden aktywny pickup_point obsługujący ten dzień tygodnia.
-- product_availability(p_day date) returns table(product_id uuid, cap int, reserved int, remaining int, is_available boolean) — dla każdego aktywnego produktu: cap = override.cap ?? daily_cap_default, reserved = daily_stock.reserved_qty ?? 0, is_available = false, gdy extract(isodow from p_day) nie należy do products.weekdays; w przeciwnym razie override.is_available ?? true.
-- create_order(p_pickup_point_id uuid, p_pickup_date date, p_items jsonb, p_note text) returns uuid — SECURITY DEFINER, wykonywana jako zalogowany user (auth.uid()). W jednej transakcji: sprawdza, że pickup_date jest w available_pickup_dates() i punkt obsługuje ten dzień; dla każdego itemu robi upsert do daily_stock (cap z product_availability), blokuje wiersz (FOR UPDATE), sprawdza reserved_qty + qty <= cap oraz qty <= settings.max_qty_per_item, inkrementuje reserved_qty; liczy sumy ze snapshotem cen; generuje pickup_code unikalny dla pickup_date (pętla z retry); wstawia orders (expires_at = now() + pending_order_ttl_minutes) i order_items; loguje order_events. Przy braku limitu rzuca wyjątek z komunikatem 'OUT_OF_STOCK:<product_id>:<remaining>'. p_items to jsonb array [{product_id, qty}].
+- available_pickup_dates(p_lead_days int default 1) returns setof date — daty, na które można teraz zamawiać. Cutoff decyduje o starcie (jutro jeśli teraz < cutoff, pojutrze jeśli >= cutoff). Pierwsza data przesuwa się o (p_lead_days − 1) dni roboczych (order_weekdays minus closed_dates) względem tego startu, potem max_days_ahead dni kalendarzowych, tylko order_weekdays, bez closed_dates, tylko gdy jest aktywny pickup_point na ten dzień tygodnia widoczny dla wołającego (anon: tylko publiczne; authenticated: publiczne + z pickup_point_access; is_staff(): wszystkie). available_pickup_dates() bez argumentu to wrapper wołający wersję z 1.
+- product_availability(p_day date) returns table(product_id uuid, cap int, reserved int, remaining int, is_available boolean, lead_days int, earliest_date date, effective_price_grosze int, is_promo boolean) — dla każdego aktywnego produktu: cap = override.cap ?? daily_cap_default, reserved = daily_stock.reserved_qty ?? 0, is_available = false, gdy extract(isodow from p_day) nie należy do products.weekdays; w przeciwnym razie override.is_available ?? true. lead_days = coalesce(products.lead_days, categories.lead_days, 1). earliest_date = pierwsza data z available_pickup_dates(lead_days). is_promo = promo_price_grosze nie jest null i dziś (Europe/Warsaw) ∈ [promo_from, promo_to] (null na krańcu = bez ograniczenia). effective_price_grosze = promo_price_grosze gdy is_promo, inaczej price_grosze.
+- validate_discount_code(p_code text, p_subtotal int, p_pickup_point_id uuid) returns jsonb {valid, discount_grosze, message} — SECURITY DEFINER, authenticated. Klient nie ma SELECT na discount_codes. Sprawdza aktywność, daty, min_order, max_uses, per_user_once, punkt; liczy rabat od subtotal z limitem max_discount_grosze.
+- create_order(p_pickup_point_id uuid, p_pickup_date date, p_items jsonb, p_note text, p_discount jsonb default null, p_invoice jsonb default null) returns uuid — SECURITY DEFINER, wykonywana jako zalogowany user (auth.uid()). W jednej transakcji: sprawdza, że pickup_date jest w available_pickup_dates() i punkt obsługuje ten dzień; sprawdza, że p_pickup_date ∈ available_pickup_dates(max lead_days z pozycji) — inaczej raise 'LEAD_TIME:<product_id>:<earliest_date>'; dla każdego itemu robi upsert do daily_stock (cap z product_availability), blokuje wiersz (FOR UPDATE), sprawdza reserved_qty + qty <= cap oraz qty <= settings.max_qty_per_item, inkrementuje reserved_qty; liczy sumy ze snapshotem ceny efektywnej; p_discount to {"voucher_id": uuid} albo {"code": text} — kod i voucher się nie łączą; waliduje rabat, zapisuje użycie kodu (discount_code_uses, uses_count + 1) albo used_order_id vouchera; generuje pickup_code unikalny dla pickup_date (pętla z retry); wstawia orders (expires_at = now() + pending_order_ttl_minutes) i order_items; loguje order_events. Przy braku limitu rzuca wyjątek z komunikatem 'OUT_OF_STOCK:<product_id>:<remaining>'. p_items to jsonb array [{product_id, qty}]. Przy cancelled/refunded/expired — zwolnienie użycia kodu (usuń z discount_code_uses, uses_count − 1) razem z restore_loyalty_for_order.
 - release_order_stock(p_order_id uuid) — dekrementuje daily_stock o ilości z order_items (nie poniżej 0). Używana przy expired/cancelled.
 - expire_pending_orders() — ustawia status expired dla pending_payment z expires_at < now(), wywołuje release_order_stock, loguje event. Uruchamiana przez pg_cron co 5 minut.
 - set_order_status(p_order_id uuid, p_status text, p_note text) — dla staff/owner; sprawdza dozwolone przejścia (patrz sekcja 5), ustawia timestampy, loguje order_events. Przy cancelled wywołuje release_order_stock.
 - production_summary(p_day date) returns table(product_id uuid, product_name text, total_qty int, by_point jsonb) — sumy per produkt z zamówień w statusach paid, in_production, delivered, picked_up na dany dzień; by_point = {pickup_point_name: qty}.
+- rename_allergen(p_old text, p_new text) — SECURITY DEFINER, tylko owner. Zmienia allergens.name i w products.allergens robi array_replace(old, new).
+- rename_tag(p_old text, p_new text) — analogicznie dla product_tags.name i products.tags.
+- unlock_pickup_point(p_code text) — SECURITY DEFINER, authenticated. Po poprawnym access_code wstawia pickup_point_access (granted_via='code') i zwraca punkt. Limit 5 nieudanych prób / 15 min (pickup_point_unlock_attempts). Błędny kod: UNLOCK_INVALID (bez podpowiedzi).
+- sync_domain_access(p_user uuid) — SECURITY DEFINER. Dla każdego restricted punktu, którego allowed_email_domains zawiera domenę e-maila użytkownika, wstawia dostęp granted_via='domain' (nie nadpisuje istniejącego). Wołana triggerem po insercie profiles oraz przy logowaniu.
 
 ## 5. Statusy i dozwolone przejścia
 pending_payment → paid (tylko webhook Stripe, przez service_role)
@@ -140,6 +198,8 @@ Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprze
 
 ## 6. Reguły biznesowe
 - Cutoff: settings.cutoff_time w Europe/Warsaw. Decyduje available_pickup_dates(), nigdy klient.
+- Każdy produkt ma efektywny lead_days = coalesce(products.lead_days, categories.lead_days). Zamówienie może mieć pickup_date nie wcześniejszą niż pierwsza dostępna data dla lead_days = max(lead_days pozycji w koszyku). Domyślnie 1 (na jutro). Kategoria "Torty" może mieć 2 (na pojutrze).
+- Cena efektywna produktu = promo_price_grosze, jeśli dziś ∈ [promo_from, promo_to], inaczej price_grosze. Snapshot ceny w order_items bierze cenę efektywną na moment zamówienia. Kod rabatowy i voucher lojalnościowy NIE łączą się — klient wybiera jeden. Rabat z kodu liczony od subtotal, ograniczony max_discount_grosze, total po rabacie ≥ 200 gr.
 - Limit dzienny per produkt. Menu pokazuje remaining; przy remaining <= 5 pokazuje "zostało N"; przy 0 produkt widoczny jako "wyprzedane na ten dzień", nie do dodania.
 - Ilość jednego produktu w zamówieniu <= settings.max_qty_per_item. Powyżej: link do formularza zamówienia specjalnego.
 - Zamówienie pending_payment żyje pending_order_ttl_minutes (30). Sesja Stripe Checkout ma expires_at = 30 minut.
@@ -147,6 +207,7 @@ Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprze
 - Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprzedzającego pickup_date (czyli do momentu, w którym Justyna zaczyna wiedzieć, co produkować). Anulowanie: paid → cancelled → refunded automatycznie przez Stripe Refund API. settings.customer_cancellation_enabled boolean default true. Jeśli pickup_date to poniedziałek, granica to niedziela o cutoff (nie piątek).
 - Zwroty po anulowaniu klienta idą przez Stripe Refund API; gdy się nie uda — zamówienie zostaje cancelled, owner dostaje mail „Zwrot ręczny wymagany”. Owner może też zwrócić ręcznie i ustawić refunded.
 - Klient może zaznaczyć w koszyku 'Chcę fakturę na firmę' i podać NIP, nazwę, adres. Dane trafiają do zamówienia; fakturę wystawia właścicielka poza systemem. NIP walidowany (10 cyfr + suma kontrolna).
+- Punkt "restricted" jest widoczny i wybieralny wyłącznie dla użytkowników z wpisem w pickup_point_access. Wpis powstaje: (a) po wpisaniu poprawnego access_code (funkcja unlock_pickup_point(code) SECURITY DEFINER, zwraca punkt; limit 5 prób / 15 min per user — licz w tabeli pickup_point_unlock_attempts), (b) automatycznie przy logowaniu, jeśli domena e-maila użytkownika ∈ allowed_email_domains któregoś punktu (trigger na profiles insert + funkcja sync_domain_access(user_id) wołana przy logowaniu), (c) ręcznie przez ownera. Zmiana access_code nie odbiera dostępu już przyznanego. Owner może cofnąć dostęp pojedynczej osobie lub "wszystkim z kodu" (usuwa wpisy granted_via='code'). create_order przy braku dostępu raise 'POINT_FORBIDDEN'.
 
 ## 7. Płatności (Stripe)
 - Stripe Checkout, mode: payment, currency pln, payment_method_types: ['blik','p24','card'], locale 'pl'.
@@ -156,27 +217,36 @@ Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprze
 - Webhook /api/stripe/webhook: checkout.session.completed → orders.status = paid, paid_at, stripe_payment_intent_id (idempotentnie: jeśli już paid, nic). checkout.session.expired → jeśli nadal pending_payment: expired + release. Weryfikacja podpisu obowiązkowa.
 
 ## 8. Autoryzacja i RLS
-- Logowanie sklepu: Supabase Auth, e-mail OTP (6 cyfr), shouldCreateUser: true. Po pierwszym logowaniu, jeśli profiles.full_name jest null → przekierowanie na /konto/uzupelnij (imię, telefon).
+- Logowanie sklepu: Supabase Auth, e-mail OTP (6–8 cyfr, tyle ile wysyła Auth), shouldCreateUser: true. Po pierwszym logowaniu, jeśli profiles.full_name jest null → przekierowanie na /konto/uzupelnij (imię, telefon).
 - Logowanie panelu /admin: /admin/logowanie, login + hasło z konta staff/owner w Supabase Auth (funkcja admin_login_email). Nie używa OTP ani zmiennych ADMIN_*. Niezalogowany na /admin/* → /admin/logowanie.
 - Helper is_staff() returns boolean — true dla role in ('staff','owner'); is_owner() — role = 'owner'.
 - RLS:
   - profiles: select/update własny wiersz; staff select wszystkie.
-  - settings, pickup_points (is_active), categories (is_active), products (is_active): select dla wszystkich (anon też — menu jest publiczne). Update/insert/delete: owner.
+  - settings, categories (is_active), products (is_active), allergens, product_tags: select dla wszystkich (anon też — menu jest publiczne). Update/insert/delete: owner.
+  - pickup_points: select dla anon/authenticated tylko visibility='public' (i is_active); dla authenticated dodatkowo punkty z pickup_point_access; is_staff() widzi wszystkie. Update/insert/delete: owner.
+  - pickup_point_access: select własne (albo staff); write tylko funkcje SECURITY DEFINER.
+  - pickup_point_unlock_attempts: brak SELECT dla klienta; write tylko funkcje.
   - product_day_overrides, daily_stock: select wszyscy; write owner (daily_stock modyfikują wyłącznie funkcje SECURITY DEFINER).
   - orders, order_items, order_events: select własne (user_id = auth.uid()) lub staff; insert wyłącznie przez create_order; update wyłącznie przez set_order_status / webhook (service_role).
   - special_requests: insert anon i zalogowani; select/update staff.
+  - discount_codes: brak SELECT dla klienta (walidacja tylko przez validate_discount_code). Write i select: owner.
+  - discount_code_uses: select owner; write wyłącznie funkcje SECURITY DEFINER.
 - Ścieżki /admin/* (oprócz /admin/logowanie) chronione po stronie serwera helperem requireRole('staff' | 'owner') w layoucie i w każdej server action. Brak sesji → /admin/logowanie.
 
 ## 9. Routing (App Router)
 Sklep, grupa (shop):
-- / — menu (dzień docelowy wybierany u góry, domyślnie pierwsza dostępna data)
+- / — strona wizytówka (landing): hero z kamienicą, jak to działa, kategorie, o nas, CTA do sklepu
+- /sklep — kafelki kategorii + (opcjonalnie) sekcja "Popularne dziś"; dzień docelowy u góry (?dzien=YYYY-MM-DD)
+- /sklep/[kategoria] — lista produktów jednej kategorii, day-picker, inne kategorie; 404 dla nieznanego sluga
 - /koszyk — koszyk + wybór punktu odbioru + dnia + uwagi → "Przejdź do płatności"
 - /zamowienie/[id] — potwierdzenie/status zamówienia, kod odbioru, QR
 - /moje-zamowienia — historia
 - /logowanie — e-mail → kod
+- /punkt/[kod] — link zapraszający: po wejściu (z logowaniem) odblokowuje punkt i przekierowuje do /sklep z toastem "Odblokowano punkt: {nazwa}"
 - /konto, /konto/uzupelnij — profil
 - /zamowienie-specjalne — formularz dużych zamówień
 - /regulamin, /polityka-prywatnosci
+Linki do menu (dawne "/" i "/?dzien=") prowadzą na /sklep (i /sklep?dzien=). Logo w headerze prowadzi na "/". Wejście na "/?dzien=" przekierowuje na "/sklep?dzien=" (redirect, nie permanent).
 Admin:
 - /admin/logowanie — login i hasło do panelu (nie OTP)
 - /admin — dziś/jutro: liczby (zamówień, paczek per punkt, do produkcji), szybkie akcje
@@ -184,7 +254,10 @@ Admin:
 - /admin/produkcja — zestawienie produkcyjne na dzień + wersja do druku (/admin/produkcja/drukuj?day=)
 - /admin/paczki — lista paczek per punkt na dzień, "Dowiezione" per punkt (bulk delivered), wersja do druku etykiet
 - /admin/wydawanie — mobilny ekran: wpisz/zeskanuj kod → szczegóły → "Wydano"
+- /admin/kategorie, /admin/kategorie/[id] — CRUD kategorii (zdjęcie, opis, lead_days); bez usuwania, gdy są produkty — tylko dezaktywacja
 - /admin/produkty, /admin/produkty/[id] — CRUD, zdjęcie, limit domyślny, alergeny
+- /admin/slowniki — owner: alergeny i tagi (nazwa, kolejność, aktywny; tagi też slug i kolor)
+- /admin/kody-rabatowe — owner: kody rabatowe (lista, formularz, użycia)
 - /admin/limity — kalendarz: per dzień nadpisanie limitu/dostępności (blokada dzienna)
 - /admin/punkty-odbioru — CRUD
 - /admin/ustawienia — settings
@@ -230,7 +303,7 @@ Każdy opłacony produkt (1 szt. = 1 pieczątka) daje pieczątkę. Pieczątki wy
 - 30 pieczątek → voucher ONE_GROSZ (najtańszy produkt w zamówieniu za 1 grosz), po czym wszystkie aktywne pieczątki są konsumowane (licznik startuje od zera).
 Voucher jest ważny 30 dni od wydania, jeden voucher na zamówienie, nie łączy się. Rabat liczony od subtotal_grosze; total po rabacie musi wynosić ≥ 200 gr (minimum Stripe dla PLN) — jeśli nie, UI prosi o dodanie produktu. Pieczątki naliczane w mark_order_paid. Anulowanie/zwrot zamówienia usuwa pieczątki z tego zamówienia i, jeśli voucher został użyty, przywraca go (jeśli nie wygasł).
 Tabele: loyalty_stamps (user_id, order_id, earned_at, expires_at, consumed_at null), loyalty_vouchers (user_id, type check in ('PCT10','PCT50','ONE_GROSZ'), issued_at, expires_at, used_order_id null, restored_from_order_id null). RLS: select własne; write tylko funkcje SECURITY DEFINER.
-Funkcje: loyalty_status(p_user) → {active_stamps, next_threshold, vouchers[]}; grant_stamps_for_order(p_order_id) (wołana z mark_order_paid; po dodaniu sprawdza progi i wydaje voucher — próg wydaje voucher tylko raz: zapamiętaj w loyalty_vouchers, że dla danego "cyklu" próg 10/20 był już wydany, przez kolumnę cycle_started_at na stamps lub prościej: voucher PCT10 wydawany, gdy liczba aktywnych = dokładnie 10 po naliczeniu, PCT50 gdy przekracza 20 pierwszy raz — rozwiąż to deterministycznie i opisz w komentarzu); create_order dostaje nowy parametr p_voucher_id uuid default null — waliduje voucher (własny, ważny, nieużyty), liczy discount_grosze, oznacza used_order_id; release/cancel przywraca.
+Funkcje: loyalty_status(p_user) → {active_stamps, next_threshold, vouchers[]}; grant_stamps_for_order(p_order_id) (wołana z mark_order_paid; po dodaniu sprawdza progi i wydaje voucher — próg wydaje voucher tylko raz: zapamiętaj w loyalty_vouchers, że dla danego "cyklu" próg 10/20 był już wydany, przez kolumnę cycle_started_at na stamps lub prościej: voucher PCT10 wydawany, gdy liczba aktywnych = dokładnie 10 po naliczeniu, PCT50 gdy przekracza 20 pierwszy raz — rozwiąż to deterministycznie i opisz w komentarzu); create_order dostaje p_discount jsonb {"voucher_id": uuid} albo {"code": text} — waliduje voucher (własny, ważny, nieużyty) albo kod; liczy discount_grosze; oznacza used_order_id albo zapisuje discount_code_uses; release/cancel przywraca. Kod i voucher się nie łączą.
 UI: /konto sekcja "Pieczątki": pasek 7/10, lista voucherów. W koszyku: "Masz voucher −10%" z przełącznikiem użycia. W menu (header) mały licznik pieczątek.
 Stripe: przy discount_grosze > 0 utwórz coupon (amount_off = discount_grosze, currency pln, duration once, name "Voucher AdjanoDeli") i przekaż w discounts.
 
