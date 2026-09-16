@@ -55,11 +55,20 @@ export async function getProfile(): Promise<Profile | null> {
   }
 }
 
+export function loginPathFor(next = "/"): string {
+  const path = safeNextPath(next);
+  if (path === "/admin" || path.startsWith("/admin/")) {
+    return "/admin/logowanie";
+  }
+  return "/logowanie";
+}
+
 export async function requireUser(next = "/") {
   const session = await getSession();
 
   if (!session?.user) {
-    redirect(`/logowanie?next=${encodeURIComponent(safeNextPath(next))}`);
+    const path = safeNextPath(next);
+    redirect(`${loginPathFor(path)}?next=${encodeURIComponent(path)}`);
   }
 
   return session;
@@ -74,6 +83,10 @@ export async function requireRole(role: AppRole, next = "/") {
   const allowed = role === "owner" ? hasOwnerAccess : hasStaffAccess;
 
   if (!allowed) {
+    const path = safeNextPath(next);
+    if (path === "/admin" || path.startsWith("/admin/")) {
+      redirect(`/admin/logowanie?next=${encodeURIComponent(path)}`);
+    }
     redirect("/brak-dostepu");
   }
 

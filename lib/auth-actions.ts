@@ -1,10 +1,13 @@
 "use server";
 
+import { timingSafeEqual } from "node:crypto";
+
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { ensureAdminOwnerUser, getAdminLoginEnv } from "@/lib/admin/ensure-admin-user";
 import { requireUser } from "@/lib/auth";
 import { safeNextPath } from "@/lib/safe-next";
 import { createServerClient } from "@/lib/supabase/server";
@@ -43,6 +46,23 @@ const profileSchema = z.object({
   marketing_consent: z.boolean(),
   next: z.string().optional(),
 });
+
+function safeAdminNext(next?: string): string {
+  const path = safeNextPath(next);
+  if (path === "/admin" || (path.startsWith("/admin/") && path !== "/admin/logowanie")) {
+    return path;
+  }
+  return "/admin";
+}
+
+function usernameMatches(input: string, expected: string): boolean {
+  const left = Buffer.from(input.normalize("NFC"));
+  const right = Buffer.from(expected.normalize("NFC"));
+  if (left.length !== right.length) {
+    return false;
+  }
+  return timingSafeEqual(left, right);
+}
 
 function normalizePhone(phone: string | undefined): string | null {
   if (!phone) {
@@ -160,4 +180,38 @@ export async function signOut() {
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/");
+}
+
+export async function signOutAdmin() {
+  const supabase = await createServerClient();
+  await supabase.auth.signOut();
+  revalidatePath("/", "layout");
+  redirect("/admin/logowanie");
+}
+
+export async function signInAdmin(input: { username: string; password: string; next?: string }) {
+  const env = getAdminLoginEnv();
+  if (!env) {
+    return { error: "Panel nie jest skonfigurowany." };
+  }
+
+  const username = input.username.trim().toLowerCase();
+  if (!usernameMatches(username, env.username.toLowerCase())) {
+    return { error: "Zły login albo hasło." };
+  }
+
+  await ensureAdminOwnerUser();
+
+  const supabase = await createServerClient();
+  const { error } = await supabase.auth.signInWithPassword({
+    email: env.email,
+    password: input.password,
+  });
+
+  if (error) {
+    return { error: "Zły login albo hasło." };
+  }
+
+  revalidatePath("/", "layout");
+  redirect(safeAdminNext(input.next));
 }

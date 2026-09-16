@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { signOut } from "@/lib/auth-actions";
+import { signOutAdmin } from "@/lib/auth-actions";
 import { cn } from "@/lib/utils";
 
 type AdminNavProps = {
@@ -112,7 +112,7 @@ export function AdminNav({ isOwner, firstName, roleLabel, onNavigate }: AdminNav
       <div className="space-y-2 border-t border-[var(--adj-gold)] px-3 py-4">
         <p className="truncate text-sm font-medium">{firstName}</p>
         <p className="text-sm text-[var(--adj-cream)]/80">{roleLabel}</p>
-        <form action={signOut}>
+        <form action={signOutAdmin}>
           <button
             type="submit"
             className="flex min-h-12 w-full items-center rounded-md px-0 text-left text-base underline-offset-4 hover:underline"

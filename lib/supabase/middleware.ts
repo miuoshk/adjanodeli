@@ -4,6 +4,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 import type { Database } from "@/lib/supabase/database.types";
 
+function isAdminLoginPath(pathname: string) {
+  return pathname === "/admin/logowanie";
+}
+
+function isAdminPath(pathname: string) {
+  return pathname === "/admin" || pathname.startsWith("/admin/") || pathname.startsWith("/api/admin/");
+}
+
 function isProtectedPath(pathname: string) {
   return (
     pathname === "/zamowienie" ||
@@ -14,9 +22,7 @@ function isProtectedPath(pathname: string) {
     pathname.startsWith("/konto/") ||
     pathname === "/zamow-jak-zwykle" ||
     pathname.startsWith("/zamow-jak-zwykle/") ||
-    pathname === "/admin" ||
-    pathname.startsWith("/admin/") ||
-    pathname.startsWith("/api/admin/")
+    (isAdminPath(pathname) && !isAdminLoginPath(pathname))
   );
 }
 
@@ -58,7 +64,7 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && isProtectedPath(pathname)) {
     const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/logowanie";
+    loginUrl.pathname = isAdminPath(pathname) ? "/admin/logowanie" : "/logowanie";
     loginUrl.search = "";
     loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     const redirectResponse = NextResponse.redirect(loginUrl);

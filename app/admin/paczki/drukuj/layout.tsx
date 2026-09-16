@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 
-export default function PackageLabelsPrintLayout({ children }: { children: ReactNode }) {
+import { requireRole } from "@/lib/auth";
+
+export default async function PackageLabelsPrintLayout({ children }: { children: ReactNode }) {
+  await requireRole("staff", "/admin/paczki/drukuj");
   return (
     <div className="print-root">
       <style>{`

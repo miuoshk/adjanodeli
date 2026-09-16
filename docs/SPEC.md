@@ -9,7 +9,8 @@ Nazwa marki: AdjanoDeli. Brand nadrzędny: Adjano.
 - customer — zalogowany klient (e-mail OTP). Widzi menu, składa zamówienia, widzi swoje zamówienia.
 - staff — pracownik. Widzi listę paczek, zmienia statusy dostawy, wydaje po kodzie. Nie edytuje produktów ani ustawień.
 - owner — właścicielka. Wszystko, co staff, plus produkty, limity, punkty, ustawienia, anulowanie/zwroty, eksporty.
-Rola przechowywana w profiles.role. Domyślnie customer. Zmiana roli tylko przez SQL (nie ma UI do nadawania ról w Fazie 1).
+Rola przechowywana w profiles.role. Domyślnie customer. Zmiana roli tylko przez SQL (nie ma UI do nadawania ról w Fazie 1), z wyjątkiem konta panelu admina (poniżej).
+Panel /admin ma osobne logowanie loginem i hasłem (/admin/logowanie). Sklep zostaje na OTP. Dane konta panelu: zmienne środowiskowe ADMIN_USERNAME, ADMIN_EMAIL, ADMIN_PASSWORD (hasła nie ma w repozytorium). Po zalogowaniu sesja Supabase z profiles.role = owner.
 
 ## 3. Model danych (Postgres, schema public)
 Wszystkie tabele: id uuid primary key default gen_random_uuid(), created_at timestamptz default now(), updated_at timestamptz default now() (trigger set_updated_at). RLS enabled na każdej.
@@ -155,7 +156,8 @@ Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprze
 - Webhook /api/stripe/webhook: checkout.session.completed → orders.status = paid, paid_at, stripe_payment_intent_id (idempotentnie: jeśli już paid, nic). checkout.session.expired → jeśli nadal pending_payment: expired + release. Weryfikacja podpisu obowiązkowa.
 
 ## 8. Autoryzacja i RLS
-- Logowanie: Supabase Auth, e-mail OTP (6 cyfr), shouldCreateUser: true. Po pierwszym logowaniu, jeśli profiles.full_name jest null → przekierowanie na /konto/uzupelnij (imię, telefon).
+- Logowanie sklepu: Supabase Auth, e-mail OTP (6 cyfr), shouldCreateUser: true. Po pierwszym logowaniu, jeśli profiles.full_name jest null → przekierowanie na /konto/uzupelnij (imię, telefon).
+- Logowanie panelu /admin: /admin/logowanie, login + hasło (ADMIN_USERNAME / ADMIN_PASSWORD). Nie używa OTP. Niezalogowany na /admin/* → /admin/logowanie.
 - Helper is_staff() returns boolean — true dla role in ('staff','owner'); is_owner() — role = 'owner'.
 - RLS:
   - profiles: select/update własny wiersz; staff select wszystkie.
@@ -163,7 +165,7 @@ Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprze
   - product_day_overrides, daily_stock: select wszyscy; write owner (daily_stock modyfikują wyłącznie funkcje SECURITY DEFINER).
   - orders, order_items, order_events: select własne (user_id = auth.uid()) lub staff; insert wyłącznie przez create_order; update wyłącznie przez set_order_status / webhook (service_role).
   - special_requests: insert anon i zalogowani; select/update staff.
-- Ścieżki /admin/* chronione po stronie serwera helperem requireRole('staff' | 'owner') w layoucie i w każdej server action.
+- Ścieżki /admin/* (oprócz /admin/logowanie) chronione po stronie serwera helperem requireRole('staff' | 'owner') w layoucie i w każdej server action. Brak sesji → /admin/logowanie.
 
 ## 9. Routing (App Router)
 Sklep, grupa (shop):
@@ -176,6 +178,7 @@ Sklep, grupa (shop):
 - /zamowienie-specjalne — formularz dużych zamówień
 - /regulamin, /polityka-prywatnosci
 Admin:
+- /admin/logowanie — login i hasło do panelu (nie OTP)
 - /admin — dziś/jutro: liczby (zamówień, paczek per punkt, do produkcji), szybkie akcje
 - /admin/zamowienia — lista z filtrami (dzień, punkt, status), podgląd, zmiana statusu
 - /admin/produkcja — zestawienie produkcyjne na dzień + wersja do druku (/admin/produkcja/drukuj?day=)
