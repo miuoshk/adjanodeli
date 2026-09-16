@@ -3,6 +3,7 @@
 import { z } from "zod";
 
 import { getSession } from "@/lib/auth";
+import { invoicePayload, isCompleteInvoice } from "@/lib/orders/invoice";
 import { payOrder } from "@/lib/orders/pay-order";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -19,6 +20,15 @@ const placeOrderSchema = z.object({
     .min(1)
     .max(30),
   note: z.string().max(200).default(""),
+  voucherId: z.string().uuid().nullable().optional(),
+  invoice: z
+    .object({
+      requested: z.boolean(),
+      nip: z.string(),
+      company: z.string(),
+      address: z.string(),
+    })
+    .optional(),
 });
 
 export type PlaceOrderInput = z.infer<typeof placeOrderSchema>;
@@ -33,6 +43,9 @@ export type PlaceOrderResult =
         | "POINT_NOT_AVAILABLE"
         | "INVALID_ITEMS"
         | "NOT_AUTHENTICATED"
+        | "VOUCHER_INVALID"
+        | "TOTAL_BELOW_MINIMUM"
+        | "INVALID_INVOICE"
         | "UNKNOWN";
       message: string;
     };
@@ -42,6 +55,9 @@ const errorMessages = {
   POINT_NOT_AVAILABLE: "Ten punkt nie obsługuje wybranego dnia.",
   INVALID_ITEMS: "Sprawdź pozycje w koszyku.",
   NOT_AUTHENTICATED: "Zaloguj się, żeby zamówić.",
+  VOUCHER_INVALID: "Ten voucher już nie działa. Wybierz inny albo zamów bez.",
+  TOTAL_BELOW_MINIMUM: "Po rabacie zamówienie musi mieć min. 2,00 zł. Dodaj jeszcze produkt.",
+  INVALID_INVOICE: "Sprawdź NIP, nazwę i adres do faktury.",
   UNKNOWN: "Nie udało się złożyć zamówienia. Spróbuj jeszcze raz.",
 } as const;
 
@@ -68,6 +84,15 @@ function parseRpcError(text: string): PlaceOrderResult {
   if (text.includes("NOT_AUTHENTICATED")) {
     return { ok: false, code: "NOT_AUTHENTICATED", message: errorMessages.NOT_AUTHENTICATED };
   }
+  if (text.includes("VOUCHER_INVALID")) {
+    return { ok: false, code: "VOUCHER_INVALID", message: errorMessages.VOUCHER_INVALID };
+  }
+  if (text.includes("TOTAL_BELOW_MINIMUM")) {
+    return { ok: false, code: "TOTAL_BELOW_MINIMUM", message: errorMessages.TOTAL_BELOW_MINIMUM };
+  }
+  if (text.includes("INVALID_INVOICE")) {
+    return { ok: false, code: "INVALID_INVOICE", message: errorMessages.INVALID_INVOICE };
+  }
 
   return { ok: false, code: "UNKNOWN", message: errorMessages.UNKNOWN };
 }
@@ -83,7 +108,13 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
     return { ok: false, code: "INVALID_ITEMS", message: errorMessages.INVALID_ITEMS };
   }
 
+  const invoice = parsed.data.invoice;
+  if (invoice && !isCompleteInvoice(invoice)) {
+    return { ok: false, code: "INVALID_INVOICE", message: errorMessages.INVALID_INVOICE };
+  }
+
   const supabase = await createServerClient();
+  const pInvoice = invoice ? invoicePayload(invoice) : null;
   const { data, error } = await supabase.rpc("create_order", {
     p_pickup_point_id: parsed.data.pickupPointId,
     p_pickup_date: parsed.data.pickupDate,
@@ -92,6 +123,8 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
       qty: item.qty,
     })),
     p_note: parsed.data.note,
+    p_voucher_id: parsed.data.voucherId ?? undefined,
+    p_invoice: pInvoice ?? undefined,
   });
 
   if (error) {
@@ -101,6 +134,19 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
 
   if (!data) {
     return { ok: false, code: "UNKNOWN", message: errorMessages.UNKNOWN };
+  }
+
+  if (pInvoice) {
+    await supabase
+      .from("profiles")
+      .update({
+        invoice_defaults: {
+          nip: pInvoice.nip,
+          company: pInvoice.company,
+          address: pInvoice.address,
+        },
+      })
+      .eq("id", session.user.id);
   }
 
   const pay = await payOrder(data);

@@ -60,6 +60,8 @@ Tworzony triggerem handle_new_user po insercie do auth.users.
 - allergens text[] not null default '{}'
 - tags text[] not null default '{}' (np. 'keto', 'wege')
 - daily_cap_default int not null default 20 — domyślny dzienny limit
+- weekdays int[] not null default '{1,2,3,4,5,6,7}' — dni tygodnia, w które produkt jest w sprzedaży
+- is_new boolean default false
 - is_active boolean not null default true
 - sort_order int not null default 0
 
@@ -93,6 +95,10 @@ Tworzony triggerem handle_new_user po insercie do auth.users.
 - stripe_payment_intent_id text
 - expires_at timestamptz — dla pending_payment
 - paid_at, delivered_at, picked_up_at, cancelled_at timestamptz
+- invoice_requested boolean default false
+- invoice_nip text
+- invoice_company text
+- invoice_address text
 - unique (pickup_date, pickup_code)
 
 ### order_items
@@ -111,7 +117,7 @@ Tworzony triggerem handle_new_user po insercie do auth.users.
 ## 4. Funkcje SQL (single source of truth)
 - warsaw_now() returns timestamptz — now() w strefie Europe/Warsaw (do użycia w innych funkcjach).
 - available_pickup_dates() returns setof date — zwraca daty, na które można teraz zamawiać: zaczynając od jutra (jeśli teraz < cutoff) lub pojutrza (jeśli teraz >= cutoff), przez max_days_ahead dni, tylko dni z order_weekdays, z pominięciem closed_dates. Zwraca tylko daty, dla których istnieje co najmniej jeden aktywny pickup_point obsługujący ten dzień tygodnia.
-- product_availability(p_day date) returns table(product_id uuid, cap int, reserved int, remaining int, is_available boolean) — dla każdego aktywnego produktu: cap = override.cap ?? daily_cap_default, reserved = daily_stock.reserved_qty ?? 0, is_available = override.is_available ?? true.
+- product_availability(p_day date) returns table(product_id uuid, cap int, reserved int, remaining int, is_available boolean) — dla każdego aktywnego produktu: cap = override.cap ?? daily_cap_default, reserved = daily_stock.reserved_qty ?? 0, is_available = false, gdy extract(isodow from p_day) nie należy do products.weekdays; w przeciwnym razie override.is_available ?? true.
 - create_order(p_pickup_point_id uuid, p_pickup_date date, p_items jsonb, p_note text) returns uuid — SECURITY DEFINER, wykonywana jako zalogowany user (auth.uid()). W jednej transakcji: sprawdza, że pickup_date jest w available_pickup_dates() i punkt obsługuje ten dzień; dla każdego itemu robi upsert do daily_stock (cap z product_availability), blokuje wiersz (FOR UPDATE), sprawdza reserved_qty + qty <= cap oraz qty <= settings.max_qty_per_item, inkrementuje reserved_qty; liczy sumy ze snapshotem cen; generuje pickup_code unikalny dla pickup_date (pętla z retry); wstawia orders (expires_at = now() + pending_order_ttl_minutes) i order_items; loguje order_events. Przy braku limitu rzuca wyjątek z komunikatem 'OUT_OF_STOCK:<product_id>:<remaining>'. p_items to jsonb array [{product_id, qty}].
 - release_order_stock(p_order_id uuid) — dekrementuje daily_stock o ilości z order_items (nie poniżej 0). Używana przy expired/cancelled.
 - expire_pending_orders() — ustawia status expired dla pending_payment z expires_at < now(), wywołuje release_order_stock, loguje event. Uruchamiana przez pg_cron co 5 minut.
@@ -124,10 +130,12 @@ pending_payment → expired (tylko expire_pending_orders)
 pending_payment → cancelled (owner)
 paid → in_production (staff/owner)
 paid → cancelled (owner) → refunded (owner, po zwrocie w Stripe)
+paid → cancelled (klient, do cutoff dnia poprzedzającego pickup_date, gdy settings.customer_cancellation_enabled) → refunded (Stripe Refund API, albo owner ręcznie)
 in_production → delivered (staff/owner)
 delivered → picked_up (staff/owner, po kodzie)
 in_production → cancelled (owner)
 Wszystko inne: zabronione, set_order_status rzuca wyjątek.
+Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprzedzającego pickup_date (czyli do momentu, w którym Justyna zaczyna wiedzieć, co produkować). Anulowanie: paid → cancelled → refunded automatycznie przez Stripe Refund API. settings.customer_cancellation_enabled boolean default true.
 
 ## 6. Reguły biznesowe
 - Cutoff: settings.cutoff_time w Europe/Warsaw. Decyduje available_pickup_dates(), nigdy klient.
@@ -135,8 +143,9 @@ Wszystko inne: zabronione, set_order_status rzuca wyjątek.
 - Ilość jednego produktu w zamówieniu <= settings.max_qty_per_item. Powyżej: link do formularza zamówienia specjalnego.
 - Zamówienie pending_payment żyje pending_order_ttl_minutes (30). Sesja Stripe Checkout ma expires_at = 30 minut.
 - Po opłaceniu: e-mail z kodem odbioru, QR, punktem, oknem godzinowym, listą pozycji. Po delivered: e-mail "Twoja paczka czeka w [punkt] do [pickup_to]".
-- Klient w Fazie 1 nie może sam anulować (żywność, produkcja). Może zadzwonić. W Fazie 2: anulowanie do cutoff.
-- Zwroty robi owner ręcznie w Stripe, potem ustawia refunded.
+- Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprzedzającego pickup_date (czyli do momentu, w którym Justyna zaczyna wiedzieć, co produkować). Anulowanie: paid → cancelled → refunded automatycznie przez Stripe Refund API. settings.customer_cancellation_enabled boolean default true. Jeśli pickup_date to poniedziałek, granica to niedziela o cutoff (nie piątek).
+- Zwroty po anulowaniu klienta idą przez Stripe Refund API; gdy się nie uda — zamówienie zostaje cancelled, owner dostaje mail „Zwrot ręczny wymagany”. Owner może też zwrócić ręcznie i ustawić refunded.
+- Klient może zaznaczyć w koszyku 'Chcę fakturę na firmę' i podać NIP, nazwę, adres. Dane trafiają do zamówienia; fakturę wystawia właścicielka poza systemem. NIP walidowany (10 cyfr + suma kontrolna).
 
 ## 7. Płatności (Stripe)
 - Stripe Checkout, mode: payment, currency pln, payment_method_types: ['blik','p24','card'], locale 'pl'.
@@ -176,6 +185,7 @@ Admin:
 - /admin/limity — kalendarz: per dzień nadpisanie limitu/dostępności (blokada dzienna)
 - /admin/punkty-odbioru — CRUD
 - /admin/ustawienia — settings
+- /admin/statystyki — zakres dat, kafelki, wykresy, top produkty, punkty, wyprzedania (owner)
 - /admin/zamowienia-specjalne — lista special_requests
 API:
 - /api/stripe/webhook (POST)
@@ -209,3 +219,20 @@ Nadawca: EMAIL_FROM (np. "AdjanoDeli <zamowienia@adjanodeli.pl>").
 - Natywne aplikacje mobilne (PWA w Fazie 3).
 - Płatność przy odbiorze.
 - Wielojęzyczność.
+
+## 13. Lojalność
+Każdy opłacony produkt (1 szt. = 1 pieczątka) daje pieczątkę. Pieczątki wygasają 60 dni po zdobyciu (rolling). Progi liczone z aktywnych (niewygasłych, nieskonsumowanych) pieczątek:
+- 10 pieczątek → voucher PCT10 (−10% na następne zamówienie),
+- 20 pieczątek → voucher PCT50 (−50% na następne zamówienie, max 40,00 zł rabatu),
+- 30 pieczątek → voucher ONE_GROSZ (najtańszy produkt w zamówieniu za 1 grosz), po czym wszystkie aktywne pieczątki są konsumowane (licznik startuje od zera).
+Voucher jest ważny 30 dni od wydania, jeden voucher na zamówienie, nie łączy się. Rabat liczony od subtotal_grosze; total po rabacie musi wynosić ≥ 200 gr (minimum Stripe dla PLN) — jeśli nie, UI prosi o dodanie produktu. Pieczątki naliczane w mark_order_paid. Anulowanie/zwrot zamówienia usuwa pieczątki z tego zamówienia i, jeśli voucher został użyty, przywraca go (jeśli nie wygasł).
+Tabele: loyalty_stamps (user_id, order_id, earned_at, expires_at, consumed_at null), loyalty_vouchers (user_id, type check in ('PCT10','PCT50','ONE_GROSZ'), issued_at, expires_at, used_order_id null, restored_from_order_id null). RLS: select własne; write tylko funkcje SECURITY DEFINER.
+Funkcje: loyalty_status(p_user) → {active_stamps, next_threshold, vouchers[]}; grant_stamps_for_order(p_order_id) (wołana z mark_order_paid; po dodaniu sprawdza progi i wydaje voucher — próg wydaje voucher tylko raz: zapamiętaj w loyalty_vouchers, że dla danego "cyklu" próg 10/20 był już wydany, przez kolumnę cycle_started_at na stamps lub prościej: voucher PCT10 wydawany, gdy liczba aktywnych = dokładnie 10 po naliczeniu, PCT50 gdy przekracza 20 pierwszy raz — rozwiąż to deterministycznie i opisz w komentarzu); create_order dostaje nowy parametr p_voucher_id uuid default null — waliduje voucher (własny, ważny, nieużyty), liczy discount_grosze, oznacza used_order_id; release/cancel przywraca.
+UI: /konto sekcja "Pieczątki": pasek 7/10, lista voucherów. W koszyku: "Masz voucher −10%" z przełącznikiem użycia. W menu (header) mały licznik pieczątek.
+Stripe: przy discount_grosze > 0 utwórz coupon (amount_off = discount_grosze, currency pln, duration once, name "Voucher AdjanoDeli") i przekaż w discounts.
+
+## 14. Stałe zamówienia
+Tabela standing_orders: user_id, name (np. "Moje śniadanie"), pickup_point_id, weekdays int[], items jsonb [{product_id, qty}], note, is_active, remind boolean default true. RLS: własne. Max 3 na użytkownika.
+Codziennie o 17:00 (Europe/Warsaw) cron wysyła e-mail "Zamówić jak zwykle na jutro?" do użytkowników, którzy mają aktywne standing_order obejmujące dzień tygodnia pierwszej dostępnej daty i NIE mają jeszcze opłaconego zamówienia na tę datę. Mail zawiera listę pozycji, sumę i przycisk "Zamawiam" → /zamow-jak-zwykle?s={id}&d={date} (wymaga logowania) → strona wypełnia koszyk (sprawdzając dostępność, pomijając niedostępne z informacją) i przekierowuje do /koszyk. Nie ma automatycznego obciążenia.
+Cron: Vercel Cron (vercel.json) → GET /api/cron/standing-reminders, Authorization Bearer CRON_SECRET. Harmonogram w UTC: 15:00 (czas letni) — dodaj komentarz o zmianie na 16:00 zimą albo zaplanuj dwa wpisy i w kodzie sprawdzaj, czy w Warszawie jest ~17:00 (tolerancja 30 min), żeby nie wysłać dwa razy.
+UI: /konto/stale-zamowienia — lista, tworzenie z aktualnego koszyka ("Zapisz jako stałe zamówienie" w koszyku po opłaceniu — na stronie zamówienia paid), edycja dni i punktu, włącz/wyłącz.

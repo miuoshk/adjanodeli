@@ -2,6 +2,8 @@ import { sendEmail } from "@/lib/email/resend";
 import { OrderPaidEmail } from "@/lib/email/templates/order-paid";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl, formatPrice, formatTimeRange } from "@/lib/format";
+import { voucherLabel, type VoucherType } from "@/lib/loyalty/discount";
+import { parseLoyaltyStatus } from "@/lib/loyalty/status";
 import { createClient } from "@/lib/supabase/admin";
 import type { Tables } from "@/lib/supabase/database.types";
 
@@ -46,6 +48,27 @@ export async function sendOrderPaid(orderId: string): Promise<{ ok: true } | { o
       return { ok: false };
     }
 
+    const [statusResult, issuedResult] = await Promise.all([
+      admin.rpc("loyalty_status", { p_user: order.user_id }),
+      admin
+        .from("loyalty_vouchers")
+        .select("type")
+        .eq("user_id", order.user_id)
+        .gte("issued_at", order.paid_at ?? new Date(0).toISOString()),
+    ]);
+
+    const stamps = parseLoyaltyStatus(statusResult.data);
+    const stampsLine = `Pieczątki: ${stamps?.active_stamps ?? 0}/10`;
+    const issuedTypes = (issuedResult.data ?? [])
+      .map((row) => row.type)
+      .filter((type): type is VoucherType =>
+        type === "PCT10" || type === "PCT50" || type === "ONE_GROSZ",
+      );
+    const newVoucherLine =
+      issuedTypes.length > 0
+        ? `Nowy voucher: ${issuedTypes.map((type) => voucherLabel(type)).join(", ")}.`
+        : null;
+
     return sendEmail({
       to: order.customer_email,
       subject: `Zamówienie #${order.order_number} — kod odbioru ${order.pickup_code}`,
@@ -64,6 +87,8 @@ export async function sendOrderPaid(orderId: string): Promise<{ ok: true } | { o
         })),
         total: formatPrice(order.total_grosze),
         ownerPhone: settingsResult.data?.owner_phone ?? null,
+        stampsLine,
+        newVoucherLine,
       }),
     });
   } catch (err) {

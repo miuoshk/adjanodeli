@@ -25,6 +25,7 @@ const ownerLinks = [
   { href: "/admin/produkty", label: "Produkty" },
   { href: "/admin/limity", label: "Limity" },
   { href: "/admin/punkty-odbioru", label: "Punkty odbioru" },
+  { href: "/admin/statystyki", label: "Statystyki" },
 ] as const;
 
 const specialLink = {

@@ -12,8 +12,11 @@ function isProtectedPath(pathname: string) {
     pathname.startsWith("/moje-zamowienia/") ||
     pathname === "/konto" ||
     pathname.startsWith("/konto/") ||
+    pathname === "/zamow-jak-zwykle" ||
+    pathname.startsWith("/zamow-jak-zwykle/") ||
     pathname === "/admin" ||
-    pathname.startsWith("/admin/")
+    pathname.startsWith("/admin/") ||
+    pathname.startsWith("/api/admin/")
   );
 }
 

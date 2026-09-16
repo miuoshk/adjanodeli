@@ -32,6 +32,7 @@ const schema = z.object({
   maxQtyPerItem: z.coerce.number().int().min(1, "Przynajmniej 1 szt."),
   ownerEmail: z.string().email("Podaj e-mail."),
   ownerPhone: z.string(),
+  customerCancellationEnabled: z.boolean(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -54,6 +55,7 @@ export function SettingsForm({ settings }: { settings: OwnerSettings }) {
       maxQtyPerItem: settings.max_qty_per_item,
       ownerEmail: settings.owner_email,
       ownerPhone: settings.owner_phone ?? "",
+      customerCancellationEnabled: settings.customer_cancellation_enabled,
     },
   });
 
@@ -226,6 +228,25 @@ export function SettingsForm({ settings }: { settings: OwnerSettings }) {
               <FormControl>
                 <Input {...field} type="number" min={1} className="min-h-12 text-base" />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="customerCancellationEnabled"
+          render={({ field }) => (
+            <FormItem>
+              <label className="flex min-h-12 items-center gap-3 text-sm leading-relaxed">
+                <input
+                  type="checkbox"
+                  checked={field.value}
+                  onChange={(event) => field.onChange(event.target.checked)}
+                  className="size-5 shrink-0"
+                />
+                Klient może anulować do cutoff dnia przed odbiorem
+              </label>
               <FormMessage />
             </FormItem>
           )}

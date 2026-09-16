@@ -1,4 +1,4 @@
-import { parseDateOnly, warsawDateIso } from "@/lib/dates";
+import { isoWeekday, parseDateOnly, warsawDateIso } from "@/lib/dates";
 import { createServerClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/supabase/database.types";
 
@@ -96,6 +96,7 @@ export type LimitCell = {
   isAvailable: boolean;
   hasOverride: boolean;
   overrideCap: number | null;
+  onSaleDay: boolean;
 };
 
 export type LimitsGrid = {
@@ -113,7 +114,7 @@ export async function getLimitsGrid(from: string): Promise<LimitsGrid> {
   const [productsResult, overridesResult, stockResult] = await Promise.all([
     supabase
       .from("products")
-      .select("id, name, daily_cap_default, sort_order, category_id, categories(name, sort_order)")
+      .select("id, name, daily_cap_default, sort_order, weekdays, category_id, categories(name, sort_order)")
       .eq("is_active", true)
       .order("sort_order"),
     supabase
@@ -134,6 +135,7 @@ export async function getLimitsGrid(from: string): Promise<LimitsGrid> {
     name: string;
     daily_cap_default: number;
     sort_order: number;
+    weekdays: number[];
     category_id: string | null;
     categories: CategoryJoin | CategoryJoin[] | null;
   }[])
@@ -148,6 +150,7 @@ export async function getLimitsGrid(from: string): Promise<LimitsGrid> {
         categorySort: category?.sort_order ?? 999,
         productSort: product.sort_order,
         dailyCapDefault: product.daily_cap_default,
+        weekdays: product.weekdays,
       };
     })
     .sort((a, b) => {
@@ -185,6 +188,7 @@ export async function getLimitsGrid(from: string): Promise<LimitsGrid> {
         isAvailable: override?.is_available ?? true,
         hasOverride: Boolean(override),
         overrideCap,
+        onSaleDay: product.weekdays.includes(isoWeekday(day)),
       };
     }
   }

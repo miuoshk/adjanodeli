@@ -8,10 +8,19 @@ import { toast } from "sonner";
 
 import { isoWeekday, parseDateOnly } from "@/lib/dates";
 import { formatDatePl, formatPrice, formatTimeRange } from "@/lib/format";
+import {
+  computeDiscount,
+  STRIPE_MIN_GROSZE,
+  voucherLabel,
+} from "@/lib/loyalty/discount";
+import { isCompleteInvoice, type InvoiceDefaults } from "@/lib/orders/invoice";
+import type { LoyaltyVoucher } from "@/lib/loyalty/status";
+import { isValidNip } from "@/lib/validation/nip";
 import { getAvailability, type ProductAvailability } from "@/lib/orders/availability";
 import { placeOrder } from "@/lib/orders/place-order";
 import { selectSubtotal, useCart, type CartItem } from "@/lib/store/cart";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -35,7 +44,19 @@ type CartViewProps = {
   pickupPoints: CartPickupPoint[];
   maxQtyPerItem: number;
   isLoggedIn: boolean;
+  vouchers: LoyaltyVoucher[];
+  invoiceDefaults: InvoiceDefaults | null;
 };
+
+function voucherRank(voucher: LoyaltyVoucher): number {
+  if (voucher.type === "ONE_GROSZ") {
+    return 3;
+  }
+  if (voucher.type === "PCT50") {
+    return 2;
+  }
+  return 1;
+}
 
 function remainingFor(
   availability: Map<string, ProductAvailability>,
@@ -56,6 +77,8 @@ export function CartView({
   pickupPoints,
   maxQtyPerItem,
   isLoggedIn,
+  vouchers,
+  invoiceDefaults,
 }: CartViewProps) {
   const [hydrated, setHydrated] = useState(false);
   const [availability, setAvailability] = useState<Map<string, ProductAvailability>>(
@@ -64,6 +87,13 @@ export function CartView({
   const [availabilityReady, setAvailabilityReady] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [wantInvoice, setWantInvoice] = useState(false);
+  const [invoiceNip, setInvoiceNip] = useState(invoiceDefaults?.nip ?? "");
+  const [invoiceCompany, setInvoiceCompany] = useState(invoiceDefaults?.company ?? "");
+  const [invoiceAddress, setInvoiceAddress] = useState(invoiceDefaults?.address ?? "");
+  const defaultVoucherId = [...vouchers].sort((a, b) => voucherRank(b) - voucherRank(a))[0]?.id ?? null;
+  const [useVoucher, setUseVoucher] = useState(vouchers.length > 0);
+  const [voucherId, setVoucherId] = useState<string | null>(defaultVoucherId);
 
   const items = useCart((state) => state.items);
   const day = useCart((state) => state.day);
@@ -134,6 +164,17 @@ export function CartView({
   const pointServesDay =
     selectedPoint && weekday !== null ? selectedPoint.weekdays.includes(weekday) : false;
 
+  const selectedVoucher = vouchers.find((voucher) => voucher.id === voucherId) ?? null;
+  const discountGrosze =
+    useVoucher && selectedVoucher
+      ? computeDiscount(
+          selectedVoucher.type,
+          items.map((item) => ({ unitPriceGrosze: item.unitPriceGrosze, qty: item.qty })),
+        )
+      : 0;
+  const payableGrosze = subtotal - discountGrosze;
+  const belowMinimum = useVoucher && discountGrosze > 0 && payableGrosze < STRIPE_MIN_GROSZE;
+
   const overstock = useMemo(() => {
     const issues = new Map<string, number>();
     if (!availabilityReady) {
@@ -148,6 +189,13 @@ export function CartView({
     return issues;
   }, [items, availability, availabilityReady]);
 
+  const invoiceOk = isCompleteInvoice({
+    requested: wantInvoice,
+    nip: invoiceNip,
+    company: invoiceCompany,
+    address: invoiceAddress,
+  });
+
   const canPay =
     items.length > 0 &&
     Boolean(day) &&
@@ -155,7 +203,9 @@ export function CartView({
     pointServesDay &&
     availabilityReady &&
     overstock.size === 0 &&
-    termsAccepted;
+    termsAccepted &&
+    !belowMinimum &&
+    invoiceOk;
 
   function handleDayChange(nextDay: string) {
     setDay(nextDay);
@@ -211,6 +261,13 @@ export function CartView({
         pickupDate: day,
         items: items.map((item) => ({ productId: item.productId, qty: item.qty })),
         note,
+        voucherId: useVoucher ? voucherId : null,
+        invoice: {
+          requested: wantInvoice,
+          nip: invoiceNip,
+          company: invoiceCompany,
+          address: invoiceAddress,
+        },
       });
 
       if (result.ok) {
@@ -394,10 +451,102 @@ export function CartView({
           />
           <p className="text-xs text-muted-foreground">{note.length}/200</p>
         </div>
+
+        <div className="space-y-3 rounded-xl border border-[var(--adj-cream-dark)] bg-card px-4 py-3">
+          <label className="flex items-start gap-3 text-sm leading-relaxed">
+            <input
+              type="checkbox"
+              checked={wantInvoice}
+              onChange={(event) => setWantInvoice(event.target.checked)}
+              className="mt-1 size-5 shrink-0"
+            />
+            <span>Chcę fakturę na firmę</span>
+          </label>
+          {wantInvoice ? (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="invoice-nip">NIP</Label>
+                <Input
+                  id="invoice-nip"
+                  value={invoiceNip}
+                  onChange={(event) => setInvoiceNip(event.target.value)}
+                  inputMode="numeric"
+                  className="h-12 min-h-12 text-base"
+                />
+                {invoiceNip.trim().length > 0 && !isValidNip(invoiceNip) ? (
+                  <p className="text-sm text-primary">NIP ma mieć 10 cyfr i poprawną sumę kontrolną.</p>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="invoice-company">Nazwa firmy</Label>
+                <Input
+                  id="invoice-company"
+                  value={invoiceCompany}
+                  onChange={(event) => setInvoiceCompany(event.target.value)}
+                  className="h-12 min-h-12 text-base"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="invoice-address">Adres</Label>
+                <textarea
+                  id="invoice-address"
+                  value={invoiceAddress}
+                  onChange={(event) => setInvoiceAddress(event.target.value)}
+                  className="min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                />
+              </div>
+            </div>
+          ) : null}
+        </div>
       </section>
 
       <div className="space-y-3">
-        <p className="text-lg font-medium">Suma: {formatPrice(subtotal)}</p>
+        {vouchers.length > 0 && selectedVoucher ? (
+          <div className="space-y-2 rounded-xl border border-[var(--adj-cream-dark)] bg-card px-4 py-3">
+            <label className="flex items-start gap-3 text-sm leading-relaxed">
+              <input
+                type="checkbox"
+                checked={useVoucher}
+                onChange={(event) => setUseVoucher(event.target.checked)}
+                className="mt-1 size-5 shrink-0"
+              />
+              <span>Masz voucher {voucherLabel(selectedVoucher.type)}</span>
+            </label>
+            {vouchers.length > 1 ? (
+              <Select
+                value={voucherId ?? undefined}
+                onValueChange={setVoucherId}
+                disabled={!useVoucher}
+              >
+                <SelectTrigger className="h-12 min-h-12 w-full text-base">
+                  <SelectValue placeholder="Wybierz voucher" />
+                </SelectTrigger>
+                <SelectContent>
+                  {vouchers.map((voucher) => (
+                    <SelectItem key={voucher.id} value={voucher.id}>
+                      {voucherLabel(voucher.type)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
+          </div>
+        ) : null}
+
+        {discountGrosze > 0 ? (
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">Suma: {formatPrice(subtotal)}</p>
+            <p className="text-sm text-muted-foreground">Rabat: −{formatPrice(discountGrosze)}</p>
+            <p className="text-lg font-medium">Do zapłaty: {formatPrice(payableGrosze)}</p>
+          </div>
+        ) : (
+          <p className="text-lg font-medium">Suma: {formatPrice(subtotal)}</p>
+        )}
+        {belowMinimum ? (
+          <p className="text-sm leading-relaxed text-primary">
+            Dodaj jeszcze produkt — po rabacie zamówienie musi mieć min. 2,00 zł.
+          </p>
+        ) : null}
         <p className="text-sm leading-relaxed text-muted-foreground">
           Płatność online: BLIK, przelew, karta. Odbiór za okazaniem kodu.
         </p>
@@ -426,9 +575,9 @@ export function CartView({
           </span>
         </label>
 
-        {overstock.size > 0 || dayExpired ? (
+        {overstock.size > 0 || dayExpired || belowMinimum ? (
           <Button type="button" size="lg" className="min-h-12 w-full text-base" disabled>
-            Przejdź do płatności · {formatPrice(subtotal)}
+            Przejdź do płatności · {formatPrice(payableGrosze)}
           </Button>
         ) : isLoggedIn ? (
           <Button
@@ -438,7 +587,7 @@ export function CartView({
             disabled={!canPay || isPending}
             onClick={handlePay}
           >
-            Przejdź do płatności · {formatPrice(subtotal)}
+            Przejdź do płatności · {formatPrice(payableGrosze)}
           </Button>
         ) : (
           <Button asChild size="lg" className="min-h-12 w-full text-base">

@@ -8,9 +8,15 @@ import { PayOrderButton } from "@/components/shop/pay-order-button";
 import { PaymentCheckPoll } from "@/components/shop/payment-check-poll";
 import { QrCode } from "@/components/shop/qr-code";
 import { ReorderButton } from "@/components/shop/reorder-button";
+import { CancelOrderButton } from "@/components/shop/cancel-order-button";
+import { SaveStandingOrderButton } from "@/components/shop/save-standing-order-button";
 import { requireUser } from "@/lib/auth";
 import { formatCutoff, parseDateOnly } from "@/lib/dates";
 import { formatDatePl, formatPrice, formatTimeRange } from "@/lib/format";
+import {
+  customerCancelDeadline,
+  formatCustomerCancelDeadline,
+} from "@/lib/orders/cancel-deadline";
 import { createServerClient } from "@/lib/supabase/server";
 import type { CartItem } from "@/lib/store/cart";
 import type { Tables } from "@/lib/supabase/database.types";
@@ -85,14 +91,19 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
   await requireUser(`/zamowienie/${id}`);
 
   const supabase = await createServerClient();
-  const [orderResult, datesResult, settingsResult] = await Promise.all([
+  const [orderResult, datesResult, settingsResult, standingCountResult] = await Promise.all([
     supabase
       .from("orders")
       .select("*, order_items(*), pickup_points(*)")
       .eq("id", id)
       .maybeSingle(),
     supabase.rpc("available_pickup_dates"),
-    supabase.from("settings").select("owner_phone").eq("id", 1).single(),
+    supabase
+      .from("settings")
+      .select("owner_phone, cutoff_time, customer_cancellation_enabled")
+      .eq("id", 1)
+      .single(),
+    supabase.from("standing_orders").select("id", { count: "exact", head: true }),
   ]);
 
   const order = orderResult.data as
@@ -112,6 +123,8 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
   const items = order.order_items ?? [];
   const firstDay = (datesResult.data ?? []).map((value) => value.slice(0, 10))[0] ?? null;
   const bakeryPhone = settingsResult.data?.owner_phone;
+  const cancelEnabled = settingsResult.data?.customer_cancellation_enabled ?? true;
+  const cutoffTime = settingsResult.data?.cutoff_time ?? "20:00";
   const waitingForWebhook =
     query.status === "success" && order.status === "pending_payment";
   const reorderItems = toCartItems(items);
@@ -126,6 +139,9 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
         firstDay={firstDay}
         bakeryPhone={bakeryPhone}
         reorderItems={reorderItems}
+        standingCount={standingCountResult.count ?? 0}
+        cancelEnabled={cancelEnabled}
+        cutoffTime={cutoffTime}
       />
     </div>
   );
@@ -138,6 +154,9 @@ function OrderStatusView({
   firstDay,
   bakeryPhone,
   reorderItems,
+  standingCount,
+  cancelEnabled,
+  cutoffTime,
 }: {
   order: OrderRow;
   point: PickupPointRow | null;
@@ -145,6 +164,9 @@ function OrderStatusView({
   firstDay: string | null;
   bakeryPhone: string | null | undefined;
   reorderItems: CartItem[];
+  standingCount: number;
+  cancelEnabled: boolean;
+  cutoffTime: string;
 }) {
   if (order.status === "pending_payment") {
     return (
@@ -161,7 +183,23 @@ function OrderStatusView({
     );
   }
 
-  if (order.status === "paid" || order.status === "in_production") {
+  if (order.status === "paid") {
+    return (
+      <PaidLikeView
+        heading={`Dziękujemy! Zamówienie #${order.order_number} jest opłacone.`}
+        order={order}
+        point={point}
+        items={items}
+        showJanosz
+        standingCount={standingCount}
+        cancelEnabled={cancelEnabled}
+        cutoffTime={cutoffTime}
+        bakeryPhone={bakeryPhone}
+      />
+    );
+  }
+
+  if (order.status === "in_production") {
     return (
       <PaidLikeView
         heading={`Dziękujemy! Zamówienie #${order.order_number} jest opłacone.`}
@@ -241,13 +279,30 @@ function PaidLikeView({
   point,
   items,
   showJanosz,
+  standingCount,
+  cancelEnabled,
+  cutoffTime,
+  bakeryPhone,
 }: {
   heading: string;
   order: OrderRow;
   point: PickupPointRow | null;
   items: OrderItemRow[];
   showJanosz: boolean;
+  standingCount?: number;
+  cancelEnabled?: boolean;
+  cutoffTime?: string;
+  bakeryPhone?: string | null;
 }) {
+  const deadlineLabel =
+    cancelEnabled && cutoffTime
+      ? formatCustomerCancelDeadline(order.pickup_date.slice(0, 10), cutoffTime)
+      : null;
+  const canCancel =
+    Boolean(cancelEnabled && cutoffTime) &&
+    Date.now() < customerCancelDeadline(order.pickup_date.slice(0, 10), cutoffTime ?? "20:00").getTime();
+  const phone = bakeryPhone?.trim();
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-semibold leading-tight">{heading}</h1>
@@ -260,6 +315,18 @@ function PaidLikeView({
       {point ? <PickupBlock point={point} pickupDate={order.pickup_date} /> : null}
       <OrderItems items={items} />
       <p className="text-lg font-medium">Suma: {formatPrice(order.total_grosze)}</p>
+      {standingCount !== undefined ? (
+        <SaveStandingOrderButton orderId={order.id} standingCount={standingCount} />
+      ) : null}
+      {cancelEnabled === undefined ? null : canCancel && deadlineLabel ? (
+        <CancelOrderButton orderId={order.id} deadlineLabel={deadlineLabel} />
+      ) : (
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          {deadlineLabel
+            ? `Anulowanie możliwe było do ${deadlineLabel}. Zadzwoń: ${phone || "piekarnia"}.`
+            : `Anulowanie jest wyłączone. Zadzwoń: ${phone || "piekarnia"}.`}
+        </p>
+      )}
       {showJanosz ? (
         <div className="flex flex-col items-center gap-3 pt-2 text-center">
           <Image

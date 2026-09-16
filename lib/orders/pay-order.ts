@@ -22,7 +22,12 @@ type OrderItemRow = Pick<
 
 type PayableOrder = Pick<
   Tables<"orders">,
-  "id" | "status" | "expires_at" | "customer_email" | "stripe_checkout_session_id"
+  | "id"
+  | "status"
+  | "expires_at"
+  | "customer_email"
+  | "stripe_checkout_session_id"
+  | "discount_grosze"
 > & {
   order_items: OrderItemRow[];
 };
@@ -68,7 +73,7 @@ export async function payOrder(orderId: string): Promise<PayOrderResult> {
   const { data } = await supabase
     .from("orders")
     .select(
-      "id, status, expires_at, customer_email, stripe_checkout_session_id, order_items(id, product_name, unit_price_grosze, qty)",
+      "id, status, expires_at, customer_email, stripe_checkout_session_id, discount_grosze, order_items(id, product_name, unit_price_grosze, qty)",
     )
     .eq("id", parsedId.data)
     .maybeSingle();
@@ -87,6 +92,17 @@ export async function payOrder(orderId: string): Promise<PayOrderResult> {
 
   try {
     const base = appUrl();
+    const discounts: { coupon: string }[] = [];
+    if (order.discount_grosze > 0) {
+      const coupon = await getStripe().coupons.create({
+        amount_off: order.discount_grosze,
+        currency: "pln",
+        duration: "once",
+        name: "Voucher AdjanoDeli",
+      });
+      discounts.push({ coupon: coupon.id });
+    }
+
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
       locale: "pl",
@@ -106,6 +122,7 @@ export async function payOrder(orderId: string): Promise<PayOrderResult> {
           product_data: { name: item.product_name },
         },
       })),
+      ...(discounts.length > 0 ? { discounts } : {}),
     });
 
     if (!session.url) {

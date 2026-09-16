@@ -3,10 +3,12 @@ import Link from "next/link";
 import { UserRound } from "lucide-react";
 
 import { getProfile } from "@/lib/auth";
+import { getLoyaltyStatus } from "@/lib/loyalty/status";
 import { HeaderCartLink } from "@/components/shop/header-cart-link";
 
 export async function SiteHeader() {
   const profile = await getProfile();
+  const loyalty = profile ? await getLoyaltyStatus(profile.id) : null;
   const firstName = profile?.full_name?.trim().split(/\s+/)[0];
   const isStaff = profile?.role === "staff" || profile?.role === "owner";
 
@@ -37,6 +39,16 @@ export async function SiteHeader() {
               className="flex min-h-12 items-center rounded-md px-2 text-sm font-medium hover:bg-black/10"
             >
               Panel
+            </Link>
+          ) : null}
+          {loyalty ? (
+            <Link
+              href="/konto"
+              className="flex min-h-12 min-w-12 flex-col items-center justify-center rounded-md px-1 text-xs font-medium hover:bg-black/10"
+              aria-label={`Pieczątki ${loyalty.active_stamps} z ${loyalty.next_threshold}`}
+            >
+              <span className="text-sm font-semibold leading-none">{loyalty.active_stamps}</span>
+              <span className="leading-none text-[10px] opacity-80">/{loyalty.next_threshold}</span>
             </Link>
           ) : null}
           <HeaderCartLink />

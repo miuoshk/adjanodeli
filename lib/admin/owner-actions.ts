@@ -53,6 +53,8 @@ export type ProductPayload = {
   dailyCapDefault: number;
   sortOrder: number;
   isActive: boolean;
+  isNew: boolean;
+  weekdays: number[];
   imagePath: string | null;
 };
 
@@ -74,6 +76,9 @@ function parseProductPayload(payload: ProductPayload) {
   }
   if (!Number.isInteger(payload.sortOrder)) {
     return { ok: false as const, message: "Kolejność ma być liczbą całkowitą." };
+  }
+  if (payload.weekdays.length === 0 || payload.weekdays.some((day) => day < 1 || day > 7)) {
+    return { ok: false as const, message: "Zaznacz przynajmniej jeden dzień." };
   }
   return { ok: true as const };
 }
@@ -102,6 +107,8 @@ export async function createProduct(payload: ProductPayload) {
       daily_cap_default: payload.dailyCapDefault,
       sort_order: payload.sortOrder,
       is_active: payload.isActive,
+      is_new: payload.isNew,
+      weekdays: [...payload.weekdays].sort((a, b) => a - b),
       image_path: payload.imagePath,
     })
     .select("id")
@@ -141,6 +148,8 @@ export async function updateProduct(id: string, payload: ProductPayload) {
       daily_cap_default: payload.dailyCapDefault,
       sort_order: payload.sortOrder,
       is_active: payload.isActive,
+      is_new: payload.isNew,
+      weekdays: [...payload.weekdays].sort((a, b) => a - b),
       image_path: payload.imagePath,
     })
     .eq("id", id);
@@ -342,6 +351,7 @@ export type SettingsPayload = {
   maxQtyPerItem: number;
   ownerEmail: string;
   ownerPhone: string;
+  customerCancellationEnabled: boolean;
 };
 
 export async function saveSettings(payload: SettingsPayload) {
@@ -385,6 +395,7 @@ export async function saveSettings(payload: SettingsPayload) {
       max_qty_per_item: payload.maxQtyPerItem,
       owner_email: payload.ownerEmail.trim(),
       owner_phone: payload.ownerPhone.trim() || null,
+      customer_cancellation_enabled: payload.customerCancellationEnabled,
     })
     .eq("id", 1);
 

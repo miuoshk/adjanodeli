@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 
+import { CopyInvoiceButton } from "@/components/admin/copy-invoice-button";
 import { OrderActions } from "@/components/admin/order-actions";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatusBadge } from "@/components/admin/status-badge";
@@ -55,6 +56,21 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
           <p className="font-heading text-2xl tracking-[0.2em] text-primary">{order.pickup_code}</p>
         ) : null}
         {order.note ? <p>Uwagi: {order.note}</p> : null}
+        {order.invoice_requested ? (
+          <div className="space-y-2 pt-2">
+            <p className="font-medium">Faktura na firmę</p>
+            {order.invoice_company ? <p>{order.invoice_company}</p> : null}
+            {order.invoice_nip ? <p>NIP: {order.invoice_nip}</p> : null}
+            {order.invoice_address ? <p className="whitespace-pre-wrap">{order.invoice_address}</p> : null}
+            {order.invoice_company && order.invoice_nip && order.invoice_address ? (
+              <CopyInvoiceButton
+                company={order.invoice_company}
+                nip={order.invoice_nip}
+                address={order.invoice_address}
+              />
+            ) : null}
+          </div>
+        ) : null}
         {stripeUrl ? (
           <p>
             <a href={stripeUrl} target="_blank" rel="noreferrer" className="underline-offset-4 hover:underline">

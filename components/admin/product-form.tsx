@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ALLERGENS, PRICE_RE, PRODUCT_TAGS, groszeToPriceInput, slugifyName } from "@/lib/admin/catalog";
+import { ALLERGENS, PRICE_RE, PRODUCT_TAGS, WEEKDAYS, groszeToPriceInput, slugifyName } from "@/lib/admin/catalog";
 import { createProduct, updateProduct } from "@/lib/admin/owner-actions";
 import type { OwnerCategory, OwnerProduct } from "@/lib/admin/owner-queries";
 import { productPublicUrl } from "@/lib/products/image";
@@ -39,6 +39,8 @@ const schema = z.object({
   dailyCapDefault: z.coerce.number().int().min(0, "Limit ≥ 0."),
   sortOrder: z.coerce.number().int("Kolejność ma być liczbą."),
   isActive: z.boolean(),
+  isNew: z.boolean(),
+  weekdays: z.array(z.number()).min(1, "Zaznacz przynajmniej jeden dzień."),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -71,6 +73,8 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       dailyCapDefault: product?.daily_cap_default ?? 20,
       sortOrder: product?.sort_order ?? 0,
       isActive: product?.is_active ?? true,
+      isNew: product?.is_new ?? false,
+      weekdays: product?.weekdays ?? [1, 2, 3, 4, 5, 6, 7],
     },
   });
 
@@ -343,6 +347,57 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="weekdays"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Dni sprzedaży</FormLabel>
+              <div className="flex flex-wrap gap-2">
+                {WEEKDAYS.map((day) => (
+                  <label
+                    key={day.value}
+                    className="flex min-h-12 items-center gap-2 rounded-md border border-[var(--adj-cream-dark)] bg-card px-3 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={field.value.includes(day.value)}
+                      onChange={(event) => {
+                        field.onChange(
+                          event.target.checked
+                            ? [...field.value, day.value]
+                            : field.value.filter((value) => value !== day.value),
+                        );
+                      }}
+                    />
+                    {day.label}
+                  </label>
+                ))}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="isNew"
+          render={({ field }) => (
+            <FormItem>
+              <label className="flex min-h-12 items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={field.value}
+                  onChange={(event) => field.onChange(event.target.checked)}
+                  className="size-4"
+                />
+                Nowość
+              </label>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

@@ -31,6 +31,7 @@ type ProductCardProps = {
   day: string;
   remaining: number;
   isAvailable: boolean;
+  isNew?: boolean;
   maxQtyPerItem: number;
 };
 
@@ -44,6 +45,7 @@ export function ProductCard({
   day,
   remaining,
   isAvailable,
+  isNew = false,
   maxQtyPerItem,
 }: ProductCardProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -127,6 +129,11 @@ export function ProductCard({
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex flex-wrap items-start gap-2">
           <h3 className="font-heading text-xl font-semibold leading-tight">{name}</h3>
+          {isNew ? (
+            <span className="rounded-full bg-[var(--adj-gold)] px-2 py-0.5 text-xs font-medium text-[var(--adj-ink)]">
+              Nowość
+            </span>
+          ) : null}
           {showRemaining ? (
             <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
               zostało {remaining}

@@ -20,6 +20,8 @@ type OrderPaidEmailProps = {
   items: OrderPaidItem[];
   total: string;
   ownerPhone: string | null;
+  stampsLine: string;
+  newVoucherLine: string | null;
 };
 
 export function OrderPaidEmail({
@@ -33,6 +35,8 @@ export function OrderPaidEmail({
   items,
   total,
   ownerPhone,
+  stampsLine,
+  newVoucherLine,
 }: OrderPaidEmailProps) {
   return (
     <EmailShell title="AdjanoDeli" ownerPhone={ownerPhone}>
@@ -69,6 +73,8 @@ export function OrderPaidEmail({
         ))}
       </table>
       <p style={{ margin: 0, fontWeight: 700 }}>Suma: {total}</p>
+      <p style={{ margin: "16px 0 0" }}>{stampsLine}</p>
+      {newVoucherLine ? <p style={{ margin: "8px 0 0" }}>{newVoucherLine}</p> : null}
     </EmailShell>
   );
 }

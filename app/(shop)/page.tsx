@@ -4,7 +4,7 @@ import { DayPicker } from "@/components/shop/day-picker";
 import { CategoryNav } from "@/components/shop/category-nav";
 import { MobileCartBar } from "@/components/shop/mobile-cart-bar";
 import { ProductCard } from "@/components/shop/product-card";
-import { formatCutoff, parseDateOnly } from "@/lib/dates";
+import { formatCutoff, isoWeekday, parseDateOnly } from "@/lib/dates";
 import { formatDatePl } from "@/lib/format";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 import { createServerClient } from "@/lib/supabase/server";
@@ -31,7 +31,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       supabase.from("categories").select("id, name, slug, sort_order").eq("is_active", true).order("sort_order"),
       supabase
         .from("products")
-        .select("id, category_id, name, description, allergens, price_grosze, image_path, daily_cap_default, sort_order")
+        .select("id, category_id, name, description, allergens, price_grosze, image_path, daily_cap_default, sort_order, weekdays, is_new")
         .eq("is_active", true)
         .order("sort_order"),
       supabase.from("settings").select("cutoff_time, max_qty_per_item").eq("id", 1).single(),
@@ -65,10 +65,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     const cutoff = formatCutoff(settingsResult.data?.cutoff_time ?? "20:00");
     const maxQtyPerItem = settingsResult.data?.max_qty_per_item ?? 15;
 
+    const dayWeekday = isoWeekday(selectedDay);
     const categoriesWithProducts = categories
       .map((category) => ({
         ...category,
-        products: products.filter((product) => product.category_id === category.id),
+        products: products.filter(
+          (product) =>
+            product.category_id === category.id && product.weekdays.includes(dayWeekday),
+        ),
       }))
       .filter((category) => category.products.length > 0);
 
@@ -119,6 +123,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                       day={selectedDay}
                       remaining={stock?.remaining ?? product.daily_cap_default}
                       isAvailable={stock?.is_available ?? true}
+                      isNew={Boolean(product.is_new)}
                       maxQtyPerItem={maxQtyPerItem}
                     />
                   );

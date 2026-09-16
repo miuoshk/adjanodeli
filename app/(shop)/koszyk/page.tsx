@@ -1,5 +1,7 @@
 import { CartView } from "@/components/shop/cart-view";
 import { getProfile } from "@/lib/auth";
+import { getLoyaltyStatus } from "@/lib/loyalty/status";
+import { parseInvoiceDefaults } from "@/lib/orders/invoice";
 import { createServerClient } from "@/lib/supabase/server";
 
 export default async function CartPage() {
@@ -16,6 +18,7 @@ export default async function CartPage() {
     getProfile(),
   ]);
 
+  const loyalty = profile ? await getLoyaltyStatus(profile.id) : null;
   const pickupDates = (datesResult.data ?? []).map((value) => value.slice(0, 10));
 
   return (
@@ -24,6 +27,8 @@ export default async function CartPage() {
       pickupPoints={pointsResult.data ?? []}
       maxQtyPerItem={settingsResult.data?.max_qty_per_item ?? 15}
       isLoggedIn={Boolean(profile)}
+      vouchers={loyalty?.vouchers ?? []}
+      invoiceDefaults={parseInvoiceDefaults(profile?.invoice_defaults)}
     />
   );
 }

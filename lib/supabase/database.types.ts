@@ -107,6 +107,115 @@ export type Database = {
           },
         ]
       }
+      loyalty_stamps: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          cycle_started_at: string
+          earned_at: string
+          expires_at: string
+          id: string
+          order_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          cycle_started_at: string
+          earned_at?: string
+          expires_at: string
+          id?: string
+          order_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          cycle_started_at?: string
+          earned_at?: string
+          expires_at?: string
+          id?: string
+          order_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_stamps_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_stamps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_vouchers: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          issued_at: string
+          restored_from_order_id: string | null
+          type: string
+          updated_at: string
+          used_order_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          issued_at?: string
+          restored_from_order_id?: string | null
+          type: string
+          updated_at?: string
+          used_order_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          issued_at?: string
+          restored_from_order_id?: string | null
+          type?: string
+          updated_at?: string
+          used_order_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_vouchers_restored_from_order_id_fkey"
+            columns: ["restored_from_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_vouchers_used_order_id_fkey"
+            columns: ["used_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_vouchers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_events: {
         Row: {
           actor: string | null
@@ -214,6 +323,10 @@ export type Database = {
           discount_grosze: number
           expires_at: string | null
           id: string
+          invoice_address: string | null
+          invoice_company: string | null
+          invoice_nip: string | null
+          invoice_requested: boolean
           note: string | null
           order_number: number
           paid_at: string | null
@@ -240,6 +353,10 @@ export type Database = {
           discount_grosze?: number
           expires_at?: string | null
           id?: string
+          invoice_address?: string | null
+          invoice_company?: string | null
+          invoice_nip?: string | null
+          invoice_requested?: boolean
           note?: string | null
           order_number?: never
           paid_at?: string | null
@@ -266,6 +383,10 @@ export type Database = {
           discount_grosze?: number
           expires_at?: string | null
           id?: string
+          invoice_address?: string | null
+          invoice_company?: string | null
+          invoice_nip?: string | null
+          invoice_requested?: boolean
           note?: string | null
           order_number?: never
           paid_at?: string | null
@@ -392,12 +513,14 @@ export type Database = {
           id: string
           image_path: string | null
           is_active: boolean
+          is_new: boolean
           name: string
           price_grosze: number
           slug: string
           sort_order: number
           tags: string[]
           updated_at: string
+          weekdays: number[]
         }
         Insert: {
           allergens?: string[]
@@ -408,12 +531,14 @@ export type Database = {
           id?: string
           image_path?: string | null
           is_active?: boolean
+          is_new?: boolean
           name: string
           price_grosze: number
           slug: string
           sort_order?: number
           tags?: string[]
           updated_at?: string
+          weekdays?: number[]
         }
         Update: {
           allergens?: string[]
@@ -424,12 +549,14 @@ export type Database = {
           id?: string
           image_path?: string | null
           is_active?: boolean
+          is_new?: boolean
           name?: string
           price_grosze?: number
           slug?: string
           sort_order?: number
           tags?: string[]
           updated_at?: string
+          weekdays?: number[]
         }
         Relationships: [
           {
@@ -447,6 +574,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          invoice_defaults: Json | null
           marketing_consent: boolean | null
           phone: string | null
           role: string
@@ -457,6 +585,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          invoice_defaults?: Json | null
           marketing_consent?: boolean | null
           phone?: string | null
           role?: string
@@ -467,6 +596,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          invoice_defaults?: Json | null
           marketing_consent?: boolean | null
           phone?: string | null
           role?: string
@@ -480,6 +610,7 @@ export type Database = {
           closed_dates: string[]
           created_at: string
           currency: string
+          customer_cancellation_enabled: boolean
           cutoff_time: string
           id: number
           max_days_ahead: number
@@ -495,6 +626,7 @@ export type Database = {
           closed_dates?: string[]
           created_at?: string
           currency?: string
+          customer_cancellation_enabled?: boolean
           cutoff_time?: string
           id: number
           max_days_ahead?: number
@@ -510,6 +642,7 @@ export type Database = {
           closed_dates?: string[]
           created_at?: string
           currency?: string
+          customer_cancellation_enabled?: boolean
           cutoff_time?: string
           id?: number
           max_days_ahead?: number
@@ -558,6 +691,63 @@ export type Database = {
         }
         Relationships: []
       }
+      standing_orders: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          items: Json
+          name: string
+          note: string | null
+          pickup_point_id: string
+          remind: boolean
+          updated_at: string
+          user_id: string
+          weekdays: number[]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          items: Json
+          name: string
+          note?: string | null
+          pickup_point_id: string
+          remind?: boolean
+          updated_at?: string
+          user_id: string
+          weekdays: number[]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          items?: Json
+          name?: string
+          note?: string | null
+          pickup_point_id?: string
+          remind?: boolean
+          updated_at?: string
+          user_id?: string
+          weekdays?: number[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "standing_orders_pickup_point_id_fkey"
+            columns: ["pickup_point_id"]
+            isOneToOne: false
+            referencedRelation: "pickup_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "standing_orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -566,21 +756,34 @@ export type Database = {
       available_pickup_dates: { Args: never; Returns: string[] }
       create_order: {
         Args: {
+          p_invoice?: Json
           p_items: Json
           p_note: string
           p_pickup_date: string
           p_pickup_point_id: string
+          p_voucher_id?: string
         }
         Returns: string
       }
+      customer_cancel_order: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
       expire_order: { Args: { p_order_id: string }; Returns: undefined }
       expire_pending_orders: { Args: never; Returns: number }
+      grant_stamps_for_order: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
       is_owner: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
+      is_valid_nip: { Args: { p_nip: string }; Returns: boolean }
+      loyalty_status: { Args: { p_user: string }; Returns: Json }
       mark_order_paid: {
         Args: { p_order_id: string; p_payment_intent_id: string }
         Returns: undefined
       }
+      mark_order_refunded: { Args: { p_order_id: string }; Returns: undefined }
       product_availability: {
         Args: { p_day: string }
         Returns: {
@@ -601,9 +804,75 @@ export type Database = {
         }[]
       }
       release_order_stock: { Args: { p_order_id: string }; Returns: undefined }
+      restore_loyalty_for_order: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
       set_order_status: {
         Args: { p_note: string; p_order_id: string; p_status: string }
         Returns: undefined
+      }
+      stats_by_pickup_point: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          order_count: number
+          pickup_point_id: string
+          point_name: string
+          revenue_grosze: number
+          uncollected_count: number
+          uncollected_pct: number
+        }[]
+      }
+      stats_orders_by_weekday: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          avg_orders: number
+          weekday: number
+        }[]
+      }
+      stats_require_owner_range: {
+        Args: { p_from: string; p_to: string }
+        Returns: undefined
+      }
+      stats_revenue_by_day: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          day: string
+          revenue_grosze: number
+        }[]
+      }
+      stats_sellout_alerts: {
+        Args: never
+        Returns: {
+          current_cap: number
+          product_id: string
+          product_name: string
+          sellout_days: number
+          suggested_cap: number
+        }[]
+      }
+      stats_summary: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          avg_order_grosze: number
+          order_count: number
+          returning_customers: number
+          revenue_grosze: number
+          uncollected_count: number
+          unique_customers: number
+        }[]
+      }
+      stats_top_products: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          product_id: string
+          product_name: string
+          qty: number
+          revenue_grosze: number
+          sale_days: number
+          sellout_days: number
+          sellout_pct: number
+        }[]
       }
       warsaw_now: { Args: never; Returns: string }
     }

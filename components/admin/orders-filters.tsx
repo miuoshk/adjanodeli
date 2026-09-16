@@ -12,6 +12,7 @@ type OrdersFiltersProps = {
   pointId: string;
   statuses: string[];
   q: string;
+  invoiceOnly: boolean;
 };
 
 const STATUS_OPTIONS = Object.keys(ORDER_STATUS_LABELS) as OrderStatus[];
@@ -23,6 +24,7 @@ export function OrdersFilters({
   pointId,
   statuses,
   q,
+  invoiceOnly,
 }: OrdersFiltersProps) {
   return (
     <form method="get" className="space-y-4 rounded-xl border border-[var(--adj-cream-dark)] bg-card p-4">
@@ -73,6 +75,16 @@ export function OrdersFilters({
           />
         </div>
       </div>
+      <label className="flex min-h-10 items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          name="faktura"
+          value="1"
+          defaultChecked={invoiceOnly}
+          className="size-4"
+        />
+        Z fakturą
+      </label>
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">Status</legend>
         <div className="flex flex-wrap gap-x-4 gap-y-2">

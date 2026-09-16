@@ -24,6 +24,7 @@ type Search = {
   status?: string | string[];
   q?: string;
   strona?: string;
+  faktura?: string;
 };
 
 type PageProps = {
@@ -33,6 +34,24 @@ type PageProps = {
 function parseStatuses(value: string | string[] | undefined): string[] {
   const raw = Array.isArray(value) ? value : value ? value.split(",") : [];
   return raw.filter((item) => isOrderStatus(item));
+}
+
+function buildExportHref(params: Search, day: string): string {
+  const next = new URLSearchParams();
+  next.set("dzien", day);
+  if (params.punkt) {
+    next.set("punkt", params.punkt);
+  }
+  for (const status of parseStatuses(params.status)) {
+    next.append("status", status);
+  }
+  if (params.q) {
+    next.set("q", params.q);
+  }
+  if (params.faktura === "1") {
+    next.set("faktura", "1");
+  }
+  return `/api/admin/orders/export?${next.toString()}`;
 }
 
 function buildPageHref(params: Search, page: number): string {
@@ -49,6 +68,9 @@ function buildPageHref(params: Search, page: number): string {
   }
   if (params.q) {
     next.set("q", params.q);
+  }
+  if (params.faktura === "1") {
+    next.set("faktura", "1");
   }
   if (page > 1) {
     next.set("strona", String(page));
@@ -74,12 +96,14 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
   const statuses = parseStatuses(params.status);
   const page = Math.max(1, Number.parseInt(params.strona ?? "1", 10) || 1);
 
+  const invoiceOnly = params.faktura === "1";
   const list = await getAdminOrderList({
     day,
     pointId: params.punkt || null,
     statuses,
     q: params.q ?? "",
     page,
+    invoiceOnly,
   });
 
   const pageCount = Math.max(1, Math.ceil(list.total / list.pageSize));
@@ -88,7 +112,13 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Zamówienia" />
+      <PageHeader title="Zamówienia">
+        {isOwner ? (
+          <Link href={buildExportHref(params, day)} className="min-h-12 underline-offset-4 hover:underline">
+            Eksport CSV
+          </Link>
+        ) : null}
+      </PageHeader>
       <OrdersFilters
         dates={dates}
         points={points}
@@ -96,6 +126,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
         pointId={params.punkt ?? ""}
         statuses={statuses}
         q={params.q ?? ""}
+        invoiceOnly={invoiceOnly}
       />
 
       {list.total === 0 ? (

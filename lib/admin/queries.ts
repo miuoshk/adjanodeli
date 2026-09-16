@@ -150,6 +150,7 @@ export type AdminOrderListFilters = {
   statuses: string[];
   q: string;
   page: number;
+  invoiceOnly: boolean;
 };
 
 export type AdminOrderListRow = {
@@ -224,6 +225,9 @@ export async function getAdminOrderList(
   }
   if (filters.statuses.length > 0) {
     query = query.in("status", filters.statuses);
+  }
+  if (filters.invoiceOnly) {
+    query = query.eq("invoice_requested", true);
   }
 
   const q = escapeIlike(filters.q);

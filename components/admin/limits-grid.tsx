@@ -66,6 +66,15 @@ export function LimitsGridView({ grid }: { grid: LimitsGrid }) {
                     if (!cell) {
                       return <td key={day} />;
                     }
+                    if (!cell.onSaleDay) {
+                      return (
+                        <td key={day} className="px-1 py-1">
+                          <div className="flex min-h-14 w-full items-center justify-center rounded-md bg-[var(--adj-cream)] text-muted-foreground opacity-60">
+                            —
+                          </div>
+                        </td>
+                      );
+                    }
                     return (
                       <td key={day} className="px-1 py-1">
                         <button
