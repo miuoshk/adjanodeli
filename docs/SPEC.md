@@ -9,8 +9,8 @@ Nazwa marki: AdjanoDeli. Brand nadrzędny: Adjano.
 - customer — zalogowany klient (e-mail OTP). Widzi menu, składa zamówienia, widzi swoje zamówienia.
 - staff — pracownik. Widzi listę paczek, zmienia statusy dostawy, wydaje po kodzie. Nie edytuje produktów ani ustawień.
 - owner — właścicielka. Wszystko, co staff, plus produkty, limity, punkty, ustawienia, anulowanie/zwroty, eksporty.
-Rola przechowywana w profiles.role. Domyślnie customer. Zmiana roli tylko przez SQL (nie ma UI do nadawania ról w Fazie 1), z wyjątkiem konta panelu admina (poniżej).
-Panel /admin ma osobne logowanie loginem i hasłem (/admin/logowanie). Sklep zostaje na OTP. Dane konta panelu: zmienne środowiskowe ADMIN_USERNAME, ADMIN_EMAIL, ADMIN_PASSWORD (hasła nie ma w repozytorium). Po zalogowaniu sesja Supabase z profiles.role = owner.
+Rola przechowywana w profiles.role. Domyślnie customer. Zmiana roli tylko przez SQL (nie ma UI do nadawania ról w Fazie 1).
+Panel /admin ma osobne logowanie loginem i hasłem (/admin/logowanie). Sklep zostaje na OTP. Login to e-mail konta staff/owner w Supabase albo część przed @. Hasło jest hasłem tego użytkownika w Auth. Po zalogowaniu sesja Supabase z profiles.role = staff albo owner.
 
 ## 3. Model danych (Postgres, schema public)
 Wszystkie tabele: id uuid primary key default gen_random_uuid(), created_at timestamptz default now(), updated_at timestamptz default now() (trigger set_updated_at). RLS enabled na każdej.
@@ -157,7 +157,7 @@ Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprze
 
 ## 8. Autoryzacja i RLS
 - Logowanie sklepu: Supabase Auth, e-mail OTP (6 cyfr), shouldCreateUser: true. Po pierwszym logowaniu, jeśli profiles.full_name jest null → przekierowanie na /konto/uzupelnij (imię, telefon).
-- Logowanie panelu /admin: /admin/logowanie, login + hasło (ADMIN_USERNAME / ADMIN_PASSWORD). Nie używa OTP. Niezalogowany na /admin/* → /admin/logowanie.
+- Logowanie panelu /admin: /admin/logowanie, login + hasło z konta staff/owner w Supabase Auth (funkcja admin_login_email). Nie używa OTP ani zmiennych ADMIN_*. Niezalogowany na /admin/* → /admin/logowanie.
 - Helper is_staff() returns boolean — true dla role in ('staff','owner'); is_owner() — role = 'owner'.
 - RLS:
   - profiles: select/update własny wiersz; staff select wszystkie.

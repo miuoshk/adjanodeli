@@ -753,6 +753,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_login_email: { Args: { p_login: string }; Returns: string }
       available_pickup_dates: { Args: never; Returns: string[] }
       create_order: {
         Args: {

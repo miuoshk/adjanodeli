@@ -1,13 +1,10 @@
 "use server";
 
-import { timingSafeEqual } from "node:crypto";
-
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { ensureAdminOwnerUser, getAdminLoginEnv } from "@/lib/admin/ensure-admin-user";
 import { requireUser } from "@/lib/auth";
 import { safeNextPath } from "@/lib/safe-next";
 import { createServerClient } from "@/lib/supabase/server";
@@ -53,15 +50,6 @@ function safeAdminNext(next?: string): string {
     return path;
   }
   return "/admin";
-}
-
-function usernameMatches(input: string, expected: string): boolean {
-  const left = Buffer.from(input.normalize("NFC"));
-  const right = Buffer.from(expected.normalize("NFC"));
-  if (left.length !== right.length) {
-    return false;
-  }
-  return timingSafeEqual(left, right);
 }
 
 function normalizePhone(phone: string | undefined): string | null {
@@ -190,25 +178,36 @@ export async function signOutAdmin() {
 }
 
 export async function signInAdmin(input: { username: string; password: string; next?: string }) {
-  const env = getAdminLoginEnv();
-  if (!env) {
-    return { error: "Panel nie jest skonfigurowany." };
-  }
-
-  const username = input.username.trim().toLowerCase();
-  if (!usernameMatches(username, env.username.toLowerCase())) {
+  const login = input.username.trim().toLowerCase();
+  if (!login || !input.password) {
     return { error: "Zły login albo hasło." };
   }
 
-  await ensureAdminOwnerUser();
-
   const supabase = await createServerClient();
+  const { data: email } = await supabase.rpc("admin_login_email", { p_login: login });
+  if (!email) {
+    return { error: "Zły login albo hasło." };
+  }
+
   const { error } = await supabase.auth.signInWithPassword({
-    email: env.email,
+    email,
     password: input.password,
   });
 
   if (error) {
+    return { error: "Zły login albo hasło." };
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle()
+    : { data: null };
+
+  if (profile?.role !== "staff" && profile?.role !== "owner") {
+    await supabase.auth.signOut();
     return { error: "Zły login albo hasło." };
   }
 
