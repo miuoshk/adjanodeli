@@ -1,12 +1,27 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/auth";
 import { safeNextPath } from "@/lib/safe-next";
 import { createServerClient } from "@/lib/supabase/server";
+
+async function appOrigin(): Promise<string> {
+  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  if (fromEnv) {
+    return fromEnv;
+  }
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+  const proto = requestHeaders.get("x-forwarded-proto") ?? "http";
+  if (host) {
+    return `${proto}://${host}`;
+  }
+  return "http://localhost:3000";
+}
 
 const emailSchema = z.string().trim().email("Podaj prawidłowy e-mail.");
 
@@ -49,7 +64,10 @@ export async function sendOtp(email: string) {
   const supabase = await createServerClient();
   const { error } = await supabase.auth.signInWithOtp({
     email: parsed.data,
-    options: { shouldCreateUser: true },
+    options: {
+      shouldCreateUser: true,
+      emailRedirectTo: `${await appOrigin()}/`,
+    },
   });
 
   if (error) {
