@@ -22,7 +22,6 @@ import { blockingLeadItem, cartEarliestDate } from "@/lib/orders/lead-time";
 import { placeOrder } from "@/lib/orders/place-order";
 import type { UnlockedPickupPoint } from "@/lib/pickup/unlock-point";
 import { selectSubtotal, useCart, type CartItem } from "@/lib/store/cart";
-import { PatternBackdrop } from "@/components/shop/bakery-pattern";
 import { UnlockPointForm } from "@/components/shop/unlock-point-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -392,16 +391,14 @@ export function CartView({
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center gap-6 py-8 text-center">
-        <PatternBackdrop className="rounded-2xl px-6 py-4">
-          <Image
-            src="/brand/janosz.png"
-            alt="Janosz"
-            width={220}
-            height={320}
-            className="h-auto w-[min(100%,220px)]"
-            priority
-          />
-        </PatternBackdrop>
+        <Image
+          src="/brand/janosz.png"
+          alt="Janosz"
+          width={220}
+          height={320}
+          className="h-auto w-[min(100%,220px)]"
+          priority
+        />
         <p className="font-heading text-2xl font-semibold">
           Koszyk jest pusty. Janosz czeka.
         </p>

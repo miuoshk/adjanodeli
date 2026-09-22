@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 
-import { PatternBackdrop, PatternFrame } from "@/components/shop/bakery-pattern";
+import { PatternFrame } from "@/components/shop/bakery-pattern";
 import { OrderCountdown } from "@/components/shop/order-countdown";
 import { PayOrderButton } from "@/components/shop/pay-order-button";
 import { PaymentCheckPoll } from "@/components/shop/payment-check-poll";
@@ -332,15 +332,13 @@ function PaidLikeView({
       )}
       {showJanosz ? (
         <div className="flex flex-col items-center gap-3 pt-2 text-center">
-          <PatternBackdrop className="rounded-2xl px-6 py-4">
-            <Image
-              src="/brand/janosz.png"
-              alt="Janosz"
-              width={180}
-              height={260}
-              className="h-auto w-[min(100%,180px)]"
-            />
-          </PatternBackdrop>
+          <Image
+            src="/brand/janosz.png"
+            alt="Janosz"
+            width={180}
+            height={260}
+            className="h-auto w-[min(100%,180px)]"
+          />
           <p className="text-sm">Janosz pakuje Twoje zamówienie.</p>
         </div>
       ) : null}

@@ -3,7 +3,6 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Briefcase, Clock, CookingPot } from "lucide-react";
 
-import { PatternBand } from "@/components/shop/bakery-pattern";
 import { CategoryTile } from "@/components/shop/category-tile";
 import { Button } from "@/components/ui/button";
 import { formatCutoff } from "@/lib/dates";
@@ -137,7 +136,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="bg-[var(--adj-cream)]">
+      <section>
         <div className="mx-auto grid max-w-5xl gap-8 px-4 py-10 sm:grid-cols-3">
           {facts.map((fact) => (
             <div key={fact.title} className="flex gap-3">
@@ -155,9 +154,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <PatternBand soft />
-
-      <section id="jak-to-dziala" className="scroll-mt-24 bg-[var(--adj-cream-dark)]/40">
+      <section id="jak-to-dziala" className="scroll-mt-24">
         <div className="mx-auto max-w-5xl px-4 py-12">
           <h2 className="font-heading text-3xl font-semibold">Jak to działa</h2>
           <ol className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -176,7 +173,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="bg-[var(--adj-cream)]">
+      <section>
         <div className="mx-auto max-w-5xl px-4 py-12">
           <h2 className="font-heading text-3xl font-semibold">Co pieczemy</h2>
           {tiles.length > 0 ? (
@@ -206,7 +203,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="bg-[var(--adj-cream)]">
+      <section>
         <div className="mx-auto grid max-w-5xl gap-8 px-4 py-12 md:grid-cols-2 md:items-center">
           <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-[var(--adj-cream-dark)]">
             <Image

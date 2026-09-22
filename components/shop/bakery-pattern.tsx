@@ -4,53 +4,29 @@ import { cn } from "@/lib/utils";
 
 const PATTERN_URL = "/brand/wzor-adjano-kafelek-przezroczysty.svg";
 
-function patternStyle(size: string): { backgroundImage: string; backgroundSize: string } {
-  return {
-    backgroundImage: `url(${PATTERN_URL})`,
-    backgroundSize: size,
-  };
-}
+const patternImage = {
+  backgroundImage: `url(${PATTERN_URL})`,
+} as const;
 
-export function PatternBand({
-  soft = false,
-  className,
-}: {
-  soft?: boolean;
-  className?: string;
-}) {
+export function PatternWash() {
   return (
-    <div aria-hidden className={cn("h-10 overflow-hidden bg-[var(--adj-cream)]", className)}>
-      <div
-        className={cn("h-full bg-repeat-x bg-center", soft ? "opacity-20" : "opacity-100")}
-        style={patternStyle("auto 220px")}
-      />
-    </div>
+    <div
+      aria-hidden
+      className="pointer-events-none fixed inset-0 -z-10 bg-cover bg-center bg-no-repeat"
+      style={{ ...patternImage, opacity: 0.06 }}
+    />
   );
 }
 
 export function PatternFrame({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("rounded-xl p-3", className)} style={patternStyle("320px auto")}>
-      <div className="rounded-lg bg-background px-4 py-5">{children}</div>
-    </div>
-  );
-}
-
-export function PatternBackdrop({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={cn("relative overflow-hidden", className)}>
+    <div className={cn("relative overflow-hidden rounded-xl p-3", className)}>
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-repeat opacity-20"
-        style={patternStyle("420px auto")}
+        className="absolute inset-0 bg-cover bg-center opacity-40"
+        style={patternImage}
       />
-      {children}
+      <div className="relative rounded-lg bg-background px-4 py-5">{children}</div>
     </div>
   );
 }

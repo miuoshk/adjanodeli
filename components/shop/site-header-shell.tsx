@@ -3,7 +3,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
-import { PatternBand } from "@/components/shop/bakery-pattern";
 import { cn } from "@/lib/utils";
 
 export function SiteHeaderShell({ children }: { children: ReactNode }) {
@@ -26,6 +25,8 @@ export function SiteHeaderShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, [isLanding]);
 
+  const overlay = isLanding && !scrolled;
+
   return (
     <header
       className={cn(
@@ -42,7 +43,10 @@ export function SiteHeaderShell({ children }: { children: ReactNode }) {
       >
         {children}
       </div>
-      {isLanding ? null : <PatternBand />}
+      <div
+        className={cn("h-px bg-[var(--adj-gold)]", overlay && "opacity-0")}
+        aria-hidden
+      />
     </header>
   );
 }
