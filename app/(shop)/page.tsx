@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Briefcase, Clock, CookingPot } from "lucide-react";
 
+import { PatternBand } from "@/components/shop/bakery-pattern";
 import { CategoryTile } from "@/components/shop/category-tile";
 import { Button } from "@/components/ui/button";
 import { formatCutoff } from "@/lib/dates";
@@ -153,6 +154,8 @@ export default async function LandingPage() {
           ))}
         </div>
       </section>
+
+      <PatternBand soft />
 
       <section id="jak-to-dziala" className="scroll-mt-24 bg-[var(--adj-cream-dark)]/40">
         <div className="mx-auto max-w-5xl px-4 py-12">

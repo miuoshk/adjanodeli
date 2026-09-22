@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 
+import { PatternBackdrop, PatternFrame } from "@/components/shop/bakery-pattern";
 import { OrderCountdown } from "@/components/shop/order-countdown";
 import { PayOrderButton } from "@/components/shop/pay-order-button";
 import { PaymentCheckPoll } from "@/components/shop/payment-check-poll";
@@ -308,7 +309,9 @@ function PaidLikeView({
       <h1 className="text-3xl font-semibold leading-tight">{heading}</h1>
       {order.pickup_code ? (
         <div className="space-y-4">
-          <PickupCode code={order.pickup_code} />
+          <PatternFrame>
+            <PickupCode code={order.pickup_code} />
+          </PatternFrame>
           <QrCode value={order.pickup_code} />
         </div>
       ) : null}
@@ -329,13 +332,15 @@ function PaidLikeView({
       )}
       {showJanosz ? (
         <div className="flex flex-col items-center gap-3 pt-2 text-center">
-          <Image
-            src="/brand/janosz.png"
-            alt="Janosz"
-            width={180}
-            height={260}
-            className="h-auto w-[min(100%,180px)]"
-          />
+          <PatternBackdrop className="rounded-2xl px-6 py-4">
+            <Image
+              src="/brand/janosz.png"
+              alt="Janosz"
+              width={180}
+              height={260}
+              className="h-auto w-[min(100%,180px)]"
+            />
+          </PatternBackdrop>
           <p className="text-sm">Janosz pakuje Twoje zamówienie.</p>
         </div>
       ) : null}
