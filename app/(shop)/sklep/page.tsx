@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 
-import { CategoryTile } from "@/components/shop/category-tile";
+import { SectionHeading } from "@/components/brand/section-heading";
+import { ShelfTile, SpecialOrderTile } from "@/components/brand/shelf-tile";
 import { DayPicker } from "@/components/shop/day-picker";
 import { MobileCartBar } from "@/components/shop/mobile-cart-bar";
 import { UnlockPointToast } from "@/components/shop/unlock-point-toast";
-import { parseDateOnly } from "@/lib/dates";
-import { formatDatePl } from "@/lib/format";
+import { formatCutoff, warsawDateIso } from "@/lib/dates";
 import { buildCategoryTiles } from "@/lib/shop/category-tiles";
+import { buildPickupCopy } from "@/lib/shop/pickup-copy";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -26,20 +27,20 @@ export const metadata: Metadata = {
   },
 };
 
+function shopPaused(title: string, description: string) {
+  return <SectionHeading as="h1" eyebrow="Sklep" title={title} description={description} />;
+}
+
 export default async function ShopPage({ searchParams }: ShopPageProps) {
   const params = await searchParams;
   if (!getSupabasePublicEnv()) {
-    return (
-      <p className="text-lg leading-relaxed">
-        Sklep chwilowo niedostępny. Wróć za chwilę.
-      </p>
-    );
+    return shopPaused("Sklep chwilowo niedostępny", "Wróć za chwilę.");
   }
 
   try {
     const supabase = await createServerClient();
 
-    const [datesResult, categoriesResult, productsResult] = await Promise.all([
+    const [datesResult, categoriesResult, productsResult, settingsResult] = await Promise.all([
       supabase.rpc("available_pickup_dates"),
       supabase
         .from("categories")
@@ -50,6 +51,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
         .from("products")
         .select("id, category_id, weekdays")
         .eq("is_active", true),
+      supabase.from("settings").select("cutoff_time").eq("id", 1).maybeSingle(),
     ]);
 
     const pickupDates = (datesResult.data ?? [])
@@ -57,15 +59,15 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
       .filter(Boolean);
 
     if (pickupDates.length === 0) {
-      return (
-        <p className="text-lg leading-relaxed">
-          Zamówienia chwilowo wstrzymane. Wróć wkrótce.
-        </p>
-      );
+      return shopPaused("Zamówienia chwilowo wstrzymane", "Wróć wkrótce.");
     }
 
     const selectedDay =
       params.dzien && pickupDates.includes(params.dzien) ? params.dzien : pickupDates[0];
+    const cutoff = settingsResult.data?.cutoff_time
+      ? formatCutoff(String(settingsResult.data.cutoff_time))
+      : "20:00";
+    const copy = buildPickupCopy(selectedDay, cutoff, warsawDateIso());
 
     const { data: availability } = await supabase.rpc("product_availability", {
       p_day: selectedDay,
@@ -79,46 +81,38 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
     );
 
     return (
-      <div className="space-y-6 pb-24 md:pb-0">
+      <div className="pb-24 md:pb-0">
         <UnlockPointToast name={params.odblokowano?.trim() || null} />
-        <DayPicker dates={pickupDates} selected={selectedDay} />
-        <h1 className="font-heading text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-          Co dziś pieczemy na {formatDatePl(parseDateOnly(selectedDay))}?
-        </h1>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Odbiór w Twoim miejscu pracy? Zapytaj w sekretariacie o kod AdjanoDeli.
+        <SectionHeading
+          as="h1"
+          eyebrow="Sklep"
+          title={copy.menuHeading}
+          description={copy.deadline}
+        />
+        <div className="mt-8">
+          <DayPicker dates={pickupDates} selected={selectedDay} />
+        </div>
+        <p className="adj-ui mt-4 text-[15px] text-[var(--adj-ink-soft)]">
+          Odbierasz w&nbsp;pracy? Kod od pracodawcy wpiszesz w&nbsp;koszyku.
         </p>
 
         {tiles.length > 0 ? (
-          <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
+          <ul className="mt-10 grid grid-cols-2 gap-x-4 gap-y-9 lg:grid-cols-4 lg:gap-x-8 lg:gap-y-14">
             {tiles.map((tile) => (
-              <li key={tile.id}>
-                <CategoryTile
-                  name={tile.name}
-                  slug={tile.slug}
-                  imagePath={tile.imagePath}
-                  productCount={tile.productCount}
-                  runningLow={tile.runningLow}
-                  hasPromo={tile.hasPromo}
-                  day={selectedDay}
-                />
-              </li>
+              <ShelfTile key={tile.id} tile={tile} day={selectedDay} />
             ))}
+            <SpecialOrderTile />
           </ul>
         ) : (
-          <p className="text-base leading-relaxed">Na ten dzień nic nie pieczemy.</p>
+          <p className="mt-10 max-w-[36em] text-lg text-[var(--adj-ink-soft)]">
+            Na ten dzień nic nie pieczemy. Wybierz inny dzień powyżej.
+          </p>
         )}
-
-        {/* TODO: sekcja "Zamów ponownie" — 3 ostatnio zamawiane produkty dla zalogowanych */}
 
         <MobileCartBar />
       </div>
     );
   } catch {
-    return (
-      <p className="text-lg leading-relaxed">
-        Sklep chwilowo niedostępny. Wróć za chwilę.
-      </p>
-    );
+    return shopPaused("Sklep chwilowo niedostępny", "Wróć za chwilę.");
   }
 }

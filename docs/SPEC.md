@@ -200,7 +200,7 @@ Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprze
 ## 6. Reguły biznesowe
 - Cutoff: settings.cutoff_time w Europe/Warsaw. Decyduje available_pickup_dates(), nigdy klient.
 - Każdy produkt ma efektywny lead_days = coalesce(products.lead_days, categories.lead_days). Zamówienie może mieć pickup_date nie wcześniejszą niż pierwsza dostępna data dla lead_days = max(lead_days pozycji w koszyku). Domyślnie 1 (na jutro). Kategoria "Torty" może mieć 2 (na pojutrze).
-- Cena efektywna produktu = promo_price_grosze, jeśli dziś ∈ [promo_from, promo_to], inaczej price_grosze. Snapshot ceny w order_items bierze cenę efektywną na moment zamówienia. Kod rabatowy i voucher lojalnościowy NIE łączą się — klient wybiera jeden. Rabat z kodu liczony od subtotal, ograniczony max_discount_grosze, total po rabacie ≥ 200 gr.
+- Cena efektywna produktu = promo_price_grosze, jeśli dziś ∈ [promo_from, promo_to], inaczej price_grosze. Snapshot ceny w order_items bierze cenę efektywną na moment zamówienia. Kod rabatowy i voucher lojalnościowy NIE łączą się — klient wybiera jeden. Rabat z kodu liczony od subtotal, ograniczony max_discount_grosze. Total zamówienia (także po rabacie) ≥ 200 gr — minimum Stripe dla PLN. Poniżej UI nie puszcza do płatności i prosi o dodanie produktu.
 - Limit dzienny per produkt. Menu pokazuje remaining; przy remaining <= 5 pokazuje "zostało N"; przy 0 produkt widoczny jako "wyprzedane na ten dzień", nie do dodania.
 - Ilość jednego produktu w zamówieniu <= settings.max_qty_per_item. Powyżej: link do formularza zamówienia specjalnego.
 - Zamówienie pending_payment żyje pending_order_ttl_minutes (30). Sesja Stripe Checkout ma expires_at = 30 minut.
@@ -286,6 +286,10 @@ API:
 - Mobile-first. Menu to lista kart produktów z ceną, opisem, "zostało N", przyciskiem +/-.
 - Ton tekstów: krótko, ciepło, konkretnie. Przykład dobry: "Zamów do 20:00, odbierz jutro w pracy." Przykład zły: "Odkryj wyjątkowe smaki tradycji w nowoczesnej odsłonie."
 - Maskotka Janosz (public/brand/janosz.png) tylko w: ekranie po opłaceniu ("Janosz pakuje Twoje zamówienie"), pustym koszyku, 404.
+- Cały sklep (wszystkie strony w app/(shop)) używa tego samego systemu co landing: papier --adj-cream z ziarnem, nagłówki Brygada 1918, etykiety/przyciski/liczby Archivo, header kremowy z paskiem najbliższego odbioru, stopka khaki.
+- Kształty: przyciski i pola 6 px promienia, karty i ramki 0–2 px (papier, nie „bańki”). Cienie tylko pod kartami „papierowymi” (etykieta, naklejka, kod odbioru).
+- Zdjęcia produktów (białe tło) zawsze z klasą adj-cutout na papierze, bez ramek i bez czarnych gradientów.
+- Janosz: ekran po opłaceniu, pusty koszyk, 404 (bez zmian).
 
 ## 11. E-maile (Resend, szablony w lib/email/templates/)
 - order-paid: temat "Zamówienie #{order_number} — kod odbioru {code}". Treść: kod dużą czcionką, QR (data URL), punkt, adres, okno godzinowe, data, lista pozycji, suma, telefon do piekarni.

@@ -344,7 +344,7 @@ export function PickupPointForm({ point }: { point?: OwnerPickupPoint }) {
                       {...field}
                       rows={3}
                       placeholder="mikolow.sr.gov.pl"
-                      className="min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                      className="min-h-24 w-full rounded-[6px] border border-[rgba(43,42,31,0.28)] bg-[var(--adj-paper-light)] px-4 py-3 text-base shadow-none outline-none placeholder:text-muted-foreground focus-visible:border-[var(--adj-khaki)] focus-visible:ring-[3px] focus-visible:ring-[var(--adj-gold)]/35"
                     />
                   </FormControl>
                   <p className="text-xs text-muted-foreground">Jedna domena na linię, bez @.</p>

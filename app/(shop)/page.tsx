@@ -112,7 +112,7 @@ export default async function LandingPage() {
   }
 
   return (
-    <div className="adj-landing">
+    <div>
       <LandingHero copy={copy} cutoff={pickup.cutoff} shop={shop} shopHref={shopHref} />
       {featured.length >= 2 ? (
         <LandingFeatured products={featured} copy={copy} shopHref={shopHref} />

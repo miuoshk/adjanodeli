@@ -4,15 +4,17 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { productPublicUrl } from "@/lib/products/image";
-
-import { formatDatePl, formatPrice } from "@/lib/format";
+import { LabelTag, tagTone } from "@/components/brand/label-tag";
+import { Price } from "@/components/brand/price";
+import { QtyStepper } from "@/components/brand/qty-stepper";
+import { formatDatePl } from "@/lib/format";
 import { parseDateOnly } from "@/lib/dates";
 import { useCart } from "@/lib/store/cart";
-import { tagBadgeClass } from "@/lib/shop/tag-color";
+import { nbsp } from "@/lib/typography";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -79,6 +81,7 @@ export function ProductCard({
   const soldOut = !tooEarly && (!isAvailable || remaining <= 0);
   const showRemaining = !soldOut && !tooEarly && remaining <= 5;
   const imageUrl = productPublicUrl(imagePath);
+  const muted = soldOut || tooEarly;
   const leadNote =
     leadDays > 1 && earliestDate
       ? `Na zamówienie — odbiór najwcześniej ${formatDatePl(parseDateOnly(earliestDate))}`
@@ -151,102 +154,73 @@ export function ProductCard({
   }
 
   return (
-    <article
-      className={`flex gap-3 rounded-xl border bg-card p-4 ${soldOut || tooEarly ? "opacity-55" : ""}`}
-    >
-      {imageUrl ? (
-        <div className="relative size-20 shrink-0 overflow-hidden rounded-lg sm:size-28">
+    <article className="group flex gap-4 md:flex-col md:gap-0">
+      <div className="relative size-[104px] shrink-0 overflow-hidden border-b border-[var(--adj-ink)] md:aspect-square md:size-auto">
+        {imageUrl ? (
           <Image
             src={imageUrl}
             alt=""
             fill
-            className="object-cover"
-            sizes="(max-width: 640px) 80px, 112px"
+            sizes="(min-width: 1024px) 30vw, (min-width: 768px) 45vw, 104px"
+            className={cn(
+              "adj-cutout object-contain object-bottom",
+              muted && "opacity-50 grayscale",
+            )}
           />
-        </div>
-      ) : null}
-      <div className="min-w-0 flex-1 space-y-1.5">
-        <div className="flex flex-wrap items-start gap-2">
-          <h3 className="font-heading text-xl font-semibold leading-tight">{name}</h3>
-          {isNew ? (
-            <span className="rounded-full bg-[var(--adj-gold)] px-2 py-0.5 text-xs font-medium text-[var(--adj-ink)]">
-              Nowość
-            </span>
-          ) : null}
-          {isPromo ? (
-            <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
-              Promocja
-            </span>
-          ) : null}
-          {tags.map((tag) => (
-            <span
-              key={tag.name}
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${tagBadgeClass(tag.color)}`}
-            >
-              {tag.name}
-            </span>
-          ))}
-          {showRemaining ? (
-            <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
-              zostało {remaining}
-            </span>
-          ) : null}
-        </div>
-        {description ? <p className="text-sm leading-relaxed">{description}</p> : null}
-        {allergens.length > 0 ? (
-          <p className="text-xs text-muted-foreground">zawiera: {allergens.join(", ")}</p>
         ) : null}
-        {isPromo && regularPriceGrosze != null && regularPriceGrosze > unitPriceGrosze ? (
-          <p className="flex flex-wrap items-baseline gap-2 pt-1">
-            <span className="text-base font-medium text-primary">{formatPrice(unitPriceGrosze)}</span>
-            <span className="text-sm text-muted-foreground line-through">{formatPrice(regularPriceGrosze)}</span>
-          </p>
-        ) : (
-          <p className="pt-1 text-base font-medium">{formatPrice(unitPriceGrosze)}</p>
-        )}
-        {leadNote ? <p className="text-sm leading-relaxed text-muted-foreground">{leadNote}</p> : null}
       </div>
-
-      <div className="flex shrink-0 items-start pt-0.5">
-        {tooEarly && earliestDate ? (
-          <Button type="button" variant="outline" className="min-h-12 max-w-36 text-sm" onClick={requestEarliest}>
-            Wybierz {formatDatePl(parseDateOnly(earliestDate))}
-          </Button>
-        ) : soldOut ? (
-          <p className="max-w-24 text-right text-sm text-muted-foreground">
-            wyprzedane na ten dzień
+      <div className="min-w-0 flex-1 md:mt-4">
+        <div className="flex flex-wrap gap-1.5">
+          {isNew ? <LabelTag tone="gold">Nowość</LabelTag> : null}
+          {isPromo ? <LabelTag tone="red">Promocja</LabelTag> : null}
+          {tags.map((tag) => (
+            <LabelTag key={tag.name} tone={tagTone(tag.color)}>
+              {tag.name}
+            </LabelTag>
+          ))}
+          {showRemaining ? <LabelTag tone="red">Zostało {remaining}</LabelTag> : null}
+        </div>
+        <h3 className="mt-2 font-heading text-[20px] leading-[1.15] font-medium md:text-[24px]">
+          {nbsp(displayName(name))}
+        </h3>
+        {description ? <ProductDescription text={description} /> : null}
+        {allergens.length > 0 ? (
+          <p className="adj-ui mt-2 text-[13px] text-[var(--adj-ink-soft)]">
+            Alergeny: {allergens.map((item) => item.toLocaleLowerCase("pl")).join(", ")}
           </p>
-        ) : qty === 0 ? (
-          <Button type="button" className="min-h-12 min-w-20" onClick={tryIncrease}>
-            Dodaj
-          </Button>
-        ) : (
-          <div className="flex items-center gap-1">
+        ) : null}
+        {leadNote ? <p className="mt-2 text-sm text-[var(--adj-ink-soft)] italic">{leadNote}</p> : null}
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <Price
+            grosze={unitPriceGrosze}
+            regularGrosze={isPromo ? regularPriceGrosze : undefined}
+          />
+          {tooEarly && earliestDate ? (
             <Button
               type="button"
               variant="outline"
-              size="icon"
-              className="size-12"
-              onClick={() => setQty(productId, qty - 1)}
-              aria-label="Zmniejsz ilość"
+              className="min-w-[112px]"
+              onClick={requestEarliest}
             >
-              <Minus className="size-4" />
+              Wybierz {formatDatePl(parseDateOnly(earliestDate))}
             </Button>
-            <span className="min-w-8 text-center text-base font-medium" aria-live="polite">
-              {qty}
-            </span>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="size-12"
-              onClick={tryIncrease}
-              aria-label="Zwiększ ilość"
-            >
-              <Plus className="size-4" />
+          ) : soldOut ? (
+            <p className="adj-ui text-right text-sm text-[var(--adj-ink-soft)]">
+              Wyprzedane na ten dzień
+            </p>
+          ) : qty === 0 ? (
+            <Button type="button" className="min-w-[112px]" onClick={tryIncrease}>
+              Dodaj
             </Button>
-          </div>
-        )}
+          ) : (
+            <QtyStepper
+              value={qty}
+              label={name}
+              onDecrease={() => setQty(productId, qty - 1)}
+              onIncrease={tryIncrease}
+            />
+          )}
+        </div>
       </div>
 
       <Dialog open={leadConfirmOpen} onOpenChange={setLeadConfirmOpen}>
@@ -295,5 +269,28 @@ export function ProductCard({
         </DialogContent>
       </Dialog>
     </article>
+  );
+}
+
+function displayName(name: string): string {
+  if (!name) {
+    return name;
+  }
+  return name.charAt(0).toLocaleUpperCase("pl") + name.slice(1);
+}
+
+function ProductDescription({ text }: { text: string }) {
+  const [head, ...rest] = text.split("\n");
+  const lines = rest.map((line) => line.trim()).filter(Boolean);
+
+  return (
+    <div className="mt-1.5 text-[15px] leading-[1.5] text-[var(--adj-ink-soft)] md:line-clamp-3">
+      {head ? <p>{nbsp(head)}</p> : null}
+      {lines.map((line) => (
+        <p key={line} className="adj-ui text-[13px]">
+          {nbsp(line)}
+        </p>
+      ))}
+    </div>
   );
 }

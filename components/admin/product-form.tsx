@@ -291,7 +291,7 @@ export function ProductForm({ categories, allergens, tags, product }: ProductFor
                 <textarea
                   {...field}
                   rows={3}
-                  className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-base"
+                  className="w-full rounded-[6px] border border-[rgba(43,42,31,0.28)] bg-[var(--adj-paper-light)] px-4 py-3 text-base shadow-none outline-none focus-visible:border-[var(--adj-khaki)] focus-visible:ring-[3px] focus-visible:ring-[var(--adj-gold)]/35"
                 />
               </FormControl>
               <FormMessage />

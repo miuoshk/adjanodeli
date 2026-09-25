@@ -92,7 +92,7 @@ export function SpecialRequestForm() {
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           placeholder="Co, ile, dla ilu osób"
-          className="min-h-32 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base"
+          className="min-h-24 w-full rounded-[6px] border border-[rgba(43,42,31,0.28)] bg-[var(--adj-paper-light)] px-4 py-3 text-base shadow-none outline-none placeholder:text-muted-foreground focus-visible:border-[var(--adj-khaki)] focus-visible:ring-[3px] focus-visible:ring-[var(--adj-gold)]/35"
         />
       </div>
       <Button type="submit" className="min-h-12" disabled={saving}>

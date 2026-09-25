@@ -2,14 +2,17 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { CategoryTile } from "@/components/shop/category-tile";
+import { SectionHeading } from "@/components/brand/section-heading";
+import { ShelfTile } from "@/components/brand/shelf-tile";
 import { DayPicker } from "@/components/shop/day-picker";
 import { MobileCartBar } from "@/components/shop/mobile-cart-bar";
 import { ProductCard } from "@/components/shop/product-card";
-import { isoWeekday } from "@/lib/dates";
+import { formatCutoff, isoWeekday, warsawDateIso } from "@/lib/dates";
 import { buildCategoryTiles } from "@/lib/shop/category-tiles";
+import { buildPickupCopy } from "@/lib/shop/pickup-copy";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 import { createServerClient } from "@/lib/supabase/server";
+import { nbsp } from "@/lib/typography";
 
 type CategoryPageProps = {
   params: Promise<{ kategoria: string }>;
@@ -64,9 +67,12 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
 
   if (!getSupabasePublicEnv()) {
     return (
-      <p className="text-lg leading-relaxed">
-        Sklep chwilowo niedostępny. Wróć za chwilę.
-      </p>
+      <SectionHeading
+        as="h1"
+        eyebrow="Sklep"
+        title="Sklep chwilowo niedostępny"
+        description="Wróć za chwilę."
+      />
     );
   }
 
@@ -96,7 +102,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       )
       .eq("is_active", true)
       .order("sort_order"),
-    supabase.from("settings").select("max_qty_per_item").eq("id", 1).maybeSingle(),
+    supabase.from("settings").select("max_qty_per_item, cutoff_time").eq("id", 1).maybeSingle(),
     supabase.from("product_tags").select("name, color"),
   ]);
 
@@ -106,9 +112,12 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
 
   if (pickupDates.length === 0) {
     return (
-      <p className="text-lg leading-relaxed">
-        Zamówienia chwilowo wstrzymane. Wróć wkrótce.
-      </p>
+      <SectionHeading
+        as="h1"
+        eyebrow="Sklep"
+        title="Zamówienia chwilowo wstrzymane"
+        description="Wróć wkrótce."
+      />
     );
   }
 
@@ -116,6 +125,10 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     query.dzien && pickupDates.includes(query.dzien) ? query.dzien : pickupDates[0];
   const dayWeekday = isoWeekday(selectedDay);
   const maxQtyPerItem = settingsResult.data?.max_qty_per_item ?? 15;
+  const cutoff = settingsResult.data?.cutoff_time
+    ? formatCutoff(String(settingsResult.data.cutoff_time))
+    : "20:00";
+  const copy = buildPickupCopy(selectedDay, cutoff, warsawDateIso());
 
   const { data: availability } = await supabase.rpc("product_availability", {
     p_day: selectedDay,
@@ -135,26 +148,30 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   );
 
   return (
-    <div className="space-y-6 pb-24 md:pb-0">
-      <nav className="text-sm text-muted-foreground">
-        <Link href={`/sklep?dzien=${selectedDay}`} className="underline-offset-4 hover:underline">
+    <div className="pb-24 md:pb-0">
+      <nav className="adj-ui text-[14px] text-[var(--adj-ink-soft)]">
+        <Link href={`/sklep?dzien=${selectedDay}`} className="hover:text-[var(--adj-ink)]">
           Sklep
         </Link>
-        <span aria-hidden> › </span>
-        <span className="text-foreground">{category.name}</span>
+        {" / "}
+        <span className="text-[var(--adj-ink)]">{nbsp(category.name)}</span>
       </nav>
 
-      <div className="space-y-2">
-        <h1 className="font-heading text-3xl font-semibold leading-tight">{category.name}</h1>
-        {category.description ? (
-          <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">{category.description}</p>
-        ) : null}
+      <div className="mt-6">
+        <SectionHeading
+          as="h1"
+          eyebrow={copy.longDate ?? undefined}
+          title={nbsp(category.name)}
+          description={category.description}
+        />
       </div>
 
-      <DayPicker dates={pickupDates} selected={selectedDay} basePath={`/sklep/${category.slug}`} />
+      <div className="mt-8">
+        <DayPicker dates={pickupDates} selected={selectedDay} basePath={`/sklep/${category.slug}`} />
+      </div>
 
       {products.length > 0 ? (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="mt-10 grid gap-y-8 md:grid-cols-2 md:gap-x-8 md:gap-y-12 lg:grid-cols-3">
           {products.map((product) => {
             const stock = availabilityByProduct.get(product.id);
             return (
@@ -184,26 +201,15 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
           })}
         </div>
       ) : (
-        <p className="text-base leading-relaxed">Na ten dzień nic z tej kategorii.</p>
+        <p className="mt-10 text-lg text-[var(--adj-ink-soft)]">Na ten dzień nic z tej kategorii.</p>
       )}
 
       {otherTiles.length > 0 ? (
-        <section className="space-y-3">
-          <h2 className="font-heading text-2xl font-semibold">Inne kategorie</h2>
-          <ul className="grid grid-cols-3 gap-2 md:grid-cols-4">
+        <section className="mt-20 border-t border-[var(--adj-ink)] pt-10">
+          <SectionHeading as="h2" title="Inne kategorie" />
+          <ul className="mt-6 grid grid-cols-3 gap-3 md:grid-cols-4 lg:grid-cols-6">
             {otherTiles.map((tile) => (
-              <li key={tile.id}>
-                <CategoryTile
-                  name={tile.name}
-                  slug={tile.slug}
-                  imagePath={tile.imagePath}
-                  productCount={tile.productCount}
-                  runningLow={tile.runningLow}
-                  hasPromo={tile.hasPromo}
-                  day={selectedDay}
-                  compact
-                />
-              </li>
+              <ShelfTile key={tile.id} tile={tile} day={selectedDay} compact />
             ))}
           </ul>
         </section>

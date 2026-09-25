@@ -17,7 +17,7 @@ export function HeaderCartLink() {
     >
       <ShoppingCart className="size-6" strokeWidth={1.75} />
       {totalQty > 0 ? (
-        <Badge className="absolute -top-0.5 -right-0.5 size-5 justify-center rounded-full bg-primary px-0 text-[11px] text-primary-foreground">
+        <Badge className="adj-ui absolute -top-0.5 -right-0.5 size-5 justify-center rounded-full border-0 bg-[var(--adj-red)] px-0 text-[11px] tracking-normal text-[var(--adj-cream)] normal-case">
           {totalQty}
         </Badge>
       ) : null}

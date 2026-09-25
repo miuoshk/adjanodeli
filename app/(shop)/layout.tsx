@@ -1,4 +1,3 @@
-import { PatternWash } from "@/components/shop/bakery-pattern";
 import { SiteFooter } from "@/components/shop/site-footer";
 import { ShopMain } from "@/components/shop/shop-main";
 import { SiteHeader } from "@/components/shop/site-header";
@@ -13,8 +12,7 @@ export default function ShopLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="isolate flex min-h-screen flex-col">
-      <PatternWash />
+    <div className="adj-landing isolate flex min-h-screen flex-col">
       <SiteHeader />
       <ShopMain>{children}</ShopMain>
       <SiteFooter />

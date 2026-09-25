@@ -50,11 +50,11 @@ export async function SiteHeader() {
         {loyalty ? (
           <Link
             href="/konto"
-            className="flex min-h-12 min-w-12 flex-col items-center justify-center rounded-md px-1 text-xs font-medium hover:bg-black/10"
+            className="inline-flex size-10 items-center justify-center rounded-full border border-dashed border-[var(--adj-red)] text-[13px] font-semibold text-[var(--adj-red)] adj-ui"
+            title={`Pieczątki ${loyalty.active_stamps} z ${loyalty.next_threshold}`}
             aria-label={`Pieczątki ${loyalty.active_stamps} z ${loyalty.next_threshold}`}
           >
-            <span className="text-sm font-semibold leading-none">{loyalty.active_stamps}</span>
-            <span className="leading-none text-[10px] opacity-80">/{loyalty.next_threshold}</span>
+            {loyalty.active_stamps}
           </Link>
         ) : null}
         <HeaderCartLink />
