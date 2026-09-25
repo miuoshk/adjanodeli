@@ -3,6 +3,7 @@
 import { z } from "zod";
 
 import { requireUser } from "@/lib/auth";
+import { STRIPE_MIN_GROSZE } from "@/lib/loyalty/discount";
 import { getStripe } from "@/lib/stripe/client";
 import { createClient } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
@@ -90,6 +91,17 @@ export async function payOrder(orderId: string): Promise<PayOrderResult> {
     }
   }
 
+  const payableGrosze =
+    order.order_items.reduce((sum, item) => sum + item.unit_price_grosze * item.qty, 0) -
+    order.discount_grosze;
+  if (payableGrosze < STRIPE_MIN_GROSZE) {
+    return {
+      ok: false,
+      code: "UNKNOWN",
+      message: "Zamówienie musi mieć min. 2,00 zł, inaczej płatność się nie otworzy.",
+    };
+  }
+
   try {
     const base = appUrl();
     const discounts: { coupon: string }[] = [];
@@ -140,7 +152,8 @@ export async function payOrder(orderId: string): Promise<PayOrderResult> {
     }
 
     return { ok: true, url: session.url };
-  } catch {
+  } catch (error) {
+    console.error("[PAY]", order.id, error);
     return { ok: false, code: "UNKNOWN", message: "Nie udało się otworzyć płatności." };
   }
 }
