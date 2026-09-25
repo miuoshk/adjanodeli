@@ -34,7 +34,7 @@ export default function TermsPage() {
       <section className="space-y-2">
         <h2 className="font-heading text-2xl font-semibold">Płatność</h2>
         <p>
-          Płatność jest z góry, online przez Stripe. Dostępne metody: BLIK, Przelewy24 i karta.
+          Płatność jest z góry, online przez Stripe. Dostępne metody: BLIK, karta, Apple Pay i Google Pay.
           Zamówienie nieopłacone w czasie sesji płatności wygasa i nie jest realizowane.
         </p>
       </section>

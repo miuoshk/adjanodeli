@@ -107,7 +107,7 @@ export async function payOrder(orderId: string): Promise<PayOrderResult> {
       mode: "payment",
       locale: "pl",
       currency: "pln",
-      payment_method_types: ["blik", "p24", "card"],
+      payment_method_types: ["blik", "card"],
       customer_email: order.customer_email,
       client_reference_id: order.id,
       metadata: { order_id: order.id },

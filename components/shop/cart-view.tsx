@@ -736,7 +736,7 @@ export function CartView({
           </p>
         ) : null}
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Płatność online: BLIK, przelew, karta. Odbiór za okazaniem kodu.
+          Płatność online: BLIK, karta, Apple Pay albo Google Pay. Odbiór za okazaniem kodu.
         </p>
 
         <label className="flex items-start gap-3 text-sm leading-relaxed">

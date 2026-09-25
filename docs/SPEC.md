@@ -210,7 +210,7 @@ Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprze
 - Punkt "restricted" jest widoczny i wybieralny wyłącznie dla użytkowników z wpisem w pickup_point_access. Wpis powstaje: (a) po wpisaniu poprawnego access_code (funkcja unlock_pickup_point(code) SECURITY DEFINER, zwraca punkt; limit 5 prób / 15 min per user — licz w tabeli pickup_point_unlock_attempts), (b) automatycznie przy logowaniu, jeśli domena e-maila użytkownika ∈ allowed_email_domains któregoś punktu (trigger na profiles insert + funkcja sync_domain_access(user_id) wołana przy logowaniu), (c) ręcznie przez ownera. Zmiana access_code nie odbiera dostępu już przyznanego. Owner może cofnąć dostęp pojedynczej osobie lub "wszystkim z kodu" (usuwa wpisy granted_via='code'). create_order przy braku dostępu raise 'POINT_FORBIDDEN'.
 
 ## 7. Płatności (Stripe)
-- Stripe Checkout, mode: payment, currency pln, payment_method_types: ['blik','p24','card'], locale 'pl'.
+- Stripe Checkout, mode: payment, currency pln, payment_method_types: ['blik','card'], locale 'pl'. Apple Pay i Google Pay idą z kartą (portfele), nie jako osobne typy.
 - line_items: jedna pozycja per order_item (name, unit_amount = unit_price_grosze, quantity). Jeśli discount_grosze > 0 (Faza 2): coupon amount_off tworzony ad hoc.
 - metadata: { order_id }. client_reference_id = order_id. expires_at = now + 30 min.
 - success_url: /zamowienie/{order_id}?status=success, cancel_url: /koszyk?cancelled=1.
