@@ -1,29 +1,28 @@
-import Image from "next/image";
 import Link from "next/link";
 import { UserRound } from "lucide-react";
 
-import { getProfile } from "@/lib/auth";
-import { getLoyaltyStatus } from "@/lib/loyalty/status";
+import { LandingStrip } from "@/components/landing/landing-strip";
 import { HeaderCartLink } from "@/components/shop/header-cart-link";
+import { HeaderLogo } from "@/components/shop/header-logo";
+import { LandingNavLinks } from "@/components/shop/landing-nav-links";
 import { SiteHeaderShell } from "@/components/shop/site-header-shell";
+import { getProfile } from "@/lib/auth";
+import { warsawDateIso } from "@/lib/dates";
+import { getLoyaltyStatus } from "@/lib/loyalty/status";
+import { getPickupBasics } from "@/lib/shop/landing-data";
+import { buildPickupCopy } from "@/lib/shop/pickup-copy";
 
 export async function SiteHeader() {
   const profile = await getProfile();
   const loyalty = profile ? await getLoyaltyStatus(profile.id) : null;
+  const pickup = await getPickupBasics();
+  const copy = buildPickupCopy(pickup.day, pickup.cutoff, warsawDateIso());
   const firstName = profile?.full_name?.trim().split(/\s+/)[0];
   const isStaff = profile?.role === "staff" || profile?.role === "owner";
 
   return (
-    <SiteHeaderShell>
-      <Link href="/" className="relative block h-9 w-[120px] shrink-0">
-        <Image
-          src="/brand/adjano-logo.png"
-          alt="Adjano"
-          fill
-          className="object-contain object-left"
-          priority
-        />
-      </Link>
+    <SiteHeaderShell announcement={<LandingStrip copy={copy} cutoff={pickup.cutoff} />}>
+      <HeaderLogo />
       <div className="flex min-w-0 items-center gap-2">
         <Link
           href="/sklep"
@@ -31,6 +30,7 @@ export async function SiteHeader() {
         >
           Sklep
         </Link>
+        <LandingNavLinks />
         {profile ? (
           <Link
             href="/moje-zamowienia"

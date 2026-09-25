@@ -235,7 +235,7 @@ Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprze
 
 ## 9. Routing (App Router)
 Sklep, grupa (shop):
-- / — strona wizytówka (landing): hero z kamienicą, jak to działa, kategorie, o nas, CTA do sklepu
+- / — strona wizytówka (landing): pasek z najbliższym dniem odbioru, hero z produktami, menu na najbliższy dzień odbioru (kafle kategorii z ceną „od”), jak to działa w 3 krokach + punkty odbioru (tylko publiczne + informacja o punktach na kod), o nas ze zdjęciami z pieca, CTA na wzorze Adjano.
 - /sklep — kafelki kategorii + (opcjonalnie) sekcja "Popularne dziś"; dzień docelowy u góry (?dzien=YYYY-MM-DD)
 - /sklep/[kategoria] — lista produktów jednej kategorii, day-picker, inne kategorie; 404 dla nieznanego sluga
 - /koszyk — koszyk + wybór punktu odbioru + dnia + uwagi → "Przejdź do płatności"
@@ -277,7 +277,10 @@ API:
   --adj-red-dark: #9E1116 (hover)
   --adj-gold: #B8975A (cienkie linie, ozdobniki — jak złota linia na opakowaniu)
   --adj-ink: #2B2A1F (tekst)
-- Fonty (next/font/google): nagłówki Cormorant Garamond (600/700), tekst Inter (400/500/600). Logotyp "Adjano" wyłącznie jako obraz (public/brand/adjano-logo.svg lub .png), nigdy jako tekst w foncie script.
+  --adj-paper-light: #FBF7EE (karty i naklejka na landingu)
+  --adj-ink-soft: #57553E (tekst drugorzędny, kontrast ≥ 5.7:1 na kremie)
+  --adj-gold-light: #D4BC85 (etykiety w stopce na khaki)
+- Fonty (next/font/google): nagłówki i tekst landingu Brygada 1918 (zmienna, normal + italic), etykiety i przyciski landingu Archivo (oś wdth), tekst aplikacji Inter (400/500/600). Logotyp "Adjano" wyłącznie jako obraz (public/brand/adjano-logo*.png|svg), nigdy jako tekst w foncie script.
 - Rozmiar bazowy tekstu 16px, na mobile przyciski min. 48px wysokości. Użytkownicy to często osoby 45+, na telefonie, w pracy — czytelność ważniejsza niż efekt.
 - Mobile-first. Menu to lista kart produktów z ceną, opisem, "zostało N", przyciskiem +/-.
 - Ton tekstów: krótko, ciepło, konkretnie. Przykład dobry: "Zamów do 20:00, odbierz jutro w pracy." Przykład zły: "Odkryj wyjątkowe smaki tradycji w nowoczesnej odsłonie."

@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adjano — landing v4 (wzorzec)</title>
+<!-- Fonty w aplikacji: next/font/google (Brygada 1918 + Archivo z osią wdth), patrz docs/design/prompts/01-landing.md -->
+<link rel="stylesheet" href="reference.css">
+<style>body{margin:0;background:#F1EADB}</style>
+</head>
+<body>
+<!--
+  WZORZEC WIZUALNY landingu v4. Nie importować do aplikacji.
+  Przenieść 1:1 do Next.js zgodnie z docs/design/prompts/01-landing.md.
+  Data (poniedziałek, 28 września), ceny i liczby pozycji są przykładowe — w aplikacji idą z bazy.
+  Szerokość < 820px w tym pliku = układ telefonu (w aplikacji: breakpointy Tailwind, mobile-first).
+-->
+<div class="adj">
+
+  <div class="strip">
+    <div class="wrap strip-in">
+      <span class="hide-m">Najbliższy odbiór: <b>poniedziałek, 28 września</b></span>
+      <span class="show-m">Najbliższy odbiór: <b>pon., 28 września</b></span>
+      <span class="strip-sep"></span>
+      <span class="hide-m">Zamówienia do 20:00 dzień wcześniej</span>
+      <span class="show-m">Zamówisz do 20:00</span>
+      <span class="strip-sep hide-m"></span>
+      <span class="hide-m">BLIK, Przelewy24 albo karta</span>
+    </div>
+  </div>
+
+  <header class="head">
+    <div class="wrap head-in">
+      <a class="logo" href="#top" aria-label="Adjano — strona główna"><img src="/brand/adjano-logo-red.svg" alt="Adjano"></a>
+      <nav class="nav" aria-label="Główna">
+        <a class="txt" href="#sklep">Sklep</a>
+        <a class="txt" href="#jak-to-dziala">Jak to działa</a>
+        <a class="txt" href="#punkty-odbioru">Punkty odbioru</a>
+        <a class="ico" href="#koszyk" aria-label="Koszyk">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 5h2l2.2 10.2a1.5 1.5 0 0 0 1.5 1.2h7.9a1.5 1.5 0 0 0 1.5-1.1L20.5 8.5H6.4"></path><circle cx="9.5" cy="20" r="1.2"></circle><circle cx="17" cy="20" r="1.2"></circle></svg>
+        </a>
+        <a class="login" href="#logowanie">
+          <span class="t">Zaloguj</span>
+          <span class="av"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"></circle><path d="M4.8 20c1.1-3.6 3.9-5.4 7.2-5.4s6.1 1.8 7.2 5.4"></path></svg></span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="lbl lbl-red lbl-row rise">
+          <span>Piekarnia-Cukiernia</span><span class="lbl-dot hide-m"></span><span class="hide-m">Mikołów-Kamionka</span><span class="lbl-dot"></span><span>od 1937</span>
+        </div>
+        <h1 class="h1 rise rise-2">Zamów do 20:00, <em>rano odbierzesz w&nbsp;pracy.</em></h1>
+        <p class="lead rise rise-3">Pieczywo, kanapki i&nbsp;ciasta z&nbsp;piekarni przy Katowickiej 120. Zamówienie składasz przez internet, a&nbsp;rano odbierasz je w&nbsp;wybranym punkcie.</p>
+        <div class="cta-row rise rise-4">
+          <a class="btn" href="#sklep">Zamów na poniedziałek</a>
+          <a class="link" href="#jak-to-dziala">Jak to działa</a>
+        </div>
+        <div class="hero-meta rise rise-4">
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg>Odbiór w&nbsp;piekarni: pn–pt, 7:00–17:00</span>
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="1.5"></rect><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"></path></svg>W&nbsp;pracy: na kod od pracodawcy</span>
+        </div>
+      </div>
+      <div class="still" aria-hidden="true">
+        <div class="still-ring"></div>
+        <div class="still-main"><img src="/brand/hero-chleb.png" alt=""></div>
+        <div class="still-side"><img src="/brand/hero-bulki.png" alt=""></div>
+        <div class="tag">
+          <p class="tag-t">Pieczone w&nbsp;Kamionce</p>
+          <p class="lbl tag-s">ul. Katowicka 120</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="shelf" id="sklep">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <p class="lbl lbl-red">Menu</p>
+          <h2 class="h2">Co pieczemy na poniedziałek</h2>
+        </div>
+        <a class="link" href="#sklep">Cały sklep</a>
+      </div>
+      <ul class="shelf-grid">
+        <li><a class="shelf-item" href="#kanapki"><div class="shelf-img"><img src="{categoryPublicUrl(image_path)}" alt=""></div><h3 class="shelf-name">Kanapki</h3><p class="lbl shelf-meta">10 pozycji · od 11,00 zł</p></a></li>
+        <li><a class="shelf-item" href="#salatki"><div class="shelf-img"><img src="{categoryPublicUrl(image_path)}" alt=""></div><h3 class="shelf-name">Sałatki</h3><p class="lbl shelf-meta">6 pozycji · od 17,00 zł</p></a></li>
+        <li><a class="shelf-item" href="#deserki"><div class="shelf-img"><img src="{categoryPublicUrl(image_path)}" alt=""></div><h3 class="shelf-name">Deserki w&nbsp;kubeczkach</h3><p class="lbl shelf-meta">3 pozycje · od 11,00 zł</p></a></li>
+        <li><a class="shelf-item" href="#slodkosci"><div class="shelf-img"><img src="{categoryPublicUrl(image_path)}" alt=""></div><h3 class="shelf-name">Drobne słodkości</h3><p class="lbl shelf-meta">5 pozycji · od 5,50 zł</p></a></li>
+        <li><a class="shelf-item" href="#keto"><div class="shelf-img"><img src="{categoryPublicUrl(image_path)}" alt=""></div><h3 class="shelf-name">Keto &amp; Fit</h3><p class="lbl shelf-meta">5 pozycji · od 10,00 zł</p></a></li>
+        <li><a class="shelf-item" href="#chleby"><div class="shelf-img"><img src="{categoryPublicUrl(image_path)}" alt=""></div><h3 class="shelf-name">Chleby</h3><p class="lbl shelf-meta">4 pozycje · od 7,60 zł</p></a></li>
+        <li><a class="shelf-item" href="#bulki"><div class="shelf-img"><img src="{categoryPublicUrl(image_path)}" alt=""></div><h3 class="shelf-name">Bułki</h3><p class="lbl shelf-meta">6 pozycji · od 1,00 zł</p></a></li>
+        <li class="shelf-sp">
+          <a class="shelf-special" href="#zamowienie-specjalne">
+            <div>
+              <p class="lbl lbl-red">Zamówienie specjalne</p>
+              <p class="t">Większa ilość albo coś spoza menu?</p>
+              <p class="d">Napisz, czego potrzebujesz i&nbsp;na kiedy. Odezwiemy się.</p>
+            </div>
+            <span class="link">Napisz do nas</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+
+  <section class="how" id="jak-to-dziala">
+    <div class="wrap">
+      <p class="lbl lbl-red">Jak to działa</p>
+      <h2 class="h2">Tak paczka trafia do&nbsp;Ciebie</h2>
+      <div class="how-grid">
+        <div class="how-col">
+          <p class="how-big">do 20:00</p>
+          <h3 class="how-t">Zamawiasz</h3>
+          <p class="how-d">Wybierasz dzień i&nbsp;punkt odbioru. Płacisz BLIK-iem, Przelewy24 albo kartą.</p>
+        </div>
+        <div class="how-col">
+          <p class="how-big">rano</p>
+          <h3 class="how-t">Pieczemy i&nbsp;pakujemy</h3>
+          <p class="how-d">Każda paczka dostaje etykietę z&nbsp;Twoim imieniem.</p>
+        </div>
+        <div class="how-col">
+          <p class="how-big">na kod</p>
+          <h3 class="how-t">Odbierasz</h3>
+          <p class="how-d">W&nbsp;punkcie podajesz cztery znaki z&nbsp;e‑maila.</p>
+        </div>
+      </div>
+      <div class="pickup" id="punkty-odbioru">
+        <div>
+          <p class="lbl">Odbiór w&nbsp;piekarni</p>
+          <p>Piekarnia Adjano, ul. Katowicka 120, Mikołów <span class="muted">· pn–pt, 7:00–17:00</span></p>
+        </div>
+        <div>
+          <p class="lbl">Odbiór w&nbsp;pracy</p>
+          <p>Dowozimy do kilku instytucji w&nbsp;Mikołowie. <span class="muted">Kod dostaniesz w&nbsp;sekretariacie i&nbsp;wpiszesz go w&nbsp;koszyku.</span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="story" id="o-nas">
+    <div class="wrap">
+      <div class="story-grid">
+        <div class="ph ph-peel"><img src="/brand/landing/piec-lopata.jpg" alt="Upieczony bochenek na drewnianej łopacie przy otwartym piecu"></div>
+        <div>
+          <p class="lbl lbl-red">O&nbsp;nas</p>
+          <h2 class="h2">Pieczemy w&nbsp;Kamionce od <em>1937</em> roku.</h2>
+          <p class="story-p">Jesteśmy rodzinną piekarnią i&nbsp;cukiernią przy Katowickiej 120. Bochenki wyrastają u&nbsp;nas w&nbsp;koszykach, a&nbsp;do pieca wkładamy je drewnianą łopatą.</p>
+          <p class="story-p">Oprócz chleba i&nbsp;bułek robimy ciasta, a&nbsp;do pracy także kanapki, sałatki i&nbsp;deserki w&nbsp;kubeczkach.</p>
+          <dl class="facts">
+            <div><dt>Adres</dt><dd>ul. Katowicka 120, 43-190 Mikołów</dd></div>
+            <div><dt>Odbiór w&nbsp;sklepie</dt><dd>pn–pt, 7:00–17:00</dd></div>
+            <div><dt>Telefon</dt><dd class="ph-txt">[numer z&nbsp;ustawień panelu]</dd></div>
+          </dl>
+        </div>
+      </div>
+      <div class="story-photos">
+        <figure class="f1">
+          <div class="ph ph-baskets"><img src="/brand/landing/piec-koszyki.jpg" alt="Koszyki z wyrastającym ciastem na regałach, w tle piekarz przy piecu"></div>
+          <figcaption class="cap">Koszyki do wyrastania.</figcaption>
+        </figure>
+        <figure class="f2">
+          <div class="ph ph-oven"><img src="/brand/landing/piec-trzon.jpg" alt="Bochenki pieką się w piecu"></div>
+          <figcaption class="cap">Bochenki w&nbsp;piecu.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="bag">
+    <div class="wrap">
+      <div class="sticker">
+        <img class="logo-s" src="/brand/adjano-logo-red.svg" alt="Adjano">
+        <h2 class="h2">Na poniedziałek zamówisz do niedzieli, 20:00.</h2>
+        <div class="cta-row"><a class="btn" href="#sklep">Zamów na poniedziałek</a></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="gilt"></div>
+    <div class="wrap">
+      <div class="foot-grid">
+        <div class="col">
+          <img class="foot-logo" src="/brand/adjano-logo-cream.svg" alt="Adjano">
+          <p class="foot-claim">Piekarnia-Cukiernia Adjano. Rodzinna piekarnia z&nbsp;Kamionki, od 1937 roku.</p>
+        </div>
+        <div class="col">
+          <p class="lbl">Adres</p>
+          <address>ul. Katowicka 120<br>43-190 Mikołów</address>
+        </div>
+        <div class="col">
+          <p class="lbl">Odbiór w&nbsp;sklepie</p>
+          <p>pn–pt, 7:00–17:00</p>
+        </div>
+        <div class="col">
+          <p class="lbl">Informacje</p>
+          <ul>
+            <li><a href="#regulamin">Regulamin</a></li>
+            <li><a href="#polityka-prywatnosci">Polityka prywatności</a></li>
+            <li><a href="#zamowienie-specjalne">Zamówienia specjalne</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="foot-bottom">
+        <span>© 2026 Piekarnia-Cukiernia Adjano</span>
+        <span>Zamówienia online: AdjanoDeli</span>
+      </div>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

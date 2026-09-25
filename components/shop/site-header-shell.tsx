@@ -1,52 +1,37 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
-import { cn } from "@/lib/utils";
-
-export function SiteHeaderShell({ children }: { children: ReactNode }) {
+export function SiteHeaderShell({
+  children,
+  announcement,
+}: {
+  children: ReactNode;
+  announcement?: ReactNode;
+}) {
   const pathname = usePathname();
   const isLanding = pathname === "/";
-  const [scrolled, setScrolled] = useState(false);
 
-  useEffect(() => {
-    if (!isLanding) {
-      setScrolled(false);
-      return;
-    }
-
-    function onScroll() {
-      setScrolled(window.scrollY > 16);
-    }
-
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [isLanding]);
-
-  const overlay = isLanding && !scrolled;
+  if (isLanding) {
+    return (
+      <>
+        {announcement}
+        <header className="sticky top-0 z-50 border-b border-[rgba(43,42,31,0.18)] bg-[var(--adj-cream)]/95 text-[var(--adj-ink)] backdrop-blur">
+          <div className="mx-auto flex h-[68px] w-full max-w-[1280px] items-center justify-between px-5 lg:h-[84px] lg:px-12">
+            {children}
+          </div>
+        </header>
+      </>
+    );
+  }
 
   return (
-    <header
-      className={cn(
-        "z-50 text-secondary-foreground",
-        isLanding ? "fixed inset-x-0 top-0" : "sticky top-0 bg-secondary",
-        isLanding && (scrolled ? "bg-secondary" : "bg-transparent"),
-      )}
-    >
-      <div
-        className={cn(
-          "mx-auto flex h-14 items-center justify-between px-4",
-          isLanding ? "max-w-5xl" : "max-w-3xl",
-        )}
-      >
+    <header className="sticky top-0 z-50 bg-secondary text-secondary-foreground">
+      <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4">
         {children}
       </div>
-      <div
-        className={cn("h-px bg-[var(--adj-gold)]", overlay && "opacity-0")}
-        aria-hidden
-      />
+      <div className="h-px bg-[var(--adj-gold)]" aria-hidden />
     </header>
   );
 }

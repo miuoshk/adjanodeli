@@ -1,15 +1,23 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Inter } from "next/font/google";
+import { Archivo, Brygada_1918, Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 
 import { Toaster } from "@/components/ui/sonner";
 
 import "./globals.css";
 
-const cormorant = Cormorant_Garamond({
+const brygada = Brygada_1918({
   variable: "--font-heading",
   subsets: ["latin", "latin-ext"],
-  weight: ["600", "700"],
+  style: ["normal", "italic"],
+  display: "swap",
+});
+
+const archivo = Archivo({
+  variable: "--font-label",
+  subsets: ["latin", "latin-ext"],
+  axes: ["wdth"],
+  display: "swap",
 });
 
 const inter = Inter({
@@ -31,7 +39,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pl" suppressHydrationWarning>
-      <body className={`${cormorant.variable} ${inter.variable}`}>
+      <body className={`${brygada.variable} ${archivo.variable} ${inter.variable}`}>
         <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light">
           {children}
           <Toaster />

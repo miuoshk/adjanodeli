@@ -7,6 +7,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-body);
   --font-heading: var(--font-heading);
+  --font-label: var(--font-label);
   --font-body: var(--font-body);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -55,6 +56,9 @@
   --adj-red-dark: #9e1116;
   --adj-gold: #b8975a;
   --adj-ink: #2b2a1f;
+  --adj-paper-light: #fbf7ee;
+  --adj-ink-soft: #57553e;
+  --adj-gold-light: #d4bc85;
 
   --background: var(--adj-cream);
   --foreground: var(--adj-ink);
@@ -106,4 +110,133 @@
   h3 {
     @apply font-heading;
   }
+}
+
+@layer components {
+  .adj-landing {
+    position: relative;
+    background: var(--adj-cream);
+    color: var(--adj-ink);
+    font-family: var(--font-heading);
+    font-variant-numeric: lining-nums;
+  }
+  /* ziarno papieru nad wszystkim, nie łapie kliknięć */
+  .adj-landing::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    pointer-events: none;
+    background: url("/brand/grain.png") 0 0 / 220px 220px repeat;
+    opacity: 0.5;
+  }
+  .adj-label {
+    font-family: var(--font-label);
+    font-stretch: 75%;
+    font-weight: 650;
+    font-size: 0.8125rem;
+    line-height: 1.2;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .adj-ui {
+    font-family: var(--font-label);
+    font-stretch: 85%;
+  }
+  .adj-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 3.5rem;
+    padding-inline: 1.875rem;
+    border-radius: 6px;
+    background: var(--adj-red);
+    color: var(--adj-cream);
+    font-family: var(--font-label);
+    font-stretch: 85%;
+    font-weight: 650;
+    font-size: 1.125rem;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    transition: background-color 160ms ease, transform 120ms ease;
+  }
+  /* wewnętrzna ramka jak na pieczątce */
+  .adj-btn::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgb(241 234 219 / 0.38);
+    border-radius: 3px;
+    pointer-events: none;
+  }
+  .adj-btn:hover { background: var(--adj-red-dark); }
+  .adj-btn:active { transform: scale(0.98); }
+  .adj-btn:focus-visible { outline: 2px solid var(--adj-ink); outline-offset: 3px; }
+  .adj-link {
+    font-family: var(--font-label);
+    font-stretch: 85%;
+    font-weight: 600;
+    font-size: 1.0625rem;
+    word-spacing: 0.08em;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 6px;
+    text-decoration-color: var(--adj-gold);
+  }
+  .adj-link:hover { color: var(--adj-red); text-decoration-color: var(--adj-red); }
+  .adj-gilt {
+    height: 5px;
+    border-top: 1px solid var(--adj-gold);
+    border-bottom: 1px solid var(--adj-gold);
+  }
+  /* zdjęcie produktu na białym tle kładzie się na papier */
+  .adj-cutout {
+    mix-blend-mode: multiply;
+    filter: brightness(1.035) contrast(1.03);
+    -webkit-mask-image: radial-gradient(ellipse closest-side, #000 74%, transparent 100%);
+    mask-image: radial-gradient(ellipse closest-side, #000 74%, transparent 100%);
+  }
+  /* zdjęcia z pieca: jednolita, lekko przygaszona kolorystyka */
+  .adj-photo {
+    filter: saturate(0.9) contrast(1.03);
+  }
+  .adj-ring {
+    border-radius: 9999px;
+    border: 1px solid rgb(184 151 90 / 0.55);
+  }
+  .adj-ring::after {
+    content: "";
+    position: absolute;
+    inset: 10px;
+    border-radius: 9999px;
+    border: 1px solid rgb(184 151 90 / 0.3);
+  }
+  /* naklejka na torbie: podwójna złota ramka */
+  .adj-framed {
+    background: var(--adj-paper-light);
+    border: 1px solid var(--adj-gold);
+    outline: 1px solid var(--adj-gold);
+    outline-offset: -9px;
+    box-shadow: 0 40px 70px -40px rgb(43 42 31 / 0.6);
+  }
+  .adj-pattern {
+    background-color: var(--adj-cream);
+    background-image:
+      linear-gradient(rgb(241 234 219 / 0.28), rgb(241 234 219 / 0.28)),
+      url("/brand/wzor-adjano-kafelek-przezroczysty.svg");
+    background-position: center;
+    background-size: auto, 620px auto;
+  }
+  @media (min-width: 64rem) {
+    .adj-pattern { background-size: auto, 980px auto; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .adj-rise { animation: adj-rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  }
+}
+
+@keyframes adj-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
 }

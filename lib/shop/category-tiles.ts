@@ -9,6 +9,7 @@ export type ShopCategoryTileData = {
   productCount: number;
   runningLow: boolean;
   hasPromo: boolean;
+  minPriceGrosze: number | null;
 };
 
 type CategoryRow = {
@@ -23,6 +24,7 @@ type ProductRow = {
   id: string;
   category_id: string | null;
   weekdays: number[];
+  price_grosze?: number | null;
 };
 
 type AvailabilityRow = {
@@ -61,6 +63,9 @@ export function buildCategoryTiles(
         return stock.remaining <= 5;
       });
       const hasPromo = inCategory.some((product) => availabilityByProduct.get(product.id)?.is_promo);
+      const prices = inCategory.flatMap((product) =>
+        typeof product.price_grosze === "number" ? [product.price_grosze] : [],
+      );
 
       return {
         id: category.id,
@@ -71,6 +76,7 @@ export function buildCategoryTiles(
         productCount: inCategory.length,
         runningLow,
         hasPromo,
+        minPriceGrosze: prices.length > 0 ? Math.min(...prices) : null,
       };
     })
     .filter((category) => category.productCount > 0);
