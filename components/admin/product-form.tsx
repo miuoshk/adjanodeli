@@ -40,6 +40,7 @@ const schema = z.object({
   sortOrder: z.coerce.number().int("Kolejność ma być liczbą."),
   isActive: z.boolean(),
   isNew: z.boolean(),
+  isFeatured: z.boolean(),
   weekdays: z.array(z.number()).min(1, "Zaznacz przynajmniej jeden dzień."),
   leadDays: z.enum(["", "1", "2", "3", "5", "7"]),
   promoPrice: z.string(),
@@ -121,6 +122,7 @@ export function ProductForm({ categories, allergens, tags, product }: ProductFor
       sortOrder: product?.sort_order ?? 0,
       isActive: product?.is_active ?? true,
       isNew: product?.is_new ?? false,
+      isFeatured: product?.is_featured ?? false,
       weekdays: product?.weekdays ?? [1, 2, 3, 4, 5, 6, 7],
       leadDays: productLeadChoice(product),
       promoPrice: product?.promo_price_grosze != null ? groszeToPriceInput(product.promo_price_grosze) : "",
@@ -536,6 +538,25 @@ export function ProductForm({ categories, allergens, tags, product }: ProductFor
                   className="size-4"
                 />
                 Nowość
+              </label>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="isFeatured"
+          render={({ field }) => (
+            <FormItem>
+              <label className="flex min-h-12 items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={field.value}
+                  onChange={(event) => field.onChange(event.target.checked)}
+                  className="size-4"
+                />
+                Polecany na stronie głównej
               </label>
               <FormMessage />
             </FormItem>

@@ -783,6 +783,7 @@ export type Database = {
           id: string
           image_path: string | null
           is_active: boolean
+          is_featured: boolean
           is_new: boolean
           lead_days: number | null
           name: string
@@ -805,6 +806,7 @@ export type Database = {
           id?: string
           image_path?: string | null
           is_active?: boolean
+          is_featured?: boolean
           is_new?: boolean
           lead_days?: number | null
           name: string
@@ -827,6 +829,7 @@ export type Database = {
           id?: string
           image_path?: string | null
           is_active?: boolean
+          is_featured?: boolean
           is_new?: boolean
           lead_days?: number | null
           name?: string

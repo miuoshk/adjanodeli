@@ -9,6 +9,7 @@ describe("buildPickupCopy", () => {
     expect(copy.shortDate).toBe("pon., 28 września");
     expect(copy.cta).toBe("Zamów na poniedziałek");
     expect(copy.menuHeading).toBe("Co pieczemy na poniedziałek");
+    expect(copy.featuredHeading).toBe("Polecamy na poniedziałek");
     expect(copy.deadline).toBe("Na poniedziałek zamówisz do niedzieli, 20:00.");
   });
 
@@ -16,6 +17,7 @@ describe("buildPickupCopy", () => {
     const copy = buildPickupCopy("2026-09-30", "20:00", "2026-09-29");
     expect(copy.cta).toBe("Zamów na jutro");
     expect(copy.menuHeading).toBe("Co pieczemy na jutro");
+    expect(copy.featuredHeading).toBe("Polecamy na jutro");
     expect(copy.deadline).toBe("Na jutro zamówisz dziś do 20:00.");
   });
 
@@ -37,6 +39,7 @@ describe("buildPickupCopy", () => {
     const copy = buildPickupCopy(null, "20:00", "2026-09-25");
     expect(copy.cta).toBe("Przejdź do sklepu");
     expect(copy.menuHeading).toBe("Co pieczemy");
+    expect(copy.featuredHeading).toBe("Polecamy");
     expect(copy.longDate).toBeNull();
   });
 });

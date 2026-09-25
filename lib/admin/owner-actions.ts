@@ -202,6 +202,7 @@ export type ProductPayload = {
   sortOrder: number;
   isActive: boolean;
   isNew: boolean;
+  isFeatured: boolean;
   weekdays: number[];
   imagePath: string | null;
   leadDays: number | null;
@@ -303,6 +304,7 @@ export async function createProduct(payload: ProductPayload) {
       sort_order: payload.sortOrder,
       is_active: payload.isActive,
       is_new: payload.isNew,
+      is_featured: payload.isFeatured,
       weekdays: [...payload.weekdays].sort((a, b) => a - b),
       image_path: payload.imagePath,
       lead_days: payload.leadDays,
@@ -353,6 +355,7 @@ export async function updateProduct(id: string, payload: ProductPayload) {
       sort_order: payload.sortOrder,
       is_active: payload.isActive,
       is_new: payload.isNew,
+      is_featured: payload.isFeatured,
       weekdays: [...payload.weekdays].sort((a, b) => a - b),
       image_path: payload.imagePath,
       lead_days: payload.leadDays,

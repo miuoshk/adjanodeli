@@ -24,6 +24,8 @@ export type PickupCopy = {
   cta: string;
   /** „Co pieczemy na poniedziałek” / „Co pieczemy” */
   menuHeading: string;
+  /** „Polecamy na poniedziałek” / „Polecamy na jutro” / „Polecamy” */
+  featuredHeading: string;
   /** „Na poniedziałek zamówisz do niedzieli, 20:00.” */
   deadline: string;
 };
@@ -41,6 +43,7 @@ export function buildPickupCopy(day: string | null, cutoff: string, todayIso: st
       shortDate: null,
       cta: "Przejdź do sklepu",
       menuHeading: "Co pieczemy",
+      featuredHeading: "Polecamy",
       deadline: `Zamówienia przyjmujemy do ${cutoff} dzień przed odbiorem.`,
     };
   }
@@ -62,6 +65,7 @@ export function buildPickupCopy(day: string | null, cutoff: string, todayIso: st
     shortDate: format(date, "EEE, d MMMM", { locale: pl }),
     cta: `Zamów na ${target}`,
     menuHeading: `Co pieczemy na ${target}`,
+    featuredHeading: `Polecamy na ${target}`,
     deadline: `Na ${target} zamówisz ${until}.`,
   };
 }

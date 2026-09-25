@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 
 import { categoryPublicUrl } from "@/lib/categories/image";
-import { formatPrice } from "@/lib/format";
 import type { ShopCategoryTileData } from "@/lib/shop/category-tiles";
 import type { PickupCopy } from "@/lib/shop/pickup-copy";
 import { nbsp } from "@/lib/typography";
@@ -47,10 +46,7 @@ function ShelfTile({ tile, day }: { tile: ShopCategoryTileData; day: string | nu
   const href = day ? `/sklep/${tile.slug}?dzien=${day}` : `/sklep/${tile.slug}`;
   const imageUrl = categoryPublicUrl(tile.imagePath);
   const Icon = ICONS_BY_SLUG[tile.slug] ?? ShoppingBag;
-  const meta =
-    tile.minPriceGrosze === null
-      ? formatPozycje(tile.productCount)
-      : `${formatPozycje(tile.productCount)} · od ${formatPrice(tile.minPriceGrosze)}`;
+  const meta = formatPozycje(tile.productCount);
 
   return (
     <li>

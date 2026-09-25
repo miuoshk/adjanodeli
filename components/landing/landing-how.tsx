@@ -86,6 +86,34 @@ export function LandingHow({ cutoff, points }: { cutoff: string; points: PublicP
             </p>
           </div>
         </div>
+
+        {/* Progi i ważność pieczątek: docs/SPEC.md §13. Jeśli zmienią się w SQL, popraw ten tekst. */}
+        <div className="mt-14 border-t border-[var(--adj-ink)] pt-10 lg:mt-16">
+          <p className="adj-label text-[var(--adj-red)]">Dla stałych klientów</p>
+          <div className="mt-6 grid gap-8 lg:grid-cols-3 lg:gap-10">
+            <div>
+              <h3 className="text-[23px] leading-[1.2] font-medium lg:text-[26px]">Pieczątki</h3>
+              <p className="mt-2 text-[var(--adj-ink-soft)]">
+                Za każdy opłacony produkt dostajesz pieczątkę. Przy 10 pieczątkach masz −10% na zamówienie,
+                przy 20 −50% (maks. 40&nbsp;zł), a&nbsp;przy 30 najtańszy produkt za 1&nbsp;grosz.
+              </p>
+              <p className="mt-2 text-sm">Pieczątki są ważne 60 dni.</p>
+            </div>
+            <div>
+              <h3 className="text-[23px] leading-[1.2] font-medium lg:text-[26px]">Stałe zamówienie</h3>
+              <p className="mt-2 text-[var(--adj-ink-soft)]">
+                Zapisz zamówienie jako stałe. Dzień wcześniej o&nbsp;17:00 przypomnimy Ci mailem,
+                a&nbsp;jednym kliknięciem przeniesiesz te same produkty do koszyka.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-[23px] leading-[1.2] font-medium lg:text-[26px]">Faktura na firmę</h3>
+              <p className="mt-2 text-[var(--adj-ink-soft)]">
+                Zaznacz fakturę w&nbsp;koszyku i&nbsp;podaj NIP.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );

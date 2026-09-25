@@ -81,6 +81,7 @@ Licznik nieudanych prób odblokowania kodem (limit 5 / 15 min).
 - daily_cap_default int not null default 20 — domyślny dzienny limit
 - weekdays int[] not null default '{1,2,3,4,5,6,7}' — dni tygodnia, w które produkt jest w sprzedaży
 - is_new boolean default false
+- is_featured boolean not null default false — produkt pokazywany w sekcji „Polecamy” na stronie głównej. Ustawia właścicielka w panelu.
 - is_active boolean not null default true
 - sort_order int not null default 0
 - lead_days int null — null = użyj categories.lead_days; efektywny lead = coalesce(products.lead_days, categories.lead_days)
@@ -235,7 +236,7 @@ Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprze
 
 ## 9. Routing (App Router)
 Sklep, grupa (shop):
-- / — strona wizytówka (landing): pasek z najbliższym dniem odbioru, hero z produktami, menu na najbliższy dzień odbioru (kafle kategorii z ceną „od”), jak to działa w 3 krokach + punkty odbioru (tylko publiczne + informacja o punktach na kod), o nas ze zdjęciami z pieca, CTA na wzorze Adjano.
+- / — strona wizytówka (landing): pasek z najbliższym dniem odbioru, hero z produktami, po hero sekcja „Polecamy” (do 4 produktów z is_featured dostępnych na najbliższy dzień), menu na najbliższy dzień odbioru (kafle kategorii), jak to działa w 3 krokach + punkty odbioru (tylko publiczne + informacja o punktach na kod), w „Jak to działa” blok „Dla stałych klientów” (pieczątki, stałe zamówienie, faktura), o nas ze zdjęciami z pieca, CTA na wzorze Adjano.
 - /sklep — kafelki kategorii + (opcjonalnie) sekcja "Popularne dziś"; dzień docelowy u góry (?dzien=YYYY-MM-DD)
 - /sklep/[kategoria] — lista produktów jednej kategorii, day-picker, inne kategorie; 404 dla nieznanego sluga
 - /koszyk — koszyk + wybór punktu odbioru + dnia + uwagi → "Przejdź do płatności"
