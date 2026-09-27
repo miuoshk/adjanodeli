@@ -14,6 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { nbsp } from "@/lib/typography";
 
 export type StandingOrderCard = {
   id: string;
@@ -33,11 +35,14 @@ type StandingOrdersManagerProps = {
   points: StandingPickupPoint[];
 };
 
+const cardClass =
+  "space-y-5 rounded-[4px] border border-[rgba(43,42,31,0.18)] bg-[var(--adj-paper-light)] px-5 py-5 lg:px-6";
+
 export function StandingOrdersManager({ orders, points }: StandingOrdersManagerProps) {
   if (orders.length === 0) {
     return (
-      <p className="leading-relaxed text-muted-foreground">
-        Nie masz stałych zamówień. Zapisz je z opłaconego zamówienia.
+      <p className="text-[15px] leading-relaxed text-[var(--adj-ink-soft)]">
+        Nie masz stałych zamówień. Po opłaceniu zamówienia możesz je zapisać jako stałe.
       </p>
     );
   }
@@ -72,49 +77,50 @@ function StandingOrderEditor({
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-[var(--adj-cream-dark)] bg-card p-4">
+    <div className={cardClass}>
       <div className="flex items-start justify-between gap-3">
-        <h2 className="text-xl font-semibold">{order.name}</h2>
-        <label className="flex items-center gap-2 text-sm">
+        <h2 className="font-heading text-[22px] font-medium">{nbsp(order.name)}</h2>
+        <label className="flex items-center gap-2 text-[15px]">
           <input
             type="checkbox"
             checked={isActive}
             onChange={(event) => setIsActive(event.target.checked)}
-            className="size-5"
+            className="size-5 shrink-0 rounded-[3px] border border-[var(--adj-ink)]/40 accent-[var(--adj-khaki)]"
           />
           Włączone
         </label>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Dni</p>
-        <div className="flex flex-wrap gap-2">
-          {WEEKDAY_LABELS.map((day) => {
-            const checked = weekdays.includes(day.id);
-            return (
-              <label
-                key={day.id}
-                className={`flex min-h-12 items-center rounded-md border px-3 text-sm ${
-                  checked ? "border-primary bg-primary/10" : "border-input"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => toggleDay(day.id)}
-                  className="sr-only"
-                />
-                {day.label}
-              </label>
-            );
-          })}
-        </div>
+      <div className="flex flex-wrap gap-2">
+        {WEEKDAY_LABELS.map((day) => {
+          const checked = weekdays.includes(day.id);
+          const label = day.id === 7 ? "nd" : day.label;
+          return (
+            <label
+              key={day.id}
+              className={cn(
+                "adj-label flex min-h-12 min-w-[52px] cursor-pointer items-center justify-center rounded-[6px] border px-2 text-[11px]",
+                checked
+                  ? "border-[var(--adj-khaki)] bg-[var(--adj-khaki)] text-[var(--adj-cream)]"
+                  : "border-[rgba(43,42,31,0.22)] bg-[var(--adj-cream)]",
+              )}
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => toggleDay(day.id)}
+                className="sr-only"
+              />
+              {label}
+            </label>
+          );
+        })}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor={`point-${order.id}`}>Punkt odbioru</Label>
         <Select value={pickupPointId} onValueChange={setPickupPointId}>
-          <SelectTrigger id={`point-${order.id}`} className="h-12 min-h-12 w-full text-base">
+          <SelectTrigger id={`point-${order.id}`} className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -129,8 +135,7 @@ function StandingOrderEditor({
 
       <Button
         type="button"
-        size="lg"
-        className="min-h-12 w-full"
+        variant="outline"
         disabled={isPending || weekdays.length === 0}
         onClick={() => {
           startTransition(async () => {

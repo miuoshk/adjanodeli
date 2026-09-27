@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { SectionHeading } from "@/components/brand/section-heading";
 import { StandingOrdersManager } from "@/components/shop/standing-orders-manager";
 import { requireUser } from "@/lib/auth";
 import { createServerClient } from "@/lib/supabase/server";
@@ -22,20 +23,24 @@ export default async function StandingOrdersPage() {
   ]);
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
-      <p>
-        <Link href="/konto" className="text-sm underline underline-offset-4">
-          Wróć do konta
-        </Link>
-      </p>
-      <h1 className="text-3xl font-semibold">Stałe zamówienia</h1>
-      <p className="text-sm leading-relaxed text-muted-foreground">
-        Max 3. Nowe zapiszesz z opłaconego zamówienia.
-      </p>
-      <StandingOrdersManager
-        orders={ordersResult.data ?? []}
-        points={pointsResult.data ?? []}
+    <div>
+      <SectionHeading
+        as="h1"
+        eyebrow="Konto"
+        title="Stałe zamówienia"
+        description="Dzień wcześniej o\u00a017:00 przypomnimy Ci mailem. Z maila jednym kliknięciem przeniesiesz produkty do koszyka."
+        action={
+          <Link href="/konto" className="adj-link">
+            Wróć do konta
+          </Link>
+        }
       />
+      <div className="mt-8">
+        <StandingOrdersManager
+          orders={ordersResult.data ?? []}
+          points={pointsResult.data ?? []}
+        />
+      </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { SectionHeading } from "@/components/brand/section-heading";
 import { submitSpecialRequest } from "@/lib/special-requests/submit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,9 +20,9 @@ export function SpecialRequestForm() {
 
   if (done) {
     return (
-      <div className="space-y-3 rounded-xl border border-[var(--adj-cream-dark)] bg-card p-6">
-        <h2 className="font-heading text-2xl font-semibold">Dziękujemy</h2>
-        <p className="leading-relaxed">
+      <div>
+        <SectionHeading as="h2" title="Dziękujemy" />
+        <p className="mt-4 text-[17px] leading-relaxed">
           Odezwiemy się w ciągu jednego dnia roboczego.
         </p>
       </div>
@@ -30,7 +31,7 @@ export function SpecialRequestForm() {
 
   return (
     <form
-      className="space-y-4"
+      className="space-y-4 rounded-[4px] border border-[rgba(43,42,31,0.18)] bg-[var(--adj-paper-light)] px-5 py-5 lg:px-6"
       onSubmit={(event) => {
         event.preventDefault();
         setSaving(true);
@@ -50,7 +51,6 @@ export function SpecialRequestForm() {
           id="sr-name"
           value={name}
           onChange={(event) => setName(event.target.value)}
-          className="min-h-12 text-base"
         />
       </div>
       <div className="space-y-2">
@@ -61,7 +61,6 @@ export function SpecialRequestForm() {
           required
           value={phone}
           onChange={(event) => setPhone(event.target.value)}
-          className="min-h-12 text-base"
         />
       </div>
       <div className="space-y-2">
@@ -71,7 +70,6 @@ export function SpecialRequestForm() {
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="min-h-12 text-base"
         />
       </div>
       <div className="space-y-2">
@@ -81,7 +79,6 @@ export function SpecialRequestForm() {
           type="date"
           value={wantedDate}
           onChange={(event) => setWantedDate(event.target.value)}
-          className="min-h-12 text-base"
         />
       </div>
       <div className="space-y-2">
@@ -95,7 +92,7 @@ export function SpecialRequestForm() {
           className="min-h-24 w-full rounded-[6px] border border-[rgba(43,42,31,0.28)] bg-[var(--adj-paper-light)] px-4 py-3 text-base shadow-none outline-none placeholder:text-muted-foreground focus-visible:border-[var(--adj-khaki)] focus-visible:ring-[3px] focus-visible:ring-[var(--adj-gold)]/35"
         />
       </div>
-      <Button type="submit" className="min-h-12" disabled={saving}>
+      <Button type="submit" size="lg" disabled={saving}>
         Wyślij
       </Button>
     </form>

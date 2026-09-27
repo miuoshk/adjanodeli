@@ -11,6 +11,9 @@ type LoginFormProps = {
   next: string;
 };
 
+const cardClass =
+  "mt-8 space-y-5 rounded-[4px] border border-[rgba(43,42,31,0.18)] bg-[var(--adj-paper-light)] px-5 py-5 lg:px-6";
+
 export function LoginForm({ next }: LoginFormProps) {
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
@@ -45,7 +48,7 @@ export function LoginForm({ next }: LoginFormProps) {
 
   return (
     <form
-      className="space-y-5"
+      className={cardClass}
       onSubmit={(event) => {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
@@ -71,13 +74,13 @@ export function LoginForm({ next }: LoginFormProps) {
             type="email"
             autoComplete="email"
             required
-            className="min-h-12"
+            defaultValue={email}
             placeholder="jan@firma.pl"
           />
         </div>
       ) : (
         <div className="space-y-4">
-          <p className="text-sm leading-relaxed">
+          <p className="text-[15px] leading-relaxed">
             Wysłaliśmy kod na {email}. Sprawdź też spam.
           </p>
           <div className="space-y-2">
@@ -91,7 +94,7 @@ export function LoginForm({ next }: LoginFormProps) {
               maxLength={8}
               pattern="\d{6,8}"
               required
-              className="min-h-12 tracking-[0.3em]"
+              className="text-center font-label text-[28px] tracking-[0.35em] [font-stretch:75%]"
               value={code}
               onChange={(event) => {
                 setCode(event.target.value.replace(/\D/g, "").slice(0, 8));
@@ -101,22 +104,37 @@ export function LoginForm({ next }: LoginFormProps) {
         </div>
       )}
 
-      {error ? <p className="text-sm text-primary">{error}</p> : null}
+      {error ? <p className="adj-ui text-[15px] text-[var(--adj-red)]">{error}</p> : null}
 
-      <Button type="submit" size="lg" className="min-h-12 w-full" disabled={isPending}>
+      <Button type="submit" size="lg" className="w-full" disabled={isPending}>
         {step === "email" ? "Wyślij kod" : "Zaloguj"}
       </Button>
 
       {step === "code" ? (
-        <Button
-          type="button"
-          variant="ghost"
-          className="min-h-12 w-full"
-          disabled={isPending || secondsLeft > 0}
-          onClick={() => handleSend(email)}
-        >
-          {secondsLeft > 0 ? `Wyślij ponownie (${secondsLeft} s)` : "Wyślij ponownie"}
-        </Button>
+        <div className="flex flex-col items-center">
+          <Button
+            type="button"
+            variant="link"
+            className="h-auto"
+            disabled={isPending || secondsLeft > 0}
+            onClick={() => handleSend(email)}
+          >
+            {secondsLeft > 0 ? `Wyślij ponownie (${secondsLeft} s)` : "Wyślij ponownie"}
+          </Button>
+          <Button
+            type="button"
+            variant="link"
+            className="h-auto"
+            disabled={isPending}
+            onClick={() => {
+              setStep("email");
+              setCode("");
+              setError(null);
+            }}
+          >
+            Zmień e‑mail
+          </Button>
+        </div>
       ) : null}
     </form>
   );

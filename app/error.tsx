@@ -1,10 +1,29 @@
 "use client";
 
+import Link from "next/link";
+
+import { SectionHeading } from "@/components/brand/section-heading";
+import { Button } from "@/components/ui/button";
+
 export default function RootError() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
-      <h1 className="font-heading text-3xl font-semibold">Coś się wywaliło</h1>
-      <p className="mt-3 leading-relaxed">Odśwież stronę albo wróć za chwilę.</p>
+    <div className="min-h-screen bg-[var(--adj-cream)] px-5 py-16">
+      <div className="mx-auto max-w-3xl">
+        <SectionHeading
+          as="h1"
+          eyebrow="Błąd"
+          title="Coś poszło nie tak"
+          description="Odśwież stronę albo wróć za chwilę."
+        />
+        <div className="mt-8 flex flex-wrap items-center gap-4">
+          <Button type="button" size="lg" onClick={() => location.reload()}>
+            Odśwież
+          </Button>
+          <Button asChild variant="link">
+            <Link href="/sklep">Przejdź do sklepu</Link>
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

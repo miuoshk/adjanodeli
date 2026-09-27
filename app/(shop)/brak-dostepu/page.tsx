@@ -1,14 +1,19 @@
 import Link from "next/link";
 
+import { SectionHeading } from "@/components/brand/section-heading";
 import { Button } from "@/components/ui/button";
 
 export default function ForbiddenPage() {
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-semibold">Brak dostępu</h1>
-      <p className="text-sm leading-relaxed">Nie masz dostępu do tej strony.</p>
-      <Button asChild size="lg" className="min-h-12">
-        <Link href="/sklep">Wróć do menu</Link>
+    <div>
+      <SectionHeading
+        as="h1"
+        eyebrow="Konto"
+        title="Brak dostępu"
+        description="Ta strona jest dostępna tylko dla pracowników piekarni."
+      />
+      <Button asChild size="lg" className="mt-8">
+        <Link href="/sklep">Przejdź do sklepu</Link>
       </Button>
     </div>
   );

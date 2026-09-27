@@ -1,26 +1,23 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { PatternWash } from "@/components/shop/bakery-pattern";
 import { Button } from "@/components/ui/button";
 
 export default function NotFound() {
   return (
-    <div className="isolate flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-4 py-12 text-center">
-      <PatternWash />
+    <div className="adj-landing flex min-h-screen flex-col items-center justify-center px-5 py-16 text-center">
       <Image
         src="/brand/janosz.png"
         alt="Janosz"
-        width={220}
-        height={320}
-        className="h-auto w-[min(100%,220px)]"
+        width={180}
+        height={260}
+        className="h-auto w-[180px]"
         priority
       />
-      <p className="max-w-md font-heading text-2xl font-semibold text-foreground">
-        Tej strony nie ma. Ale kanapki są.
-      </p>
-      <Button asChild size="lg" className="min-h-12">
-        <Link href="/sklep">Wróć do menu</Link>
+      <p className="mt-6 font-heading text-[34px] font-medium">Tej strony nie ma</p>
+      <p className="mt-2 text-[var(--adj-ink-soft)]">Kanapki są w sklepie.</p>
+      <Button asChild size="lg" className="mt-8">
+        <Link href="/sklep">Przejdź do sklepu</Link>
       </Button>
     </div>
   );

@@ -1,3 +1,4 @@
+import { SectionHeading } from "@/components/brand/section-heading";
 import { LoginForm } from "@/components/shop/login-form";
 import { safeNextPath } from "@/lib/safe-next";
 
@@ -10,11 +11,13 @@ export default async function LoginPage({
   const next = safeNextPath(params.next);
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
-      <h1 className="text-3xl font-semibold">Logowanie</h1>
-      <p className="text-sm leading-relaxed text-muted-foreground">
-        Podaj e-mail, wyślemy kod. Bez hasła.
-      </p>
+    <div className="mx-auto max-w-[440px]">
+      <SectionHeading
+        as="h1"
+        eyebrow="Logowanie"
+        title="Zaloguj się kodem"
+        description="Podaj adres e‑mail. Wyślemy na niego kod do wpisania poniżej."
+      />
       <LoginForm next={next} />
     </div>
   );

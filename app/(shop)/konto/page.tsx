@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { SectionHeading } from "@/components/brand/section-heading";
 import { AccountPickupPoints } from "@/components/shop/account-pickup-points";
 import { LoyaltySection } from "@/components/shop/loyalty-section";
 import { ProfileForm } from "@/components/shop/profile-form";
@@ -8,6 +9,9 @@ import { getProfile, requireUser } from "@/lib/auth";
 import { signOut } from "@/lib/auth-actions";
 import { getLoyaltyStatus } from "@/lib/loyalty/status";
 import { createServerClient } from "@/lib/supabase/server";
+
+const cardClass =
+  "mt-6 rounded-[4px] border border-[rgba(43,42,31,0.18)] bg-[var(--adj-paper-light)] px-5 py-5 lg:px-6";
 
 export default async function AccountPage() {
   const session = await requireUser("/konto");
@@ -32,25 +36,40 @@ export default async function AccountPage() {
   });
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
-      <h1 className="text-3xl font-semibold">Konto</h1>
-      <p className="text-sm text-muted-foreground">{profile?.email}</p>
-      {loyalty ? <LoyaltySection status={loyalty} /> : null}
+    <div>
+      <SectionHeading as="h1" eyebrow={profile?.email ?? "Konto"} title="Twoje konto" />
+      {loyalty ? (
+        <div className="mt-12">
+          <LoyaltySection status={loyalty} />
+        </div>
+      ) : null}
       <AccountPickupPoints accesses={accesses} />
-      <p>
-        <Link href="/konto/stale-zamowienia" className="text-sm underline underline-offset-4">
-          Stałe zamówienia
-        </Link>
-      </p>
-      <ProfileForm
-        fullName={profile?.full_name}
-        phone={profile?.phone}
-        marketingConsent={profile?.marketing_consent}
-        next="/konto"
-        submitLabel="Zapisz"
-      />
-      <form action={signOut}>
-        <Button type="submit" variant="secondary" size="lg" className="min-h-12 w-full">
+      <Link
+        href="/konto/stale-zamowienia"
+        className="mt-12 flex items-center justify-between gap-4 rounded-[4px] border border-[rgba(43,42,31,0.18)] bg-[var(--adj-paper-light)] px-5 py-5 lg:px-6"
+      >
+        <span>
+          <span className="block font-heading text-[22px] font-medium">Stałe zamówienia</span>
+          <span className="mt-1 block text-[15px] text-[var(--adj-ink-soft)]">
+            Przypomnimy o 17:00 dzień wcześniej.
+          </span>
+        </span>
+        <span className="adj-link shrink-0">Zarządzaj</span>
+      </Link>
+      <section className="mt-12">
+        <SectionHeading as="h2" title="Twoje dane" />
+        <div className={cardClass}>
+          <ProfileForm
+            fullName={profile?.full_name}
+            phone={profile?.phone}
+            marketingConsent={profile?.marketing_consent}
+            next="/konto"
+            submitLabel="Zapisz"
+          />
+        </div>
+      </section>
+      <form action={signOut} className="mt-6">
+        <Button type="submit" variant="outline" size="lg" className="w-full md:w-auto">
           Wyloguj
         </Button>
       </form>

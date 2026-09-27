@@ -52,7 +52,6 @@ export function ProfileForm({
           name="full_name"
           required
           defaultValue={fullName ?? ""}
-          className="min-h-12"
           autoComplete="name"
         />
       </div>
@@ -64,7 +63,6 @@ export function ProfileForm({
           type="tel"
           inputMode="tel"
           defaultValue={phone ?? ""}
-          className="min-h-12"
           placeholder="500123456 albo +48500123456"
           autoComplete="tel"
         />
@@ -74,12 +72,12 @@ export function ProfileForm({
           type="checkbox"
           name="marketing_consent"
           defaultChecked={Boolean(marketingConsent)}
-          className="size-5 accent-[var(--adj-red)]"
+          className="size-5 shrink-0 rounded-[3px] border border-[var(--adj-ink)]/40 accent-[var(--adj-khaki)]"
         />
         Chcę dostać maila, gdy pojawi się coś nowego w menu.
       </label>
-      {error ? <p className="text-sm text-primary">{error}</p> : null}
-      <Button type="submit" size="lg" className="min-h-12 w-full" disabled={isPending}>
+      {error ? <p className="adj-ui text-[15px] text-[var(--adj-red)]">{error}</p> : null}
+      <Button type="submit" size="lg" className="w-full" disabled={isPending}>
         {submitLabel}
       </Button>
     </form>

@@ -1,15 +1,23 @@
+import { SectionHeading } from "@/components/brand/section-heading";
 import { SpecialRequestForm } from "@/components/shop/special-request-form";
 
 export default function SpecialRequestPage() {
   return (
-    <div className="space-y-6">
-      <h1 className="font-heading text-3xl font-semibold leading-tight">
-        Zamówienie specjalne
-      </h1>
-      <p className="text-base leading-relaxed">
-        Konferencja, szkolenie, większe zamówienie do biura? Napisz, oddzwonimy.
-      </p>
-      <SpecialRequestForm />
+    <div>
+      <SectionHeading
+        as="h1"
+        eyebrow="Zamówienia specjalne"
+        title="Większe zamówienie albo coś spoza menu"
+        description={
+          <>
+            Konferencja, szkolenie albo zamówienie do biura? Napisz, czego potrzebujesz i&nbsp;na
+            kiedy. Oddzwonimy.
+          </>
+        }
+      />
+      <div className="mt-8">
+        <SpecialRequestForm />
+      </div>
     </div>
   );
 }

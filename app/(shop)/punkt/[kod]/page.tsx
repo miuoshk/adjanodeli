@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { SectionHeading } from "@/components/brand/section-heading";
+import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { unlockPickupPoint } from "@/lib/pickup/unlock-point";
 
@@ -19,14 +21,11 @@ export default async function InvitePointPage({ params }: InvitePageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-4">
-      <h1 className="text-3xl font-semibold">Punkt odbioru</h1>
-      <p className="text-base leading-relaxed">{result.message}</p>
-      <p>
-        <Link href="/sklep" className="underline underline-offset-4">
-          Wróć do sklepu
-        </Link>
-      </p>
+    <div>
+      <SectionHeading as="h1" eyebrow="Punkt odbioru" title={result.message} />
+      <Button asChild size="lg" className="mt-8">
+        <Link href="/sklep">Przejdź do sklepu</Link>
+      </Button>
     </div>
   );
 }
