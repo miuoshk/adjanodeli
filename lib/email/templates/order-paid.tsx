@@ -62,7 +62,7 @@ export function OrderPaidEmail({
   ];
 
   return (
-    <EmailShell title="AdjanoDeli" ownerPhone={ownerPhone}>
+    <EmailShell title="Zamówienie opłacone" ownerPhone={ownerPhone}>
       <p style={{ margin: "0 0 16px", fontFamily: textFont, fontSize: "22px" }}>
         Zamówienie #{orderNumber} jest opłacone.
       </p>

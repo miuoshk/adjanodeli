@@ -31,7 +31,7 @@ export function StandingReminderEmail({
   ownerPhone,
 }: StandingReminderEmailProps) {
   return (
-    <EmailShell title="AdjanoDeli" ownerPhone={ownerPhone}>
+    <EmailShell title="Stałe zamówienie" ownerPhone={ownerPhone}>
       <p style={{ margin: "0 0 12px" }}>Zamówić jak zwykle na jutro?</p>
       <p style={{ margin: "0 0 16px", fontWeight: 700 }}>{standingName}</p>
       <p style={{ margin: "0 0 16px" }}>Odbiór: {pickupDateLabel}</p>

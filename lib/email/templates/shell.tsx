@@ -62,9 +62,10 @@ export function EmailShell({ title, ownerPhone, children }: EmailShellProps) {
                       // Maile nie renderują next/image. Zwykły img jest tu zamierzony.
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={`${appUrl}/brand/adjano-logo.png`}
-                        width="112"
-                        alt="Adjano"
+                        src={`${appUrl}/brand/email/adjano-deli-karmin@2x.png`}
+                        width="176"
+                        height="78"
+                        alt="Adjano Deli"
                         style={{ display: "block", border: 0 }}
                       />
                     ) : (
@@ -77,7 +78,7 @@ export function EmailShell({ title, ownerPhone, children }: EmailShellProps) {
                           fontFamily: textFont,
                         }}
                       >
-                        Adjano
+                        Adjano Deli
                       </p>
                     )}
                   </td>

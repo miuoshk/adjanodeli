@@ -48,6 +48,8 @@ export default async function PackageLabelsPrintLayout({ children }: { children:
           break-inside: avoid;
           page-break-inside: avoid;
         }
+        .pack-label-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8pt; }
+        .pack-label-logo { width: 26mm; height: auto; }
         .pack-label-code {
           font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
           font-size: 32pt;

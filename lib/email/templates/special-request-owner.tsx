@@ -18,7 +18,7 @@ export function SpecialRequestOwnerEmail({
   ownerPhone,
 }: SpecialRequestOwnerEmailProps) {
   return (
-    <EmailShell title="AdjanoDeli" ownerPhone={ownerPhone}>
+    <EmailShell title="Zamówienie specjalne" ownerPhone={ownerPhone}>
       <p style={{ margin: "0 0 16px", fontWeight: 700 }}>Nowe zamówienie specjalne</p>
       {name ? <p style={{ margin: "0 0 4px" }}>{name}</p> : null}
       {phone ? <p style={{ margin: "0 0 4px" }}>Tel. {phone}</p> : null}

@@ -44,7 +44,11 @@ export default async function PackageLabelsPage({ searchParams }: PackageLabelsP
         <div className="label-grid">
           {labels.map((item) => (
             <article key={item.id} className="pack-label">
-              <p className="pack-label-code">{item.pickupCode}</p>
+              <div className="pack-label-head">
+                <p className="pack-label-code">{item.pickupCode}</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/brand/logo/adjano-deli-tusz.svg" alt="" className="pack-label-logo" />
+              </div>
               <p className="pack-label-name">{item.customerName}</p>
               <p className="pack-label-meta">
                 {item.pointName} · {formatDatePl(parseDateOnly(day))}

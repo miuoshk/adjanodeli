@@ -285,12 +285,10 @@ API:
 - Rozmiar bazowy tekstu 16px, na mobile przyciski min. 48px wysokości. Użytkownicy to często osoby 45+, na telefonie, w pracy — czytelność ważniejsza niż efekt.
 - Mobile-first. Menu to lista kart produktów z ceną, opisem, "zostało N", przyciskiem +/-.
 - Ton tekstów: krótko, ciepło, konkretnie. Przykład dobry: "Zamów do 20:00, odbierz jutro w pracy." Przykład zły: "Odkryj wyjątkowe smaki tradycji w nowoczesnej odsłonie."
-- Maskotka Janosz (public/brand/janosz.png) tylko w: ekranie po opłaceniu ("Janosz pakuje Twoje zamówienie"), pustym koszyku, 404.
+- Maskotki Janosz nie używamy. W pustych stanach i na stronach błędów stoi znak A albo przeplatanka z kremową kartką.
 - Cały sklep (wszystkie strony w app/(shop)) używa tego samego systemu co landing: papier --adj-cream z ziarnem, nagłówki Brygada 1918, etykiety/przyciski/liczby Archivo, header kremowy z paskiem najbliższego odbioru, stopka khaki.
 - Kształty: przyciski i pola 6 px promienia, karty i ramki 0–2 px (papier, nie „bańki”). Cienie tylko pod kartami „papierowymi” (etykieta, naklejka, kod odbioru).
 - Zdjęcia produktów (białe tło) zawsze z klasą adj-cutout na papierze, bez ramek i bez czarnych gradientów.
-- Janosz: ekran po opłaceniu, pusty koszyk, 404 (bez zmian).
-
 ## 11. E-maile (Resend, szablony w lib/email/templates/)
 - order-paid: temat "Zamówienie #{order_number} — kod odbioru {code}". Treść: kod dużą czcionką, QR (data URL), punkt, adres, okno godzinowe, data, lista pozycji, suma, telefon do piekarni.
 - order-delivered: temat "Twoja paczka czeka — {punkt}". Treść: kod, punkt, do której godziny.

@@ -1,24 +1,38 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
-
 export default function NotFound() {
   return (
-    <div className="adj-landing flex min-h-screen flex-col items-center justify-center px-5 py-16 text-center">
-      <Image
-        src="/brand/janosz.png"
-        alt="Janosz"
-        width={180}
-        height={260}
-        className="h-auto w-[180px]"
-        priority
-      />
-      <p className="mt-6 font-heading text-[34px] font-medium">Tej strony nie ma</p>
-      <p className="mt-2 text-[var(--adj-ink-soft)]">Kanapki są w sklepie.</p>
-      <Button asChild size="lg" className="mt-8">
-        <Link href="/sklep">Przejdź do sklepu</Link>
-      </Button>
-    </div>
+    <main className="adj-pattern flex min-h-screen items-center justify-center px-5 py-16">
+      <div className="adj-framed w-full max-w-[520px] px-7 pt-10 pb-9 text-center lg:px-12 lg:pt-12 lg:pb-11">
+        <Link href="/" aria-label="Adjano Deli — strona główna" className="inline-block">
+          <Image
+            src="/brand/logo/adjano-deli-karmin.svg"
+            alt="Adjano Deli"
+            width={520}
+            height={231}
+            className="mx-auto h-auto w-[150px] lg:w-[170px]"
+            priority
+            unoptimized
+          />
+        </Link>
+        <div className="mt-7 h-px w-full bg-[var(--adj-gold-light)]" aria-hidden />
+        <p className="adj-label mt-7 text-[var(--adj-red)]">Błąd 404</p>
+        <h1 className="mt-3 font-heading text-[34px] leading-[1.08] font-medium lg:text-[40px]">
+          Tej strony nie ma
+        </h1>
+        <p className="mx-auto mt-3 max-w-[30ch] text-balance text-[17px] leading-relaxed text-[var(--adj-ink-soft)]">
+          Sprawdź adres albo wróć do sklepu. Pieczywo, kanapki i&nbsp;ciasta są na swoim miejscu.
+        </p>
+        <div className="mt-8 flex flex-col items-center gap-4">
+          <Link href="/sklep" className="adj-btn w-full sm:w-auto">
+            Przejdź do sklepu
+          </Link>
+          <Link href="/" className="adj-link">
+            Strona główna
+          </Link>
+        </div>
+      </div>
+    </main>
   );
 }

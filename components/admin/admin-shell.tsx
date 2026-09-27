@@ -28,13 +28,14 @@ export function AdminShell({ isOwner, firstName, roleLabel, children }: AdminShe
   return (
     <div className="flex min-h-screen bg-[var(--adj-cream)]">
       <aside className="hidden w-[240px] shrink-0 flex-col bg-secondary text-secondary-foreground md:flex">
-        <Link href="/admin" className="relative mx-4 mt-4 block h-9 w-[120px]">
+        <Link href="/admin" className="relative mx-4 mt-4 block h-9 w-[132px] shrink-0">
           <Image
-            src="/brand/adjano-logo.png"
-            alt="Adjano"
+            src="/brand/logo/adjano-deli-poziomy-krem.svg"
+            alt="Adjano Deli"
             fill
             className="object-contain object-left"
             priority
+            unoptimized
           />
         </Link>
         <div className="mt-2 h-px bg-[var(--adj-gold)]" aria-hidden />
@@ -63,12 +64,13 @@ export function AdminShell({ isOwner, firstName, roleLabel, children }: AdminShe
               <SheetHeader className="sr-only">
                 <SheetTitle>Menu</SheetTitle>
               </SheetHeader>
-              <Link href="/admin" className="relative mx-4 mt-4 block h-9 w-[120px]">
+              <Link href="/admin" className="relative mx-4 mt-4 block h-9 w-[132px] shrink-0">
                 <Image
-                  src="/brand/adjano-logo.png"
-                  alt="Adjano"
+                  src="/brand/logo/adjano-deli-poziomy-krem.svg"
+                  alt="Adjano Deli"
                   fill
                   className="object-contain object-left"
+                  unoptimized
                 />
               </Link>
               <div className="mt-2 h-px bg-[var(--adj-gold)]" aria-hidden />

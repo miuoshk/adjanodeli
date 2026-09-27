@@ -14,7 +14,7 @@ export function ManualRefundOwnerEmail({
   ownerPhone,
 }: ManualRefundOwnerEmailProps) {
   return (
-    <EmailShell title="AdjanoDeli" ownerPhone={ownerPhone}>
+    <EmailShell title="Zwrot do wykonania" ownerPhone={ownerPhone}>
       <p style={{ margin: "0 0 12px", fontWeight: 700 }}>
         Zwrot ręczny wymagany #{orderNumber}
       </p>

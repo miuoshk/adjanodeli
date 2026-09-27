@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
+import Image from "next/image";
 
 import { voucherLabel } from "@/lib/loyalty/discount";
 import type { LoyaltyStatus } from "@/lib/loyalty/status";
@@ -46,15 +47,18 @@ export function LoyaltySection({ status }: LoyaltySectionProps) {
                       )}
                     >
                       {earned ? (
-                        <span
+                        <Image
+                          src="/brand/logo/znak-A-sam-karmin.svg"
+                          alt=""
+                          width={185}
+                          height={161}
                           className={cn(
-                            "font-heading text-[13px] text-[var(--adj-red)] italic",
+                            "h-auto w-[62%]",
                             index % 2 === 0 ? "rotate-[-8deg]" : "rotate-[6deg]",
                           )}
                           aria-hidden
-                        >
-                          A
-                        </span>
+                          unoptimized
+                        />
                       ) : null}
                     </div>
                   );

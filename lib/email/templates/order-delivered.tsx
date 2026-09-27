@@ -23,7 +23,7 @@ export function OrderDeliveredEmail({
   ownerPhone,
 }: OrderDeliveredEmailProps) {
   return (
-    <EmailShell title="AdjanoDeli" ownerPhone={ownerPhone}>
+    <EmailShell title="Do odbioru" ownerPhone={ownerPhone}>
       <p style={{ margin: "0 0 16px", fontFamily: textFont, fontSize: "22px" }}>
         Twoja paczka czeka
       </p>

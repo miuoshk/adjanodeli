@@ -234,7 +234,7 @@ function OrderStatusView({
         order={order}
         point={point}
         items={items}
-        showJanosz
+        showPacking
         standingCount={standingCount}
         cancelEnabled={cancelEnabled}
         cutoffTime={cutoffTime}
@@ -249,7 +249,7 @@ function OrderStatusView({
         order={order}
         point={point}
         items={items}
-        showJanosz
+        showPacking
       />
     );
   }
@@ -340,7 +340,7 @@ function PaidLikeView({
   order,
   point,
   items,
-  showJanosz,
+  showPacking,
   standingCount,
   cancelEnabled,
   cutoffTime,
@@ -349,7 +349,7 @@ function PaidLikeView({
   order: OrderRow;
   point: PickupPointRow | null;
   items: OrderItemRow[];
-  showJanosz: boolean;
+  showPacking: boolean;
   standingCount?: number;
   cancelEnabled?: boolean;
   cutoffTime?: string;
@@ -388,17 +388,18 @@ function PaidLikeView({
             : `Anulowanie jest wyłączone. Zadzwoń: ${phone || "piekarnia"}.`}
         </p>
       )}
-      {showJanosz ? (
+      {showPacking ? (
         <div className="flex flex-col items-center pt-2 text-center">
           <Image
-            src="/brand/janosz.png"
-            alt="Janosz"
-            width={140}
-            height={200}
-            className="h-auto w-[140px]"
+            src="/brand/logo/znak-A-karmin.svg"
+            alt=""
+            width={512}
+            height={512}
+            className="h-auto w-12"
+            unoptimized
           />
-          <p className="mt-3 text-[15px] text-[var(--adj-ink-soft)] italic">
-            Janosz pakuje Twoje zamówienie.
+          <p className="mt-3 text-[15px] text-[var(--adj-ink-soft)]">
+            Przygotowujemy Twoje zamówienie.
           </p>
         </div>
       ) : null}

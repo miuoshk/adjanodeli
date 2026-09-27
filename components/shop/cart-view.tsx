@@ -423,15 +423,15 @@ export function CartView({
     return (
       <div className="flex flex-col items-center py-16 text-center">
         <Image
-          src="/brand/janosz.png"
-          alt="Janosz"
-          width={180}
-          height={260}
-          className="h-auto w-[180px]"
-          priority
+          src="/brand/logo/znak-A-karmin.svg"
+          alt=""
+          width={512}
+          height={512}
+          className="h-auto w-16"
+          unoptimized
         />
         <p className="mt-6 font-heading text-[32px] font-medium">Koszyk jest pusty</p>
-        <p className="mt-2 text-[var(--adj-ink-soft)]">Janosz czeka na zamówienie.</p>
+        <p className="mt-2 text-[var(--adj-ink-soft)]">Wybierz coś w&nbsp;sklepie, a&nbsp;pojawi się tutaj.</p>
         <Button asChild size="lg" className="mt-8">
           <Link href="/sklep">Przejdź do sklepu</Link>
         </Button>
