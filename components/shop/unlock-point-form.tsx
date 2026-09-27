@@ -43,8 +43,9 @@ export function UnlockPointForm({ isLoggedIn, next = "/koszyk", onUnlocked }: Un
           autoCapitalize="characters"
           autoCorrect="off"
           spellCheck={false}
+          id="employer-code"
           placeholder="Kod"
-          className="min-h-12 font-mono text-base uppercase sm:max-w-48"
+          className="uppercase sm:max-w-48"
           aria-label="Kod od pracodawcy"
         />
         <Button

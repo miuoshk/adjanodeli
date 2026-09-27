@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 
-import { PatternFrame } from "@/components/shop/bakery-pattern";
+import { LabelTag } from "@/components/brand/label-tag";
+import { Price } from "@/components/brand/price";
+import { SectionHeading } from "@/components/brand/section-heading";
 import { OrderCountdown } from "@/components/shop/order-countdown";
 import { PayOrderButton } from "@/components/shop/pay-order-button";
 import { PaymentCheckPoll } from "@/components/shop/payment-check-poll";
@@ -14,6 +16,7 @@ import { SaveStandingOrderButton } from "@/components/shop/save-standing-order-b
 import { requireUser } from "@/lib/auth";
 import { formatCutoff, parseDateOnly } from "@/lib/dates";
 import { formatDatePl, formatPrice, formatTimeRange } from "@/lib/format";
+import { nbsp } from "@/lib/typography";
 import {
   customerCancelDeadline,
   formatCustomerCancelDeadline,
@@ -42,47 +45,91 @@ function toCartItems(items: OrderItemRow[]): CartItem[] {
     }));
 }
 
-function OrderItems({ items }: { items: OrderItemRow[] }) {
+function OrderLines({ items, totalGrosze }: { items: OrderItemRow[]; totalGrosze: number }) {
   return (
-    <ul className="space-y-2">
-      {items.map((item) => (
-        <li key={item.id} className="flex justify-between gap-3 text-sm">
-          <span>
-            {item.product_name} × {item.qty}
-          </span>
-          <span>{formatPrice(item.unit_price_grosze * item.qty)}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function PickupBlock({
-  point,
-  pickupDate,
-}: {
-  point: PickupPointRow;
-  pickupDate: string;
-}) {
-  return (
-    <div className="space-y-1 text-sm leading-relaxed">
-      <p className="font-medium">{point.name}</p>
-      <p>{point.address}</p>
-      {point.description ? <p>{point.description}</p> : null}
-      <p>{formatDatePl(parseDateOnly(pickupDate))}</p>
-      <p>{formatTimeRange(point.pickup_from, point.pickup_to)}</p>
+    <div>
+      <ul className="border-t border-[var(--adj-ink)]">
+        {items.map((item) => (
+          <li
+            key={item.id}
+            className="flex justify-between gap-4 border-b border-[rgba(43,42,31,0.18)] py-3 text-[16px]"
+          >
+            <span>
+              {item.qty}× {nbsp(item.product_name)}
+            </span>
+            <Price grosze={item.unit_price_grosze * item.qty} />
+          </li>
+        ))}
+      </ul>
+      <p className="mt-4 flex items-baseline justify-between gap-4 border-t border-[rgba(43,42,31,0.18)] pt-4">
+        <span className="font-heading text-xl">Suma</span>
+        <span className="font-heading text-[28px] font-medium tabular-nums">
+          {formatPrice(totalGrosze)}
+        </span>
+      </p>
     </div>
   );
 }
 
-function PickupCode({ code }: { code: string }) {
+function PointFacts({ point, pickupDate }: { point: PickupPointRow; pickupDate: string }) {
+  const place = [point.address, point.description].filter(Boolean).join(", ");
+  const rows = [
+    ["Punkt", nbsp(point.name)],
+    ["Adres", place],
+    ["Dzień", formatDatePl(parseDateOnly(pickupDate))],
+    ["Godziny", formatTimeRange(point.pickup_from, point.pickup_to)],
+  ];
+
   return (
-    <p
-      className="font-heading text-center text-[56px] leading-none font-semibold tracking-[0.28em] text-primary"
-      aria-label={`Kod odbioru ${code}`}
-    >
-      {code}
-    </p>
+    <dl>
+      {rows.map(([label, value]) => (
+        <div key={label} className="grid grid-cols-[110px_1fr] gap-3 py-1.5 text-[16px]">
+          <dt className="adj-ui text-[14px] text-[var(--adj-ink-soft)]">{label}</dt>
+          <dd>{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function PickupTicket({
+  code,
+  point,
+  pickupDate,
+  awaiting,
+}: {
+  code: string;
+  point: PickupPointRow | null;
+  pickupDate: string;
+  awaiting?: boolean;
+}) {
+  return (
+    <section className="adj-framed px-6 py-8 lg:px-10 lg:py-10">
+      <p className="adj-label text-[var(--adj-ink-soft)]">Kod odbioru</p>
+      <div className="lg:grid lg:grid-cols-[1fr_auto] lg:items-center lg:gap-10">
+        <div>
+          {awaiting ? (
+            <div className="mt-3">
+              <LabelTag tone="red">Do odbioru</LabelTag>
+            </div>
+          ) : null}
+          <p
+            className="mt-3 font-label text-[88px] leading-[0.9] font-extrabold tracking-[0.06em] text-[var(--adj-red)] [font-stretch:62%] lg:text-[112px]"
+            aria-label={`Kod odbioru ${code}`}
+          >
+            {code}
+          </p>
+        </div>
+        <div className="mt-6 w-[168px] border border-[rgba(43,42,31,0.18)] bg-white p-3 lg:mt-0">
+          <QrCode value={code} />
+        </div>
+      </div>
+      {point ? (
+        <div className="mt-6 border-t border-dashed border-[rgba(43,42,31,0.3)] pt-5">
+          <PointFacts point={point} pickupDate={pickupDate} />
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -171,15 +218,12 @@ function OrderStatusView({
 }) {
   if (order.status === "pending_payment") {
     return (
-      <div className="space-y-5">
-        <h1 className="text-3xl font-semibold leading-tight">
-          Zamówienie #{order.order_number} czeka na płatność
-        </h1>
+      <div className="space-y-8">
+        <SectionHeading as="h1" eyebrow={`Zamówienie #${order.order_number}`} title="Czeka na płatność" />
         {order.expires_at ? <OrderCountdown expiresAt={order.expires_at} /> : null}
         <PayOrderButton orderId={order.id} totalGrosze={order.total_grosze} />
-        <OrderItems items={items} />
-        {point ? <PickupBlock point={point} pickupDate={order.pickup_date} /> : null}
-        <p className="text-lg font-medium">Suma: {formatPrice(order.total_grosze)}</p>
+        <OrderLines items={items} totalGrosze={order.total_grosze} />
+        {point ? <PointFacts point={point} pickupDate={order.pickup_date} /> : null}
       </div>
     );
   }
@@ -187,7 +231,6 @@ function OrderStatusView({
   if (order.status === "paid") {
     return (
       <PaidLikeView
-        heading={`Dziękujemy! Zamówienie #${order.order_number} jest opłacone.`}
         order={order}
         point={point}
         items={items}
@@ -203,7 +246,6 @@ function OrderStatusView({
   if (order.status === "in_production") {
     return (
       <PaidLikeView
-        heading={`Dziękujemy! Zamówienie #${order.order_number} jest opłacone.`}
         order={order}
         point={point}
         items={items}
@@ -213,14 +255,25 @@ function OrderStatusView({
   }
 
   if (order.status === "delivered") {
+    const until = point ? formatCutoff(point.pickup_to) : null;
     return (
-      <PaidLikeView
-        heading={`Twoja paczka czeka w ${point?.name ?? "punkcie"} do ${point ? formatCutoff(point.pickup_to) : "—"}.`}
-        order={order}
-        point={point}
-        items={items}
-        showJanosz={false}
-      />
+      <div className="space-y-8">
+        <SectionHeading
+          as="h1"
+          eyebrow={`Zamówienie #${order.order_number}`}
+          title="Paczka czeka na Ciebie"
+          description={point && until ? `${point.name}, do ${until}.` : undefined}
+        />
+        {order.pickup_code ? (
+          <PickupTicket
+            code={order.pickup_code}
+            point={point}
+            pickupDate={order.pickup_date}
+            awaiting
+          />
+        ) : null}
+        <OrderLines items={items} totalGrosze={order.total_grosze} />
+      </div>
     );
   }
 
@@ -229,13 +282,13 @@ function OrderStatusView({
       ? format(new Date(order.picked_up_at), "d MMMM yyyy", { locale: pl })
       : "";
     return (
-      <div className="space-y-5">
-        <h1 className="text-3xl font-semibold leading-tight">
-          Odebrane{when ? ` ${when}` : ""}. Smacznego!
-        </h1>
-        <OrderItems items={items} />
-        {point ? <p className="text-sm">{point.name}</p> : null}
-        <p className="text-sm">{formatPrice(order.total_grosze)}</p>
+      <div className="space-y-8">
+        <SectionHeading
+          as="h1"
+          eyebrow={`Zamówienie #${order.order_number}`}
+          title={`Odebrane${when ? ` ${when}` : ""}. Smacznego!`}
+        />
+        <OrderLines items={items} totalGrosze={order.total_grosze} />
         <ReorderButton firstDay={firstDay} items={reorderItems} />
       </div>
     );
@@ -243,10 +296,13 @@ function OrderStatusView({
 
   if (order.status === "expired") {
     return (
-      <div className="space-y-5">
-        <h1 className="text-3xl font-semibold leading-tight">
-          Zamówienie wygasło — nie dotarła płatność. Produkty wróciły do puli.
-        </h1>
+      <div className="space-y-8">
+        <SectionHeading
+          as="h1"
+          eyebrow={`Zamówienie #${order.order_number}`}
+          title="Zamówienie wygasło"
+          description="Płatność nie dotarła na czas, więc produkty wróciły do sprzedaży."
+        />
         <ReorderButton firstDay={firstDay} items={reorderItems} />
       </div>
     );
@@ -254,28 +310,33 @@ function OrderStatusView({
 
   if (order.status === "cancelled" || order.status === "refunded") {
     return (
-      <div className="space-y-5">
-        <h1 className="text-3xl font-semibold leading-tight">Zamówienie anulowane.</h1>
-        <p className="text-base leading-relaxed">
-          {order.status === "refunded"
-            ? "Zwrot jest po stronie piekarni."
-            : "Jeśli była płatność, zwrot zrobi piekarnia."}{" "}
-          {bakeryPhone ? `Tel. ${bakeryPhone}` : "Zadzwoń do piekarni."}
-        </p>
+      <div className="space-y-8">
+        <SectionHeading
+          as="h1"
+          eyebrow={`Zamówienie #${order.order_number}`}
+          title="Zamówienie anulowane"
+          description={
+            <>
+              {order.status === "refunded"
+                ? "Zwrot jest po stronie piekarni."
+                : "Jeśli była płatność, zwrot zrobi piekarnia."}{" "}
+              {bakeryPhone ? `Tel. ${bakeryPhone}` : "Zadzwoń do piekarni."}
+            </>
+          }
+        />
       </div>
     );
   }
 
   return (
-    <div className="space-y-5">
-      <h1 className="text-3xl font-semibold">Zamówienie #{order.order_number}</h1>
-      <OrderItems items={items} />
+    <div className="space-y-8">
+      <SectionHeading as="h1" eyebrow={`Zamówienie #${order.order_number}`} title="Zamówienie" />
+      <OrderLines items={items} totalGrosze={order.total_grosze} />
     </div>
   );
 }
 
 function PaidLikeView({
-  heading,
   order,
   point,
   items,
@@ -285,7 +346,6 @@ function PaidLikeView({
   cutoffTime,
   bakeryPhone,
 }: {
-  heading: string;
   order: OrderRow;
   point: PickupPointRow | null;
   items: OrderItemRow[];
@@ -305,41 +365,41 @@ function PaidLikeView({
   const phone = bakeryPhone?.trim();
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-semibold leading-tight">{heading}</h1>
+    <div className="space-y-8">
+      <SectionHeading
+        as="h1"
+        eyebrow={`Zamówienie #${order.order_number}`}
+        title="Opłacone. Dziękujemy!"
+        description="Kod przyszedł też e‑mailem. Pokaż go przy odbiorze."
+      />
       {order.pickup_code ? (
-        <div className="space-y-4">
-          <PatternFrame>
-            <PickupCode code={order.pickup_code} />
-          </PatternFrame>
-          <QrCode value={order.pickup_code} />
-        </div>
+        <PickupTicket code={order.pickup_code} point={point} pickupDate={order.pickup_date} />
       ) : null}
-      {point ? <PickupBlock point={point} pickupDate={order.pickup_date} /> : null}
-      <OrderItems items={items} />
-      <p className="text-lg font-medium">Suma: {formatPrice(order.total_grosze)}</p>
+      <OrderLines items={items} totalGrosze={order.total_grosze} />
       {standingCount !== undefined ? (
         <SaveStandingOrderButton orderId={order.id} standingCount={standingCount} />
       ) : null}
       {cancelEnabled === undefined ? null : canCancel && deadlineLabel ? (
         <CancelOrderButton orderId={order.id} deadlineLabel={deadlineLabel} />
       ) : (
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <p className="adj-ui text-[15px] leading-relaxed text-[var(--adj-ink-soft)]">
           {deadlineLabel
             ? `Anulowanie możliwe było do ${deadlineLabel}. Zadzwoń: ${phone || "piekarnia"}.`
             : `Anulowanie jest wyłączone. Zadzwoń: ${phone || "piekarnia"}.`}
         </p>
       )}
       {showJanosz ? (
-        <div className="flex flex-col items-center gap-3 pt-2 text-center">
+        <div className="flex flex-col items-center pt-2 text-center">
           <Image
             src="/brand/janosz.png"
             alt="Janosz"
-            width={180}
-            height={260}
-            className="h-auto w-[min(100%,180px)]"
+            width={140}
+            height={200}
+            className="h-auto w-[140px]"
           />
-          <p className="text-sm">Janosz pakuje Twoje zamówienie.</p>
+          <p className="mt-3 text-[15px] text-[var(--adj-ink-soft)] italic">
+            Janosz pakuje Twoje zamówienie.
+          </p>
         </div>
       ) : null}
     </div>

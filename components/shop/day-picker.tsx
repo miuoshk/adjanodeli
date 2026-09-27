@@ -7,18 +7,19 @@ import { useRouter } from "next/navigation";
 import { formatDayChip, parseDateOnly, warsawDateIso } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
-type DayPickerProps = {
-  dates: string[];
-  selected: string;
-  basePath?: string;
-};
-
 function stripDot(value: string): string {
   return value.replaceAll(".", "");
 }
 
-export function DayPicker({ dates, selected, basePath = "/sklep" }: DayPickerProps) {
-  const router = useRouter();
+export function DayChips({
+  dates,
+  selected,
+  onSelect,
+}: {
+  dates: string[];
+  selected: string | null;
+  onSelect: (date: string) => void;
+}) {
   const tomorrow = warsawDateIso(1);
 
   return (
@@ -30,7 +31,7 @@ export function DayPicker({ dates, selected, basePath = "/sklep" }: DayPickerPro
           <button
             key={date}
             type="button"
-            onClick={() => router.push(`${basePath}?dzien=${date}`, { scroll: false })}
+            onClick={() => onSelect(date)}
             aria-pressed={isSelected}
             aria-label={formatDayChip(date)}
             className={cn(
@@ -53,5 +54,23 @@ export function DayPicker({ dates, selected, basePath = "/sklep" }: DayPickerPro
         );
       })}
     </div>
+  );
+}
+
+type DayPickerProps = {
+  dates: string[];
+  selected: string;
+  basePath?: string;
+};
+
+export function DayPicker({ dates, selected, basePath = "/sklep" }: DayPickerProps) {
+  const router = useRouter();
+
+  return (
+    <DayChips
+      dates={dates}
+      selected={selected}
+      onSelect={(date) => router.push(`${basePath}?dzien=${date}`, { scroll: false })}
+    />
   );
 }

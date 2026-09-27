@@ -20,7 +20,6 @@ export function ReorderButton({ firstDay, items }: ReorderButtonProps) {
     <Button
       type="button"
       size="lg"
-      className="min-h-12"
       disabled={!firstDay || items.length === 0}
       onClick={() => {
         if (!firstDay) {

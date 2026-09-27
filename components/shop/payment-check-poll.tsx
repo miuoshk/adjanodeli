@@ -30,5 +30,5 @@ export function PaymentCheckPoll({ orderId }: PaymentCheckPollProps) {
     return () => window.clearInterval(timer);
   }, [orderId, router]);
 
-  return <p className="text-base">Sprawdzamy płatność…</p>;
+  return <p className="adj-ui text-[15px] text-[var(--adj-ink-soft)]">Sprawdzamy płatność…</p>;
 }

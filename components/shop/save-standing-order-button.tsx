@@ -21,24 +21,23 @@ export function SaveStandingOrderButton({
   const [isPending, startTransition] = useTransition();
 
   if (standingCount >= 3) {
-    return <p className="text-sm text-muted-foreground">Masz już 3 stałe zamówienia.</p>;
+    return <p className="adj-ui text-[15px] text-[var(--adj-ink-soft)]">Masz już 3 stałe zamówienia.</p>;
   }
 
   return (
-    <div className="space-y-3 rounded-xl border border-[var(--adj-cream-dark)] bg-card p-4">
+    <div className="space-y-3 rounded-[4px] border border-[rgba(43,42,31,0.22)] bg-[var(--adj-paper-light)] p-4">
       <Label htmlFor="standing-name">Zapisz jako stałe zamówienie</Label>
       <Input
         id="standing-name"
         value={name}
         maxLength={80}
         onChange={(event) => setName(event.target.value)}
-        className="h-12 min-h-12 text-base"
       />
       <Button
         type="button"
         size="lg"
         variant="secondary"
-        className="min-h-12 w-full"
+        className="w-full"
         disabled={isPending || name.trim().length === 0}
         onClick={() => {
           startTransition(async () => {

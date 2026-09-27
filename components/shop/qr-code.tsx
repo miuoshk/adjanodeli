@@ -25,7 +25,7 @@ export function QrCode({ value }: QrCodeProps) {
   }, [value]);
 
   if (!dataUrl) {
-    return <div className="size-[220px] rounded-lg bg-muted" aria-hidden />;
+    return <div className="aspect-square w-full bg-[var(--adj-cream-dark)]" aria-hidden />;
   }
 
   return (
@@ -34,7 +34,7 @@ export function QrCode({ value }: QrCodeProps) {
       alt={`Kod odbioru ${value}`}
       width={220}
       height={220}
-      className="mx-auto size-[220px] rounded-lg bg-white"
+      className="h-auto w-full bg-white"
     />
   );
 }

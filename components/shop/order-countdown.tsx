@@ -28,8 +28,8 @@ export function OrderCountdown({ expiresAt }: OrderCountdownProps) {
   }, [expiresAt]);
 
   return (
-    <p className="text-base">
-      Czas na płatność: <span className="font-medium tabular-nums">{remain}</span>
+    <p className="adj-ui inline-flex border border-[var(--adj-red)] px-3 py-1.5 text-[15px] text-[var(--adj-red)]">
+      Czas na płatność: <span className="ml-2 font-medium tabular-nums">{remain}</span>
     </p>
   );
 }

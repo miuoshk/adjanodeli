@@ -29,7 +29,7 @@ export function CancelOrderButton({ orderId, deadlineLabel }: CancelOrderButtonP
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" size="lg" className="min-h-12 w-full">
+        <Button type="button" variant="outline" size="lg" className="w-full">
           Anuluj zamówienie
         </Button>
       </DialogTrigger>
@@ -41,13 +41,12 @@ export function CancelOrderButton({ orderId, deadlineLabel }: CancelOrderButtonP
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button type="button" variant="secondary" className="min-h-12" onClick={() => setOpen(false)}>
+          <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
             Zostaw
           </Button>
           <Button
             type="button"
             variant="outline"
-            className="min-h-12"
             disabled={isPending}
             onClick={() => {
               startTransition(async () => {

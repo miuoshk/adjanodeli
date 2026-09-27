@@ -19,7 +19,7 @@ export function PayOrderButton({ orderId, totalGrosze }: PayOrderButtonProps) {
     <Button
       type="button"
       size="lg"
-      className="min-h-12 w-full text-base"
+      className="w-full"
       disabled={isPending}
       onClick={() => {
         startTransition(async () => {
