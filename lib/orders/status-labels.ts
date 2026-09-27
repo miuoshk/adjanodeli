@@ -17,7 +17,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, OrderStatusMeta> = {
   pending_payment: { label: "Czeka na płatność", color: "#6B6A4A" },
   paid: { label: "Opłacone", color: "#4B4A2F" },
   in_production: { label: "W produkcji", color: "#4B4A2F" },
-  delivered: { label: "Do odbioru", color: "#C4161C" },
+  delivered: { label: "Do odbioru", color: "#A6231F" },
   picked_up: { label: "Odebrane", color: "#2B2A1F" },
   expired: { label: "Wygasło", color: "#6B6A4A" },
   cancelled: { label: "Anulowane", color: "#6B6A4A" },

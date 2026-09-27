@@ -110,7 +110,7 @@ export async function payOrder(orderId: string): Promise<PayOrderResult> {
         amount_off: order.discount_grosze,
         currency: "pln",
         duration: "once",
-        name: "Rabat AdjanoDeli",
+        name: "Rabat Adjano Deli",
       });
       discounts.push({ coupon: coupon.id });
     }

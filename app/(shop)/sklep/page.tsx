@@ -16,11 +16,11 @@ type ShopPageProps = {
 };
 
 export const metadata: Metadata = {
-  title: "Sklep AdjanoDeli — zamów dziś, odbierz jutro w pracy",
+  title: "Sklep",
   description:
     "Pieczywo i słodkości z Piekarni-Cukierni Adjano. Zamów do cutoff, odbierz rano w wybranym punkcie w Mikołowie.",
   openGraph: {
-    title: "Sklep AdjanoDeli — zamów dziś, odbierz jutro w pracy",
+    title: "Sklep",
     description:
       "Pieczywo i słodkości z Piekarni-Cukierni Adjano. Zamów do cutoff, odbierz rano w wybranym punkcie w Mikołowie.",
     images: [{ url: "/brand/kamienica.jpg" }],

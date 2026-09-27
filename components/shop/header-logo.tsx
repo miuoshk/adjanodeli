@@ -3,13 +3,13 @@ import Link from "next/link";
 
 export function HeaderLogo() {
   return (
-    <Link href="/" aria-label="Adjano — strona główna" className="shrink-0">
+    <Link href="/" aria-label="Adjano Deli — strona główna" className="shrink-0">
       <Image
-        src="/brand/adjano-logo-red.svg"
-        alt="Adjano"
-        width={585}
-        height={332}
-        className="h-auto w-[100px] lg:w-[128px]"
+        src="/brand/logo/adjano-deli-poziomy-karmin.svg"
+        alt="Adjano Deli"
+        width={726}
+        height={225}
+        className="h-10 w-auto lg:h-[46px]"
         priority
         unoptimized
       />

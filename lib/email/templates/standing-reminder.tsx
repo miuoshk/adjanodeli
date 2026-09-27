@@ -1,6 +1,6 @@
 import { EmailShell } from "@/lib/email/templates/shell";
 
-const red = "#C4161C";
+const red = "#A6231F";
 const ink = "#2B2A1F";
 const cream = "#F1EADB";
 const line = "rgba(43,42,31,0.18)";

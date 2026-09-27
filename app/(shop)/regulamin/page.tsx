@@ -5,7 +5,7 @@ import { SectionHeading } from "@/components/brand/section-heading";
 export default function TermsPage() {
   return (
     <article className="max-w-[68ch] text-[17px] leading-[1.7]">
-      <SectionHeading as="h1" eyebrow="Informacje" title="Regulamin sklepu AdjanoDeli" />
+      <SectionHeading as="h1" eyebrow="Informacje" title="Regulamin sklepu Adjano Deli" />
       <p className="mt-4">Data wejścia w życie: [[DATA WEJŚCIA W ŻYCIE]]</p>
 
       <section className="space-y-2">
@@ -19,7 +19,7 @@ export default function TermsPage() {
       <section className="space-y-2">
         <h2 className="mt-12 font-heading text-[26px] font-medium">Składanie zamówień</h2>
         <p>
-          Zamówienia składasz przez stronę AdjanoDeli. Wybierasz dzień odbioru, punkt i produkty.
+          Zamówienia składasz przez stronę Adjano Deli. Wybierasz dzień odbioru, punkt i produkty.
           Zamówienia na dany dzień przyjmujemy do godziny cutoff z ustawień sklepu (domyślnie
           20:00 czasu Europe/Warsaw) dnia poprzedniego. Dostępne są tylko dni i punkty, które
           sklep aktualnie obsługuje.
@@ -54,7 +54,7 @@ export default function TermsPage() {
         */}
         <h2 className="mt-12 font-heading text-[26px] font-medium">Odstąpienie od umowy</h2>
         <p>
-          Produkty AdjanoDeli to żywność przygotowywana na wskazany dzień odbioru, łatwo
+          Produkty Adjano Deli to żywność przygotowywana na wskazany dzień odbioru, łatwo
           psująca się i o krótkim terminie przydatności. Z tego względu — zgodnie z art. 38
           pkt 4 ustawy o prawach konsumenta — prawo odstąpienia od umowy zawartej na odległość
           nie przysługuje. Jeśli coś jest nie tak z zamówieniem, napisz: rozpatrzymy sprawę

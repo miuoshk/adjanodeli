@@ -18,7 +18,7 @@ import { formatPrice } from "@/lib/format";
 import type { StatsRevenueDay, StatsWeekday } from "@/lib/admin/stats";
 
 const KHAKI = "#4B4A2F";
-const RED = "#C4161C";
+const RED = "#A6231F";
 const GRID = "#E6DCC6";
 const INK = "#2B2A1F";
 

@@ -11,11 +11,11 @@ export function LandingBag({ copy, shopHref }: { copy: PickupCopy; shopHref: str
       <div className={wrap}>
         <div className="adj-framed mx-auto max-w-[660px] px-6 pt-10 pb-10 text-center lg:px-14 lg:pt-[52px] lg:pb-[52px]">
           <Image
-            src="/brand/adjano-logo-red.svg"
-            alt="Adjano"
-            width={585}
-            height={332}
-            className="mx-auto h-auto w-24 lg:w-[120px]"
+            src="/brand/logo/adjano-deli-karmin.svg"
+            alt="Adjano Deli"
+            width={520}
+            height={231}
+            className="mx-auto h-auto w-[150px] lg:w-[190px]"
             unoptimized
           />
           <h2 className="mt-[22px] font-heading text-[34px] leading-[1.06] font-medium tracking-[-0.015em] text-balance lg:mt-[26px] lg:text-[50px] lg:leading-[1.02]">

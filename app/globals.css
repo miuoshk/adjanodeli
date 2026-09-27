@@ -52,8 +52,8 @@
   --adj-khaki-light: #6b6a4a;
   --adj-cream: #f1eadb;
   --adj-cream-dark: #e6dcc6;
-  --adj-red: #c4161c;
-  --adj-red-dark: #9e1116;
+  --adj-red: #a6231f; /* karmin */
+  --adj-red-dark: #881d19;
   --adj-gold: #b8975a;
   --adj-ink: #2b2a1f;
   --adj-paper-light: #fbf7ee;
@@ -221,15 +221,22 @@
     box-shadow: 0 40px 70px -40px rgb(43 42 31 / 0.6);
   }
   .adj-pattern {
-    background-color: var(--adj-cream);
-    background-image:
-      linear-gradient(rgb(241 234 219 / 0.28), rgb(241 234 219 / 0.28)),
-      url("/brand/wzor-adjano-kafelek-przezroczysty.svg");
+    background-color: var(--adj-khaki);
+    background-image: url("/brand/wzor-adjano-kafelek-przezroczysty.svg");
     background-position: center;
-    background-size: auto, 620px auto;
+    background-repeat: repeat;
+    background-size: 620px auto;
   }
   @media (min-width: 64rem) {
-    .adj-pattern { background-size: auto, 980px auto; }
+    .adj-pattern { background-size: 980px auto; }
+  }
+  /* oliwkowy panel z podwójną złotą ramką: logo na wzorze zawsze stoi na gładkim polu */
+  .adj-plate {
+    background: var(--adj-khaki);
+    box-shadow:
+      0 0 0 1px var(--adj-gold-light),
+      0 0 0 6px var(--adj-khaki),
+      0 0 0 7px var(--adj-gold-light);
   }
   @media (prefers-reduced-motion: no-preference) {
     .adj-rise { animation: adj-rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }

@@ -41,7 +41,7 @@ function stockPromo(
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const { kategoria } = await params;
   if (!getSupabasePublicEnv()) {
-    return { title: "Sklep AdjanoDeli" };
+    return { title: "Sklep" };
   }
   const supabase = await createServerClient();
   const { data } = await supabase
@@ -52,11 +52,11 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     .maybeSingle();
 
   if (!data) {
-    return { title: "Sklep AdjanoDeli" };
+    return { title: "Sklep" };
   }
 
   return {
-    title: `${data.name} — AdjanoDeli`,
+    title: data.name,
     description: data.description?.trim() || `Zamów ${data.name.toLowerCase()} z Piekarni Adjano.`,
   };
 }

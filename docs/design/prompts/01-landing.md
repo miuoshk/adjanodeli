@@ -485,7 +485,7 @@ Jedno źródło danych dla paska, landingu i stopki. Owiń w `cache` z `react`, 
 
 `components/landing/landing-strip.tsx` (serwerowy):
 - `bg-[var(--adj-khaki)] text-[var(--adj-cream)]`, kontener jak wyżej, `min-h-[38px] md:min-h-10`, `adj-ui text-[13px] md:text-sm tracking-[0.02em]`, elementy w rzędzie z `gap-3 md:gap-[18px]`, na desktopie wyśrodkowane, separatory `h-3.5 w-px bg-[var(--adj-cream)]/35`.
-- Desktop (`hidden md:inline`): `Najbliższy odbiór: <b>{copy.longDate}</b>` | `Zamówienia do {cutoff} dzień wcześniej` | `BLIK, Przelewy24 albo karta`.
+- Desktop (`hidden md:inline`): `Najbliższy odbiór: <b>{copy.longDate}</b>` | `Zamówienia do {cutoff} dzień wcześniej` | `BLIK, Apple Pay, Google Pay albo karta`.
 - Telefon (`md:hidden`): `Najbliższy odbiór: <b>{copy.shortDate}</b>` | `Zamówisz do {cutoff}`.
 - Gdy `copy.day === null`: sam tekst `Zamówienia do {cutoff} dzień przed odbiorem`.
 - `<b>` = `font-[650]`.
@@ -538,7 +538,7 @@ Wszystkie wymiary są z `reference.css`. Mobile-first; układy wielokolumnowe od
 - Etykieta `Jak to działa`, H2 `Tak paczka trafia do&nbsp;Ciebie`.
 - Siatka `mt-7 lg:mt-12 grid border-t border-[var(--adj-ink)] lg:grid-cols-3`; kolumny `py-6 lg:pt-8 lg:pb-[34px] lg:pr-10`, druga i trzecia `border-t border-[rgba(43,42,31,0.18)] lg:border-t-0 lg:border-l lg:pl-10`:
   - duże słowo `italic font-normal text-[42px] lg:text-[52px] leading-none text-[var(--adj-red)]`, `h3 mt-3 lg:mt-4 text-[23px] lg:text-[26px] leading-[1.2] font-medium`, `p mt-2 text-[var(--adj-ink-soft)]`:
-    1. `do {cutoff}` · `Zamawiasz` · `Wybierasz dzień i&nbsp;punkt odbioru. Płacisz BLIK-iem, Przelewy24 albo kartą.`
+    1. `do {cutoff}` · `Zamawiasz` · `Wybierasz dzień i&nbsp;punkt odbioru. Płacisz BLIK-iem, kartą, Apple Pay albo Google Pay.`
     2. `rano` · `Pieczemy i&nbsp;pakujemy` · `Każda paczka dostaje etykietę z&nbsp;Twoim imieniem.`
     3. `na kod` · `Odbierasz` · `W&nbsp;punkcie podajesz cztery znaki z&nbsp;e‑maila.` (w „e‑maila” twardy dywiz U+2011).
 - Punkty odbioru (`id="punkty-odbioru"`, `scroll-mt-24`): `grid gap-6 pt-[26px] border-t border-[rgba(43,42,31,0.18)] lg:grid-cols-2 lg:gap-x-10`; każda pozycja = `adj-label text-[var(--adj-ink-soft)]` + `p mt-2 text-[17px]`:

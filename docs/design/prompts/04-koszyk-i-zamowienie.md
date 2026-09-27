@@ -47,7 +47,7 @@
 - wiersze `mt-5 space-y-2 adj-ui text-[16px]`: `Suma` / `Rabat` (tylko gdy > 0) z `Price`,
 - `Do zapłaty`: `mt-4 border-t border-[rgba(43,42,31,0.18)] pt-4 flex items-baseline justify-between`, etykieta `font-heading text-xl`, kwota `font-heading text-[34px] font-medium tabular-nums`,
 - `belowMinimum` — komunikat jak dziś,
-- `mt-3 adj-ui text-[14px] text-[var(--adj-ink-soft)]`: `Płatność online: BLIK, Przelewy24 albo karta. Paczkę odbierasz na kod.`
+- `mt-3 adj-ui text-[14px] text-[var(--adj-ink-soft)]`: `Płatność online: BLIK, Apple Pay, Google Pay albo karta. Paczkę odbierasz na kod.`
 - checkbox regulaminu — jak dziś (linki do `/regulamin` i `/polityka-prywatnosci`),
 - przycisk: `Button size="lg" className="mt-5 w-full"`: `Przejdź do płatności · {formatPrice(payableGrosze)}` (stany disabled jak dziś),
 - niezalogowany: ten sam przycisk-link na `/logowanie?next=/koszyk` z tekstem `Zaloguj się, żeby zamówić`, pod spodem `mt-2 text-center adj-ui text-[13px] text-[var(--adj-ink-soft)]` `Logujesz się kodem z e‑maila.`

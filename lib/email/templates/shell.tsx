@@ -5,7 +5,7 @@ const card = "#FBF7EE";
 const ink = "#2B2A1F";
 const soft = "#57553E";
 const gold = "#B8975A";
-const red = "#C4161C";
+const red = "#A6231F";
 
 const textFont = "Georgia, 'Times New Roman', serif";
 const labelFont = "'Arial Narrow', Arial, sans-serif";

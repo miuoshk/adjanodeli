@@ -47,7 +47,7 @@ export function SettingsForm({ settings }: { settings: OwnerSettings }) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      bakeryName: settings.bakery_name ?? "AdjanoDeli",
+      bakeryName: settings.bakery_name ?? "Adjano Deli",
       cutoffTime: timeInputValue(settings.cutoff_time),
       orderWeekdays: settings.order_weekdays,
       maxDaysAhead: settings.max_days_ahead,
