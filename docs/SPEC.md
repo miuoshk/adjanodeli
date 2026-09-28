@@ -240,14 +240,14 @@ Sklep, grupa (shop):
 - /sklep — kafelki kategorii + (opcjonalnie) sekcja "Popularne dziś"; dzień docelowy u góry (?dzien=YYYY-MM-DD)
 - /sklep/[kategoria] — lista produktów jednej kategorii, day-picker, inne kategorie; 404 dla nieznanego sluga
 - /koszyk — koszyk + wybór punktu odbioru + dnia + uwagi → "Przejdź do płatności"
-- /zamowienie/[id] — potwierdzenie/status zamówienia, kod odbioru, QR
-- /moje-zamowienia — historia
+- /zamowienie/[id] — potwierdzenie/status zamówienia, kod odbioru, QR. Po powrocie ze Stripe (`?status=success`), dopóki status to `pending_payment`: „Potwierdzamy płatność…” i `router.refresh()` co 3 s przez najwyżej 60 s. Po 60 s: „Płatność jeszcze się przetwarza. Mail z kodem odbioru przyjdzie za chwilę, a zamówienie znajdziesz w Moich zamówieniach.” i link do /moje-zamowienia. Gdy status przejdzie na `paid`: zwykły widok z kodem. Status `expired` ze zdarzeniem „Opłacone po wygaśnięciu”: „Płatność doszła po czasie. Skontaktujemy się z Tobą” i telefon z ustawień.
+- /moje-zamowienia — historia. Pod nagłówkiem: „Zalogowana jako {email}” i „To nie Ty? Wyloguj”.
 - /logowanie — e-mail → kod
 - /punkt/[kod] — link zapraszający: po wejściu (z logowaniem) odblokowuje punkt i przekierowuje do /sklep z toastem "Odblokowano punkt: {nazwa}"
-- /konto, /konto/uzupelnij — profil
+- /konto, /konto/uzupelnij — profil. /konto pod nagłówkiem pokazuje „Zalogowana jako {email}”, potem „Twoje zamówienia”: karty `delivered` („Czeka na Ciebie”) oraz `paid` i `in_production` („W przygotowaniu”) z kodem odbioru, punktem, dniem i godzinami, następnie 3 ostatnie pozostałe zamówienia i link „Wszystkie zamówienia” do /moje-zamowienia. Bez zamówień: znak A, „Nie masz jeszcze zamówień.” i „Przejdź do sklepu”.
 - /zamowienie-specjalne — formularz dużych zamówień
 - /regulamin, /polityka-prywatnosci
-Linki do menu (dawne "/" i "/?dzien=") prowadzą na /sklep (i /sklep?dzien=). Logo w headerze prowadzi na "/". Wejście na "/?dzien=" przekierowuje na "/sklep?dzien=" (redirect, nie permanent).
+Linki do menu (dawne "/" i "/?dzien=") prowadzą na /sklep (i /sklep?dzien=). Logo w headerze prowadzi na "/". Wejście na "/?dzien=" przekierowuje na "/sklep?dzien=" (redirect, nie permanent). „Moje zamówienia” jest w nagłówku na komputerze i w menu na telefonie. Przy zamówieniu `delivered` przy linku jest kropka w karminie.
 Admin:
 - /admin/logowanie — login i hasło do panelu (nie OTP)
 - /admin — dziś/jutro: liczby (zamówień, paczek per punkt, do produkcji), szybkie akcje

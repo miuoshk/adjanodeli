@@ -138,3 +138,37 @@ where order_number = 0;
 ```
 
 `paid_at` puste przy statusie `expired` i ustawionym `stripe_payment_intent_id` nie wystąpi samo: przy `ORDER_EXPIRED` funkcja nie zapisuje intentu. Sam status `expired` bez maila w Resend oznacza, że webhook albo nie doszedł, albo doszedł po wygaśnięciu i został tylko zalogowany.
+
+## Gdzie klient szuka zamówienia
+
+Uwaga Justyny („klient na swoim koncie nie widzi zamówienia”) pasuje do tego, co było na stronie konta, zanim doszła tam lista.
+
+**`/konto`.** Strona „Twoje konto” miała pieczątki, punkty, stałe zamówienia, dane i „Wyloguj”. Listy zamówień nie było. To najpewniejsze źródło uwagi: klientka wraca na konto i nie widzi kodu ani numeru.
+
+**`/moje-zamowienia`.** Tu jest historia. Na komputerze (od 640 px) w nagłówku był link „Zamówienia”, schowany klasą `hidden sm:flex`. Na telefonie 390 px tego linku nie było. Osobnego menu mobilnego też nie było: w nagłówku zostawały Sklep, pieczątki, koszyk i ikona konta. Jedyna droga na telefonie to wiedzieć adres albo trafić na link ze strony zamówienia.
+
+**`/zamowienie/[id]?status=success`, status jeszcze `pending_payment`.** Stripe wraca od razu, webhook bywa później. Strona i tak rysowała „Czeka na płatność”, odliczanie i przycisk „Zapłać”, a nad tym krótko „Sprawdzamy płatność…” (odświeżanie co 3 s, ale tylko przez 30 s). Kodu odbioru nie ma, dopóki status nie przejdzie na `paid`.
+
+**„Wygasło” po zapłacie.** Gdy `mark_order_paid` rzuca `ORDER_EXPIRED`, status zostaje `expired`, a w `order_events` ląduje notatka „Opłacone po wygaśnięciu”. Klientka widziała ten sam ekran co przy nieopłaconym wygaśnięciu: „Zamówienie wygasło” i „Płatność nie dotarła na czas, więc produkty wróciły do sprzedaży.” Na liście etykieta statusu to „Wygasło”. Nie było widać, że pieniądze doszły.
+
+**RLS `orders_select`.** Polityka: `user_id = auth.uid() or is_staff()`. Zamówienie widzi konto, z którego je złożono (albo ktoś z panelu). Zalogowanie innym mailem daje pustą listę, nawet gdy `customer_email` na zamówieniu wygląda znajomo. `user_id` jest z sesji w chwili `create_order` i później się nie zmienia.
+
+Zapytanie tylko do odczytu. Podmień adres. `user_id_matches_account` = `false` znaczy, że zamówienie wisi na innym koncie niż profil o tym mailu. `null` znaczy, że profilu o tym adresie nie ma.
+
+```sql
+with account as (
+  select id
+  from public.profiles
+  where lower(email) = lower('klient@example.com')
+)
+select
+  o.order_number,
+  o.status,
+  o.created_at,
+  o.paid_at,
+  o.user_id = (select id from account) as user_id_matches_account
+from public.orders o
+where lower(o.customer_email) = lower('klient@example.com')
+   or o.user_id = (select id from account)
+order by o.created_at desc;
+```

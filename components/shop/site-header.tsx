@@ -5,12 +5,14 @@ import { LandingStrip } from "@/components/landing/landing-strip";
 import { HeaderCartLink } from "@/components/shop/header-cart-link";
 import { HeaderLogo } from "@/components/shop/header-logo";
 import { LandingNavLinks } from "@/components/shop/landing-nav-links";
+import { MobileShopMenu } from "@/components/shop/mobile-shop-menu";
 import { SiteHeaderShell } from "@/components/shop/site-header-shell";
 import { getProfile } from "@/lib/auth";
 import { warsawDateIso } from "@/lib/dates";
 import { getLoyaltyStatus } from "@/lib/loyalty/status";
 import { getPickupBasics } from "@/lib/shop/landing-data";
 import { buildPickupCopy } from "@/lib/shop/pickup-copy";
+import { createServerClient } from "@/lib/supabase/server";
 
 export async function SiteHeader() {
   const profile = await getProfile();
@@ -19,14 +21,24 @@ export async function SiteHeader() {
   const copy = buildPickupCopy(pickup.day, pickup.cutoff, warsawDateIso());
   const firstName = profile?.full_name?.trim().split(/\s+/)[0];
   const isStaff = profile?.role === "staff" || profile?.role === "owner";
+  let hasDelivery = false;
+  if (profile) {
+    const supabase = await createServerClient();
+    const { count } = await supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "delivered");
+    hasDelivery = (count ?? 0) > 0;
+  }
 
   return (
     <SiteHeaderShell announcement={<LandingStrip copy={copy} cutoff={pickup.cutoff} />}>
       <HeaderLogo />
       <div className="flex min-w-0 items-center gap-2">
+        {profile ? <MobileShopMenu hasDelivery={hasDelivery} /> : null}
         <Link
           href="/sklep"
-          className="flex min-h-12 items-center rounded-md px-2 text-sm font-medium hover:bg-black/10"
+          className={`${profile ? "hidden sm:flex" : "flex"} min-h-12 items-center rounded-md px-2 text-sm font-medium hover:bg-black/10`}
         >
           Sklep
         </Link>
@@ -34,9 +46,12 @@ export async function SiteHeader() {
         {profile ? (
           <Link
             href="/moje-zamowienia"
-            className="hidden min-h-12 items-center rounded-md px-2 text-sm font-medium hover:bg-black/10 sm:flex"
+            className="hidden min-h-12 items-center gap-2 rounded-md px-2 text-sm font-medium hover:bg-black/10 sm:flex"
           >
-            Zamówienia
+            Moje zamówienia
+            {hasDelivery ? (
+              <span className="size-2 shrink-0 rounded-full bg-[var(--adj-red)]" aria-label="Paczka czeka" />
+            ) : null}
           </Link>
         ) : null}
         {isStaff ? (

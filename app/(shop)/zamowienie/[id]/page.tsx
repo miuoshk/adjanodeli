@@ -21,6 +21,7 @@ import {
   customerCancelDeadline,
   formatCustomerCancelDeadline,
 } from "@/lib/orders/cancel-deadline";
+import { EXPIRED_PAID_NOTE } from "@/lib/email/send-paid-after-expiry";
 import { createServerClient } from "@/lib/supabase/server";
 import type { CartItem } from "@/lib/store/cart";
 import type { Tables } from "@/lib/supabase/database.types";
@@ -139,7 +140,8 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
   await requireUser(`/zamowienie/${id}`);
 
   const supabase = await createServerClient();
-  const [orderResult, datesResult, settingsResult, standingCountResult] = await Promise.all([
+  const [orderResult, datesResult, settingsResult, standingCountResult, latePaymentResult] =
+    await Promise.all([
     supabase
       .from("orders")
       .select("*, order_items(*), pickup_points(*)")
@@ -152,6 +154,12 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
       .eq("id", 1)
       .single(),
     supabase.from("standing_orders").select("id", { count: "exact", head: true }),
+    supabase
+      .from("order_events")
+      .select("id")
+      .eq("order_id", id)
+      .eq("note", EXPIRED_PAID_NOTE)
+      .limit(1),
   ]);
 
   const order = orderResult.data as
@@ -173,24 +181,28 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
   const bakeryPhone = settingsResult.data?.owner_phone;
   const cancelEnabled = settingsResult.data?.customer_cancellation_enabled ?? true;
   const cutoffTime = settingsResult.data?.cutoff_time ?? "20:00";
-  const waitingForWebhook =
-    query.status === "success" && order.status === "pending_payment";
+  const waitingForWebhook = query.status === "success" && order.status === "pending_payment";
+  const paidAfterExpiry = order.status === "expired" && (latePaymentResult.data?.length ?? 0) > 0;
   const reorderItems = toCartItems(items);
 
   return (
     <div className="space-y-6">
-      {waitingForWebhook ? <PaymentCheckPoll orderId={order.id} /> : null}
-      <OrderStatusView
-        order={order}
-        point={point}
-        items={items}
-        firstDay={firstDay}
-        bakeryPhone={bakeryPhone}
-        reorderItems={reorderItems}
-        standingCount={standingCountResult.count ?? 0}
-        cancelEnabled={cancelEnabled}
-        cutoffTime={cutoffTime}
-      />
+      {waitingForWebhook ? (
+        <PaymentCheckPoll orderId={order.id} orderNumber={order.order_number} />
+      ) : (
+        <OrderStatusView
+          order={order}
+          point={point}
+          items={items}
+          firstDay={firstDay}
+          bakeryPhone={bakeryPhone}
+          reorderItems={reorderItems}
+          standingCount={standingCountResult.count ?? 0}
+          cancelEnabled={cancelEnabled}
+          cutoffTime={cutoffTime}
+          paidAfterExpiry={paidAfterExpiry}
+        />
+      )}
     </div>
   );
 }
@@ -205,6 +217,7 @@ function OrderStatusView({
   standingCount,
   cancelEnabled,
   cutoffTime,
+  paidAfterExpiry,
 }: {
   order: OrderRow;
   point: PickupPointRow | null;
@@ -215,6 +228,7 @@ function OrderStatusView({
   standingCount: number;
   cancelEnabled: boolean;
   cutoffTime: string;
+  paidAfterExpiry: boolean;
 }) {
   if (order.status === "pending_payment") {
     return (
@@ -290,6 +304,20 @@ function OrderStatusView({
         />
         <OrderLines items={items} totalGrosze={order.total_grosze} />
         <ReorderButton firstDay={firstDay} items={reorderItems} />
+      </div>
+    );
+  }
+
+  if (order.status === "expired" && paidAfterExpiry) {
+    const phone = bakeryPhone?.trim();
+    return (
+      <div className="space-y-8">
+        <SectionHeading
+          as="h1"
+          eyebrow={`Zamówienie #${order.order_number}`}
+          title="Płatność doszła po czasie. Skontaktujemy się z Tobą"
+          description={phone ? `Tel. ${phone}` : "Zadzwoń do piekarni."}
+        />
       </div>
     );
   }
