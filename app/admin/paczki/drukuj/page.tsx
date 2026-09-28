@@ -2,6 +2,7 @@ import { PrintButton } from "@/components/admin/print-button";
 import { getNearestOrderDay, getPackagesData } from "@/lib/admin/queries";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl } from "@/lib/format";
+import { maskCustomerName } from "@/lib/labels/mask-customer-name";
 
 type PackageLabelsPageProps = {
   searchParams: Promise<{ dzien?: string; punkt?: string }>;
@@ -34,8 +35,9 @@ export default async function PackageLabelsPage({ searchParams }: PackageLabelsP
             Etykiety — {formatDatePl(parseDateOnly(day))}
           </h1>
           <p>{titlePoint}</p>
+          <p>Etykieta 7,5 × 6 cm.</p>
         </div>
-        <PrintButton label="Drukuj etykiety" />
+        <PrintButton label="Drukuj na etykieciarce" />
       </div>
 
       {labels.length === 0 ? (
@@ -49,7 +51,8 @@ export default async function PackageLabelsPage({ searchParams }: PackageLabelsP
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/brand/logo/adjano-deli-tusz.svg" alt="" className="pack-label-logo" />
               </div>
-              <p className="pack-label-name">{item.customerName}</p>
+              <p className="pack-label-name">{maskCustomerName(item.customerName)}</p>
+              <p className="pack-label-email">{item.customerEmail}</p>
               <p className="pack-label-meta">
                 {item.pointName} · {formatDatePl(parseDateOnly(day))}
               </p>

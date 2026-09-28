@@ -1,4 +1,8 @@
+/** Stripe Checkout for PLN rejects charges under 2,00 zł. */
 export const STRIPE_MIN_GROSZE = 200;
+
+/** Shop minimum after discount. Stays above the Stripe floor. */
+export const ORDER_MIN_GROSZE = 1000;
 
 export type VoucherType = "PCT10" | "PCT50" | "ONE_GROSZ";
 

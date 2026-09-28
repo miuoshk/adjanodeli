@@ -3,6 +3,8 @@
 import { z } from "zod";
 
 import { getSession } from "@/lib/auth";
+import { formatPrice } from "@/lib/format";
+import { ORDER_MIN_GROSZE } from "@/lib/loyalty/discount";
 import { invoicePayload, isCompleteInvoice } from "@/lib/orders/invoice";
 import { payOrder } from "@/lib/orders/pay-order";
 import { createServerClient } from "@/lib/supabase/server";
@@ -62,7 +64,7 @@ const errorMessages = {
   NOT_AUTHENTICATED: "Zaloguj się, żeby zamówić.",
   VOUCHER_INVALID: "Ten voucher już nie działa. Wybierz inny albo zamów bez.",
   DISCOUNT_INVALID: "Ten kod już nie działa. Sprawdź go albo zamów bez.",
-  TOTAL_BELOW_MINIMUM: "Po rabacie zamówienie musi mieć min. 2,00 zł. Dodaj jeszcze produkt.",
+  TOTAL_BELOW_MINIMUM: `Zamówienie musi mieć min. ${formatPrice(ORDER_MIN_GROSZE)}. Dodaj jeszcze coś.`,
   INVALID_INVOICE: "Sprawdź NIP, nazwę i adres do faktury.",
   UNKNOWN: "Nie udało się złożyć zamówienia. Spróbuj jeszcze raz.",
 } as const;

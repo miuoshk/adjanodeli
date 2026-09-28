@@ -521,6 +521,7 @@ export type PackageItem = {
   id: string;
   pickupCode: string;
   customerName: string;
+  customerEmail: string;
   itemsSummary: string;
   items: { name: string; qty: number }[];
   status: string;
@@ -546,7 +547,7 @@ export async function getPackagesData(day: string): Promise<PackagesData> {
     supabase
       .from("orders")
       .select(
-        "id, pickup_point_id, pickup_code, customer_name, status, note, order_items(product_name, qty)",
+        "id, pickup_point_id, pickup_code, customer_name, customer_email, status, note, order_items(product_name, qty)",
       )
       .eq("pickup_date", day)
       .in("status", [...COUNTED_STATUSES])
@@ -558,6 +559,7 @@ export async function getPackagesData(day: string): Promise<PackagesData> {
     pickup_point_id: string;
     pickup_code: string | null;
     customer_name: string;
+    customer_email: string;
     status: string;
     note: string | null;
     order_items: { product_name: string; qty: number }[];
@@ -574,6 +576,7 @@ export async function getPackagesData(day: string): Promise<PackagesData> {
           id: order.id,
           pickupCode: order.pickup_code ?? "—",
           customerName: order.customer_name,
+          customerEmail: order.customer_email,
           items: (order.order_items ?? []).map((item) => ({
             name: item.product_name,
             qty: item.qty,

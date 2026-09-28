@@ -16,7 +16,7 @@ import { buildPickupCopy } from "@/lib/shop/pickup-copy";
 import { nbsp } from "@/lib/typography";
 import {
   computeDiscount,
-  STRIPE_MIN_GROSZE,
+  ORDER_MIN_GROSZE,
   voucherLabel,
 } from "@/lib/loyalty/discount";
 import { isCompleteInvoice, type InvoiceDefaults } from "@/lib/orders/invoice";
@@ -241,7 +241,7 @@ export function CartView({
       : 0;
   const discountGrosze = usingCode ? (appliedCode?.discountGrosze ?? 0) : voucherDiscount;
   const payableGrosze = subtotal - discountGrosze;
-  const belowMinimum = payableGrosze < STRIPE_MIN_GROSZE;
+  const belowMinimum = payableGrosze < ORDER_MIN_GROSZE;
 
   const overstock = useMemo(() => {
     const issues = new Map<string, number>();
@@ -761,8 +761,8 @@ export function CartView({
         {belowMinimum ? (
           <p className="mt-3 text-sm leading-relaxed text-[var(--adj-red)]">
             {discountGrosze > 0
-              ? "Dodaj jeszcze produkt — po rabacie zamówienie musi mieć min. 2,00 zł."
-              : "Dodaj jeszcze coś — zamówienie musi mieć min. 2,00 zł."}
+              ? `Dodaj jeszcze produkt — po rabacie zamówienie musi mieć min. ${formatPrice(ORDER_MIN_GROSZE)}.`
+              : `Dodaj jeszcze coś — zamówienie musi mieć min. ${formatPrice(ORDER_MIN_GROSZE)}.`}
           </p>
         ) : null}
         <p className="adj-ui mt-3 text-[14px] text-[var(--adj-ink-soft)]">
