@@ -4,7 +4,7 @@ Każdy prompt to jedno zadanie dla Cursora (Agent). Jeden prompt = jeden nowy cz
 
 ## Stan
 
-Prompty 01–06 są wykonane (commity od „rebuild the landing as a paper bakery page” do „restyle transactional emails”). Teraz kolej na 08 i 09: marka Adjano Deli z księgi znaku.
+Prompty 01–06 i 08–09 są wykonane (marka Adjano Deli jest w repo, ostatnio też minimum 10 zł i etykiety na etykieciarkę). Teraz kolej na rundę 1 poprawek z uwag Justyny: prompty 10–14, opis niżej.
 
 ## Kolejność
 
@@ -30,6 +30,40 @@ Prompty 01–06 są wykonane (commity od „rebuild the landing as a paper baker
    - kliknij ścieżki z sekcji „Odbiór” na końcu promptu, na telefonie (390 px) i desktopie,
    - commit z numerem promptu w opisie, np. `feat(brand): 08 logo, karmin i ikony`.
 4. Jeśli Cursor zatrzyma się na sprzeczności ze SPEC, to dobrze. Każdy prompt ma krok, który aktualizuje SPEC; pokaż mu go palcem.
+
+## Runda 1 poprawek — uwagi Justyny z 28.09
+
+| # | Plik | Uwaga Justyny | Co robi |
+|---|------|---------------|---------|
+| — | ręcznie, 10 minut | „klient nie dostał maila” | Sprawdzenie konfiguracji, zanim ruszysz kod (lista niżej) |
+| **10** | `10-maile-i-platnosci.md` | „klient nie dostał potwierdzenia” | Audyt drogi płatność → mail, dziennik maili, „Wyślij ponownie”, alarm przy płatności za wygasłe zamówienie, stan poczty w Ustawieniach |
+| **11** | `11-konto-moje-zamowienia.md` | „klient nie widzi zamówienia na koncie” | Zamówienia na `/konto`, „Zalogowana jako…”, link w menu, ekran „Potwierdzamy płatność…” |
+| **12** | `12-dzien-dostawy.md` | „jak dać znać, że dojechałam?” | Audyt dnia, „Dziś” jako plan dnia, „Jestem na miejscu — powiadom klientów”, lepszy mail „Twoja paczka czeka”, wydawanie na telefonie |
+| **13** | `13-etykiety-a4-i-etykieciarka.md` | „za mała czcionka, A4 i etykieciarka” | Dwa formaty druku, większy tekst, bez pełnego e-maila na etykiecie |
+| **14** | `14-instrukcja-dla-justyny.md` | „instrukcja zamówień i odbiorów” | Strona „Pomoc” w panelu do druku i ściąga na trasę dla kierowcy |
+
+Kolejność ma znaczenie: 12 korzysta z dziennika maili z 10, 14 opisuje ekrany po 10–13.
+
+### Zanim odpalisz 10 (ręcznie, 10 minut)
+
+Połowa problemu z mailami może być w konfiguracji, a nie w kodzie:
+
+- [ ] **Vercel → Settings → Environment Variables (Production):** są `RESEND_API_KEY`, `EMAIL_FROM` (adres w `adjanodeli.pl`), `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_APP_URL=https://adjanodeli.pl`. Po zmianie zmiennych: Redeploy.
+- [ ] **Resend → Domains:** `adjanodeli.pl` = Verified. Bez tego Resend wysyła tylko na Twój własny adres.
+- [ ] **Resend → Emails:** czy przy zamówieniu klienta w ogóle była próba wysyłki.
+- [ ] **Stripe → Developers → Webhooks:** endpoint `https://adjanodeli.pl/api/stripe/webhook` (albo produkcyjny adres Vercela), zdarzenia `checkout.session.completed` i `checkout.session.expired`, ostatnie dostarczenia 200. Sekret z tego endpointu = `STRIPE_WEBHOOK_SECRET` na Vercelu.
+- [ ] **Vercel → Logs:** szukaj `[EMAIL]` i `[WEBHOOK]` z godziny zamówienia klienta.
+
+Wynik wpisz Cursorowi na początku czatu z promptem 10 („Resend: domena niezweryfikowana” albo „wszystko ustawione”).
+
+### Jak pracujemy z uwagami (za każdym razem)
+
+1. **Justyna zgłasza:** co robiła, na którym ekranie, telefon czy komputer, godzina, numer zamówienia, zrzut ekranu (ten sam format jest w „Pomocy”, sekcja „Gdy coś nie działa”).
+2. **Miłosz z Claude'em** zamienia uwagi w prompty: jeden temat = jeden prompt, z audytem przed zmianami.
+3. **Cursor** (nowy czat na prompt): audyt → raport w `docs/audyt/` → zmiany → testy → lista zmienionych plików.
+4. **Miłosz:** przegląd diffu, `npm test && npm run lint && npm run build`, kroki z sekcji „Odbiór”, commit z numerem promptu, push (Vercel wdraża sam), migracje `npx supabase db push`.
+5. **Justyna testuje** na produkcji według krótkiej listy od Miłosza (3–5 kroków z „Odbioru”) i daje znać: działa albo zrzut ekranu.
+6. Zamykamy temat w `docs/CHANGELOG.md`.
 
 ## Po wdrożeniu 08–09 (ręcznie, poza kodem)
 

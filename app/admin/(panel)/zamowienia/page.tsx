@@ -171,6 +171,9 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
                     <TableCell>{formatPrice(order.totalGrosze)}</TableCell>
                     <TableCell>
                       <StatusBadge status={order.status} />
+                      {order.mailFailed ? (
+                        <p className="mt-1 text-xs text-[var(--adj-red)]">Mail nie doszedł</p>
+                      ) : null}
                     </TableCell>
                     <TableCell className="font-heading tracking-widest">
                       {order.pickupCode ?? "—"}

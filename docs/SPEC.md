@@ -215,7 +215,7 @@ Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprze
 - line_items: jedna pozycja per order_item (name, unit_amount = unit_price_grosze, quantity). Jeśli discount_grosze > 0 (Faza 2): coupon amount_off tworzony ad hoc.
 - metadata: { order_id }. client_reference_id = order_id. expires_at = now + 30 min.
 - success_url: /zamowienie/{order_id}?status=success, cancel_url: /koszyk?cancelled=1.
-- Webhook /api/stripe/webhook: checkout.session.completed → orders.status = paid, paid_at, stripe_payment_intent_id (idempotentnie: jeśli już paid, nic). checkout.session.expired → jeśli nadal pending_payment: expired + release. Weryfikacja podpisu obowiązkowa.
+- Webhook /api/stripe/webhook: checkout.session.completed → orders.status = paid, paid_at, stripe_payment_intent_id (idempotentnie: jeśli już paid, nic). checkout.session.expired → jeśli nadal pending_payment: expired + release. Weryfikacja podpisu obowiązkowa. Gdy mark_order_paid rzuci ORDER_EXPIRED (klient zapłacił po wygaśnięciu): status zostaje expired, do order_events dopisywana jest notatka „Opłacone po wygaśnięciu”, a właściciel dostaje mail paid_after_expiry_owner. Panel pokazuje to na górze strony zamówienia.
 
 ## 8. Autoryzacja i RLS
 - Logowanie sklepu: Supabase Auth, e-mail OTP (6–8 cyfr, tyle ile wysyła Auth), shouldCreateUser: true. Po pierwszym logowaniu, jeśli profiles.full_name jest null → przekierowanie na /konto/uzupelnij (imię, telefon).
@@ -293,6 +293,9 @@ API:
 - order-paid: temat "Zamówienie #{order_number} — kod odbioru {code}". Treść: kod dużą czcionką, QR (data URL), punkt, adres, okno godzinowe, data, lista pozycji, suma, telefon do piekarni.
 - order-delivered: temat "Twoja paczka czeka — {punkt}". Treść: kod, punkt, do której godziny.
 - special-request-owner: do owner_email, nowe zamówienie specjalne.
+- paid_after_expiry_owner: do owner_email, gdy webhook dostanie płatność za zamówienie już wygasłe. Temat "Klient zapłacił za wygasłe zamówienie #{numer}".
+- Każda próba wysyłki ląduje w email_log (sent / failed / skipped) z order_id, kind, odbiorcą i błędem. Odczyt: staff. Zapis: tylko service_role.
+- order_paid i order_delivered nie wychodzą drugi raz, jeśli dla tej pary (order_id, kind) jest już wiersz sent — chyba że wywołanie ma force (przycisk w panelu).
 Nadawca: EMAIL_FROM (np. "AdjanoDeli <zamowienia@adjanodeli.pl>").
 
 ## 12. Poza zakresem (nie implementować bez wyraźnego polecenia)

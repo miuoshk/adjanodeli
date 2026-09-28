@@ -1,3 +1,4 @@
+import { recordEmailLog } from "@/lib/email/log";
 import { sendEmail } from "@/lib/email/resend";
 import { SpecialRequestOwnerEmail } from "@/lib/email/templates/special-request-owner";
 import { parseDateOnly } from "@/lib/dates";
@@ -14,7 +15,7 @@ type SendSpecialRequestInput = {
 
 export async function sendSpecialRequestOwner(
   input: SendSpecialRequestInput,
-): Promise<{ ok: true } | { ok: false }> {
+): Promise<{ ok: true } | { ok: false; message: string }> {
   try {
     const admin = createClient();
     const { data: settings } = await admin
@@ -24,13 +25,21 @@ export async function sendSpecialRequestOwner(
       .single();
 
     if (!settings?.owner_email) {
-      console.error("[EMAIL]", "Brak owner_email do special-request-owner.");
-      return { ok: false };
+      const message = "Brak adresu właściciela.";
+      console.error("[EMAIL]", message);
+      await recordEmailLog({
+        kind: "special_request_owner",
+        recipient: "(brak adresu)",
+        status: "failed",
+        error: message,
+      });
+      return { ok: false, message };
     }
 
     return sendEmail({
       to: settings.owner_email,
       subject: "Nowe zamówienie specjalne",
+      kind: "special_request_owner",
       react: SpecialRequestOwnerEmail({
         name: input.name,
         phone: input.phone,
@@ -43,7 +52,14 @@ export async function sendSpecialRequestOwner(
       }),
     });
   } catch (err) {
+    const message = err instanceof Error ? err.message : "Nie udało się wysłać maila.";
     console.error("[EMAIL]", err);
-    return { ok: false };
+    await recordEmailLog({
+      kind: "special_request_owner",
+      recipient: "(brak adresu)",
+      status: "failed",
+      error: message,
+    });
+    return { ok: false, message };
   }
 }

@@ -22,6 +22,7 @@ export async function sendStandingReminder(input: {
   return sendEmail({
     to: input.to,
     subject: "Zamówić jak zwykle na jutro?",
+    kind: "standing_reminder",
     react: StandingReminderEmail({
       standingName: input.standingName,
       pickupDateLabel: formatDatePl(parseDateOnly(input.pickupDate)),

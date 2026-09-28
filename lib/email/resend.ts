@@ -1,24 +1,51 @@
 import { Resend } from "resend";
 import type { ReactElement } from "react";
 
+import type { EmailKind } from "@/lib/email/delivery";
+import { emailErrorText, recordEmailLog } from "@/lib/email/log";
+
 type SendEmailInput = {
   to: string;
   subject: string;
   react: ReactElement;
+  kind: EmailKind;
+  orderId?: string | null;
 };
 
-export async function sendEmail(
-  input: SendEmailInput,
-): Promise<{ ok: true } | { ok: false }> {
-  try {
-    const from = process.env.EMAIL_FROM;
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey || !from) {
-      console.error("[EMAIL]", "Brak RESEND_API_KEY albo EMAIL_FROM.");
-      return { ok: false };
-    }
+export type SendEmailResult = { ok: true } | { ok: false; message: string };
 
-    const { error } = await new Resend(apiKey).emails.send({
+function missingConfigMessage(apiKey: string | undefined, from: string | undefined): string | null {
+  if (!apiKey && !from) {
+    return "Brak RESEND_API_KEY i EMAIL_FROM.";
+  }
+  if (!apiKey) {
+    return "Brak RESEND_API_KEY.";
+  }
+  if (!from) {
+    return "Brak EMAIL_FROM.";
+  }
+  return null;
+}
+
+export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
+  const from = process.env.EMAIL_FROM;
+  const apiKey = process.env.RESEND_API_KEY;
+  const missing = missingConfigMessage(apiKey, from);
+
+  if (missing || !apiKey || !from) {
+    console.error("[EMAIL]", missing);
+    await recordEmailLog({
+      orderId: input.orderId,
+      kind: input.kind,
+      recipient: input.to,
+      status: "failed",
+      error: missing ?? "Brak konfiguracji poczty.",
+    });
+    return { ok: false, message: missing ?? "Brak konfiguracji poczty." };
+  }
+
+  try {
+    const { data, error } = await new Resend(apiKey).emails.send({
       from,
       to: input.to,
       subject: input.subject,
@@ -26,13 +53,36 @@ export async function sendEmail(
     });
 
     if (error) {
+      const message = emailErrorText(error);
       console.error("[EMAIL]", error);
-      return { ok: false };
+      await recordEmailLog({
+        orderId: input.orderId,
+        kind: input.kind,
+        recipient: input.to,
+        status: "failed",
+        error: message,
+      });
+      return { ok: false, message };
     }
 
+    await recordEmailLog({
+      orderId: input.orderId,
+      kind: input.kind,
+      recipient: input.to,
+      status: "sent",
+      providerId: data?.id ?? null,
+    });
     return { ok: true };
   } catch (err) {
+    const message = emailErrorText(err);
     console.error("[EMAIL]", err);
-    return { ok: false };
+    await recordEmailLog({
+      orderId: input.orderId,
+      kind: input.kind,
+      recipient: input.to,
+      status: "failed",
+      error: message,
+    });
+    return { ok: false, message };
   }
 }

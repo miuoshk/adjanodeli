@@ -4,13 +4,16 @@ import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 
 import { CopyInvoiceButton } from "@/components/admin/copy-invoice-button";
+import { EmailLogList } from "@/components/admin/email-log-list";
 import { OrderActions } from "@/components/admin/order-actions";
+import { OrderMailButtons } from "@/components/admin/order-mail-buttons";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatusBadge } from "@/components/admin/status-badge";
-import { getAdminOrderDetail } from "@/lib/admin/queries";
+import { getAdminOrderDetail, getOrderEmailLog } from "@/lib/admin/queries";
 import { stripePaymentUrl } from "@/lib/admin/stripe-url";
 import { getProfile, requireRole } from "@/lib/auth";
 import { parseDateOnly } from "@/lib/dates";
+import { EXPIRED_PAID_NOTE } from "@/lib/email/send-paid-after-expiry";
 import { formatDatePl, formatPrice, formatTimeRange } from "@/lib/format";
 import { orderStatusMeta } from "@/lib/orders/status-labels";
 
@@ -24,6 +27,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
   const profile = await getProfile();
   const isOwner = profile?.role === "owner";
   const detail = await getAdminOrderDetail(id);
+  const mails = await getOrderEmailLog(id);
 
   if (!detail) {
     notFound();
@@ -34,11 +38,19 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
     ? stripePaymentUrl(order.stripe_payment_intent_id)
     : null;
 
+  const paidAfterExpiry = events.some((event) => event.note === EXPIRED_PAID_NOTE);
+
   return (
     <div className="space-y-8">
       <PageHeader title={`Zamówienie #${order.order_number}`}>
         <StatusBadge status={order.status} />
       </PageHeader>
+
+      {paidAfterExpiry ? (
+        <p className="border border-[var(--adj-red)] bg-[var(--adj-paper-light)] px-4 py-3 text-sm leading-relaxed">
+          Klient zapłacił, ale zamówienie już wygasło. Zrób zwrot w Stripe albo zadzwoń.
+        </p>
+      ) : null}
 
       <section className="space-y-2 text-sm leading-relaxed">
         <p className="text-lg font-medium">{order.customer_name}</p>
@@ -93,6 +105,12 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
           ))}
         </ul>
         <p className="text-lg font-medium">Suma: {formatPrice(order.total_grosze)}</p>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-2xl font-semibold">Maile</h2>
+        <EmailLogList rows={mails} />
+        <OrderMailButtons orderId={order.id} status={order.status} />
       </section>
 
       <section className="space-y-3">

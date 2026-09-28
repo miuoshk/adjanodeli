@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
 import { sendOrderPaid } from "@/lib/email/send-order-paid";
+import { recordPaidAfterExpiry, sendPaidAfterExpiryOwner } from "@/lib/email/send-paid-after-expiry";
 import { getStripe } from "@/lib/stripe/client";
 import { createClient } from "@/lib/supabase/admin";
 
@@ -62,6 +63,8 @@ export async function POST(req: Request) {
           const text = [error.message, error.details, error.hint].filter(Boolean).join(" ");
           if (text.includes("ORDER_EXPIRED")) {
             console.error("[WEBHOOK][EXPIRED_PAID]", orderId);
+            await recordPaidAfterExpiry(orderId);
+            await sendPaidAfterExpiryOwner(orderId);
           } else {
             console.error("[WEBHOOK]", event.type, orderId, text);
           }

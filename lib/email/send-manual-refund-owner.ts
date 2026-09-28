@@ -1,3 +1,4 @@
+import { recordEmailLog } from "@/lib/email/log";
 import { sendEmail } from "@/lib/email/resend";
 import { ManualRefundOwnerEmail } from "@/lib/email/templates/manual-refund-owner";
 import { formatPrice } from "@/lib/format";
@@ -18,13 +19,23 @@ export async function sendManualRefundOwner(orderId: string): Promise<void> {
     const order = orderResult.data;
     const ownerEmail = settingsResult.data?.owner_email;
     if (!order || !ownerEmail) {
-      console.error("[EMAIL]", "Brak danych do maila zwrotu ręcznego.", orderId);
+      const message = "Brak danych do maila o zwrocie.";
+      console.error("[EMAIL]", message, orderId);
+      await recordEmailLog({
+        orderId,
+        kind: "manual_refund_owner",
+        recipient: ownerEmail || "(brak adresu)",
+        status: "failed",
+        error: message,
+      });
       return;
     }
 
     await sendEmail({
       to: ownerEmail,
       subject: `Zwrot ręczny wymagany #${order.order_number}`,
+      kind: "manual_refund_owner",
+      orderId,
       react: ManualRefundOwnerEmail({
         orderNumber: order.order_number,
         customerName: order.customer_name,
@@ -34,5 +45,12 @@ export async function sendManualRefundOwner(orderId: string): Promise<void> {
     });
   } catch (err) {
     console.error("[EMAIL]", err);
+    await recordEmailLog({
+      orderId,
+      kind: "manual_refund_owner",
+      recipient: "(brak adresu)",
+      status: "failed",
+      error: err instanceof Error ? err.message : "Nie udało się wysłać maila.",
+    });
   }
 }

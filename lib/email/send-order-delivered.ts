@@ -1,3 +1,5 @@
+import { decideEmailSend } from "@/lib/email/delivery";
+import { hasSentEmail, recordEmailLog } from "@/lib/email/log";
 import { sendEmail } from "@/lib/email/resend";
 import { OrderDeliveredEmail } from "@/lib/email/templates/order-delivered";
 import { formatCutoff } from "@/lib/dates";
@@ -13,7 +15,8 @@ function appUrl(): string {
 
 export async function sendOrderDelivered(
   orderId: string,
-): Promise<{ ok: true } | { ok: false }> {
+  options?: { force?: boolean },
+): Promise<{ ok: true; skipped?: boolean } | { ok: false; message: string }> {
   try {
     const admin = createClient();
     const [orderResult, settingsResult] = await Promise.all([
@@ -26,8 +29,26 @@ export async function sendOrderDelivered(
       | null;
 
     if (!order?.customer_email || !order.pickup_code) {
-      console.error("[EMAIL]", "Brak danych do maila order-delivered.", orderId);
-      return { ok: false };
+      const message = "Brak e-maila albo kodu odbioru.";
+      console.error("[EMAIL]", message, orderId);
+      await recordEmailLog({
+        orderId,
+        kind: "order_delivered",
+        recipient: order?.customer_email || "(brak adresu)",
+        status: "failed",
+        error: message,
+      });
+      return { ok: false, message };
+    }
+
+    if (decideEmailSend(await hasSentEmail(orderId, "order_delivered"), options?.force) === "skip") {
+      await recordEmailLog({
+        orderId,
+        kind: "order_delivered",
+        recipient: order.customer_email,
+        status: "skipped",
+      });
+      return { ok: true, skipped: true };
     }
 
     const point = Array.isArray(order.pickup_points)
@@ -35,13 +56,23 @@ export async function sendOrderDelivered(
       : order.pickup_points;
 
     if (!point) {
-      console.error("[EMAIL]", "Brak punktu w mailu order-delivered.", orderId);
-      return { ok: false };
+      const message = "Brak punktu odbioru.";
+      console.error("[EMAIL]", message, orderId);
+      await recordEmailLog({
+        orderId,
+        kind: "order_delivered",
+        recipient: order.customer_email,
+        status: "failed",
+        error: message,
+      });
+      return { ok: false, message };
     }
 
     return sendEmail({
       to: order.customer_email,
       subject: `Twoja paczka czeka — ${point.name}`,
+      kind: "order_delivered",
+      orderId: order.id,
       react: OrderDeliveredEmail({
         pickupCode: order.pickup_code,
         detailsUrl: `${appUrl()}/zamowienie/${order.id}`,
@@ -51,7 +82,15 @@ export async function sendOrderDelivered(
       }),
     });
   } catch (err) {
+    const message = err instanceof Error ? err.message : "Nie udało się wysłać maila.";
     console.error("[EMAIL]", err);
-    return { ok: false };
+    await recordEmailLog({
+      orderId,
+      kind: "order_delivered",
+      recipient: "(brak adresu)",
+      status: "failed",
+      error: message,
+    });
+    return { ok: false, message };
   }
 }

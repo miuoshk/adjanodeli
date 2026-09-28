@@ -49,9 +49,7 @@ function isCounted(status: string): boolean {
   return (COUNTED_STATUSES as readonly string[]).includes(status);
 }
 
-function pointNameOf(
-  value: RecentOrder["pickup_points"],
-): string {
+function pointNameOf(value: RecentOrder["pickup_points"]): string {
   if (!value) {
     return "punkt";
   }
@@ -164,6 +162,7 @@ export type AdminOrderListRow = {
   totalGrosze: number;
   status: string;
   pickupCode: string | null;
+  mailFailed: boolean;
 };
 
 export type AdminOrderListResult = {
@@ -245,6 +244,7 @@ export async function getAdminOrderList(
 
   const { data, count } = await query;
   const rows = (data ?? []) as ListOrder[];
+  const failedMailIds = await failedOrderPaidIds(rows.map((order) => order.id));
 
   return {
     rows: rows.map((order) => ({
@@ -258,11 +258,84 @@ export async function getAdminOrderList(
       totalGrosze: order.total_grosze,
       status: order.status,
       pickupCode: order.pickup_code,
+      mailFailed: failedMailIds.has(order.id),
     })),
     total: count ?? 0,
     page,
     pageSize: PAGE_SIZE,
   };
+}
+
+async function failedOrderPaidIds(orderIds: string[]): Promise<Set<string>> {
+  if (orderIds.length === 0) {
+    return new Set();
+  }
+
+  const supabase = await createServerClient();
+  const { data } = await supabase
+    .from("email_log")
+    .select("order_id, status, created_at")
+    .eq("kind", "order_paid")
+    .in("order_id", orderIds)
+    .order("created_at", { ascending: false });
+
+  const seen = new Set<string>();
+  const failed = new Set<string>();
+  for (const row of data ?? []) {
+    if (!row.order_id || seen.has(row.order_id)) {
+      continue;
+    }
+    seen.add(row.order_id);
+    if (row.status === "failed") {
+      failed.add(row.order_id);
+    }
+  }
+  return failed;
+}
+
+export type OrderEmailLogRow = {
+  id: string;
+  kind: string;
+  recipient: string;
+  status: string;
+  error: string | null;
+  createdAt: string;
+};
+
+export async function getOrderEmailLog(orderId: string): Promise<OrderEmailLogRow[]> {
+  const supabase = await createServerClient();
+  const { data } = await supabase
+    .from("email_log")
+    .select("id, kind, recipient, status, error, created_at")
+    .eq("order_id", orderId)
+    .order("created_at", { ascending: false });
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    kind: row.kind,
+    recipient: row.recipient,
+    status: row.status,
+    error: row.error,
+    createdAt: row.created_at,
+  }));
+}
+
+export async function getRecentEmailLog(limit = 10): Promise<OrderEmailLogRow[]> {
+  const supabase = await createServerClient();
+  const { data } = await supabase
+    .from("email_log")
+    .select("id, kind, recipient, status, error, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    kind: row.kind,
+    recipient: row.recipient,
+    status: row.status,
+    error: row.error,
+    createdAt: row.created_at,
+  }));
 }
 
 export type AdminOrderEvent = {
