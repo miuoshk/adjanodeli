@@ -649,6 +649,7 @@ export type PackageItem = {
   items: { name: string; qty: number }[];
   status: string;
   note: string | null;
+  orderNumber: number;
 };
 
 export type PackageMailFailure = {
@@ -679,7 +680,7 @@ export async function getPackagesData(day: string): Promise<PackagesData> {
     supabase
       .from("orders")
       .select(
-        "id, pickup_point_id, pickup_code, customer_name, customer_email, status, note, order_items(product_name, qty)",
+        "id, order_number, pickup_point_id, pickup_code, customer_name, customer_email, status, note, order_items(product_name, qty)",
       )
       .eq("pickup_date", day)
       .in("status", [...COUNTED_STATUSES])
@@ -688,6 +689,7 @@ export async function getPackagesData(day: string): Promise<PackagesData> {
 
   type PackageOrder = {
     id: string;
+    order_number: number;
     pickup_point_id: string;
     pickup_code: string | null;
     customer_name: string;
@@ -716,6 +718,7 @@ export async function getPackagesData(day: string): Promise<PackagesData> {
           itemsSummary: summarizeItems(order.order_items ?? []),
           status: order.status,
           note: order.note,
+          orderNumber: order.order_number,
         }));
 
       let notifiedCount = 0;

@@ -74,9 +74,14 @@ export function DayPlan({ day, paidReadyCount, points }: DayPlanProps) {
         </Button>
       </Step>
       <Step index={2} title="Etykiety" done={labelsDone}>
-        <Button asChild className="min-h-12 w-full sm:w-auto">
-          <Link href={`/admin/paczki/drukuj?dzien=${day}`}>Etykiety</Link>
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button asChild variant="outline" className="min-h-12 w-full sm:w-auto">
+            <Link href={`/admin/paczki/drukuj?dzien=${day}&format=etykieta`}>Etykiety: etykieciarka</Link>
+          </Button>
+          <Button asChild variant="outline" className="min-h-12 w-full sm:w-auto">
+            <Link href={`/admin/paczki/drukuj?dzien=${day}&format=a4`}>Etykiety: A4</Link>
+          </Button>
+        </div>
       </Step>
       <Step index={3} title="Dostawy" done={deliveriesDone}>
         {active.length === 0 ? (

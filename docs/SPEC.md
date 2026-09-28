@@ -253,7 +253,7 @@ Admin:
 - /admin — dziś/jutro: plan dnia (produkcja, etykiety, dostawy, wydawanie), liczby, szybkie akcje
 - /admin/zamowienia — lista z filtrami (dzień, punkt, status), podgląd, zmiana statusu
 - /admin/produkcja — zestawienie produkcyjne na dzień + wersja do druku (/admin/produkcja/drukuj?day=)
-- /admin/paczki — lista paczek per punkt na dzień, „Jestem na miejscu — powiadom klientów” (paid idzie najpierw na in_production, potem delivered; mail raz), wersja do druku etykiet
+- /admin/paczki — lista paczek per punkt na dzień, „Jestem na miejscu — powiadom klientów” (paid idzie najpierw na in_production, potem delivered; mail raz), druk etykiet w dwóch formatach (`?format=etykieta` 75×60 mm, jedna na stronę, albo `?format=a4`, 8 na stronie). Na etykiecie nie ma e-maila; na dole jest numer zamówienia.
 - /admin/wydawanie — mobilny ekran: wpisz/zeskanuj kod → szczegóły → "Wydano"
 - /admin/kategorie, /admin/kategorie/[id] — CRUD kategorii (zdjęcie, opis, lead_days); bez usuwania, gdy są produkty — tylko dezaktywacja
 - /admin/produkty, /admin/produkty/[id] — CRUD, zdjęcie, limit domyślny, alergeny

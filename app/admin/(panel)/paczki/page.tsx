@@ -37,6 +37,14 @@ export default async function PackagesPage({ searchParams }: PackagesPageProps) 
     <div>
       <PageHeader title={`Paczki na ${formatDatePl(parseDateOnly(day))}`} />
       <AdminDayPicker selected={day} basePath="/admin/paczki" />
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <Button asChild variant="outline" className="min-h-12">
+          <Link href={`/admin/paczki/drukuj?dzien=${day}&format=etykieta`}>Etykiety: etykieciarka</Link>
+        </Button>
+        <Button asChild variant="outline" className="min-h-12">
+          <Link href={`/admin/paczki/drukuj?dzien=${day}&format=a4`}>Etykiety: A4</Link>
+        </Button>
+      </div>
 
       {data.sections.length === 0 ? (
         <p className="mt-6 text-sm text-muted-foreground">Brak paczek na ten dzień.</p>
@@ -63,11 +71,18 @@ export default async function PackagesPage({ searchParams }: PackagesPageProps) 
                 notifiedAt={section.notifiedAt}
                 failedMails={section.failedMails}
               />
-              <Button asChild variant="outline" className="min-h-12 w-full sm:w-auto">
-                <Link href={`/admin/paczki/drukuj?dzien=${day}&punkt=${section.point.id}`}>
-                  Drukuj etykiety
-                </Link>
-              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button asChild variant="outline" className="min-h-12 w-full sm:w-auto">
+                  <Link href={`/admin/paczki/drukuj?dzien=${day}&punkt=${section.point.id}&format=etykieta`}>
+                    Etykiety: etykieciarka
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="min-h-12 w-full sm:w-auto">
+                  <Link href={`/admin/paczki/drukuj?dzien=${day}&punkt=${section.point.id}&format=a4`}>
+                    Etykiety: A4
+                  </Link>
+                </Button>
+              </div>
 
               <div className="overflow-x-auto rounded-xl border border-[var(--adj-cream-dark)] bg-card">
                 <table className="w-full min-w-[720px] text-left text-sm">
