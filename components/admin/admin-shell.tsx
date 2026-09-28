@@ -27,7 +27,7 @@ export function AdminShell({ isOwner, firstName, roleLabel, children }: AdminShe
 
   return (
     <div className="flex min-h-screen bg-[var(--adj-cream)]">
-      <aside className="hidden w-[240px] shrink-0 flex-col bg-secondary text-secondary-foreground md:flex">
+      <aside className="hidden w-[240px] shrink-0 flex-col bg-secondary text-secondary-foreground print:hidden md:flex">
         <Link href="/admin" className="relative mx-4 mt-4 block h-9 w-[132px] shrink-0">
           <Image
             src="/brand/logo/adjano-deli-poziomy-krem.svg"
@@ -43,7 +43,7 @@ export function AdminShell({ isOwner, firstName, roleLabel, children }: AdminShe
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-40 flex h-14 items-center gap-2 bg-secondary px-3 text-secondary-foreground md:hidden">
+        <header className="sticky top-0 z-40 flex h-14 items-center gap-2 bg-secondary px-3 text-secondary-foreground print:hidden md:hidden">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button
@@ -84,7 +84,7 @@ export function AdminShell({ isOwner, firstName, roleLabel, children }: AdminShe
           </Sheet>
           <span className="font-heading text-xl font-semibold">Panel</span>
         </header>
-        <div className="h-px bg-[var(--adj-gold)] md:hidden" aria-hidden />
+        <div className="h-px bg-[var(--adj-gold)] print:hidden md:hidden" aria-hidden />
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
       </div>
     </div>

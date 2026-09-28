@@ -92,6 +92,12 @@ export function AdminNav({ isOwner, firstName, roleLabel, onNavigate }: AdminNav
               onNavigate={onNavigate}
             />
           ))}
+        <NavLink
+          href="/admin/pomoc"
+          label="Pomoc"
+          active={isActive("/admin/pomoc")}
+          onNavigate={onNavigate}
+        />
       </nav>
       <div className="space-y-2 border-t border-[var(--adj-gold)] px-3 py-4">
         <p className="truncate text-sm font-medium">{firstName}</p>
