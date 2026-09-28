@@ -70,13 +70,14 @@ export async function sendOrderDelivered(
 
     return sendEmail({
       to: order.customer_email,
-      subject: `Twoja paczka czeka — ${point.name}`,
+      subject: `Twoja paczka czeka — ${point.name}, do ${formatCutoff(point.pickup_to)}`,
       kind: "order_delivered",
       orderId: order.id,
       react: OrderDeliveredEmail({
         pickupCode: order.pickup_code,
         detailsUrl: `${appUrl()}/zamowienie/${order.id}`,
         pointName: point.name,
+        pointAddress: point.address,
         pickupTo: formatCutoff(point.pickup_to),
         ownerPhone: settingsResult.data?.owner_phone ?? null,
       }),

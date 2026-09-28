@@ -9,6 +9,7 @@ import {
   queryReadyToPickUp,
   type HandoverReadyItem,
 } from "@/lib/admin/queries";
+import { noticesFromLogs, stepsToArrived, type DeliveryLogRow } from "@/lib/admin/delivery-notices";
 import { sendOrderDelivered } from "@/lib/email/send-order-delivered";
 import { isOrderStatus } from "@/lib/orders/status-labels";
 import { createServerClient } from "@/lib/supabase/server";
@@ -106,10 +107,10 @@ export async function markPointDelivered(day: string, pointId: string) {
   const supabase = await createServerClient();
   const { data, error } = await supabase
     .from("orders")
-    .select("id, pickup_code, order_number")
+    .select("id, pickup_code, order_number, status")
     .eq("pickup_date", day)
     .eq("pickup_point_id", pointId)
-    .eq("status", "in_production");
+    .in("status", ["paid", "in_production", "delivered", "picked_up"]);
 
   if (error) {
     return { ok: false as const, message: "Nie udało się pobrać paczek." };
@@ -117,33 +118,72 @@ export async function markPointDelivered(day: string, pointId: string) {
 
   const orders = data ?? [];
   if (orders.length === 0) {
-    return { ok: false as const, message: "Brak paczek w produkcji dla tego punktu." };
+    return { ok: false as const, message: "Brak paczek dla tego punktu." };
   }
 
-  let delivered = 0;
   const statusErrors: string[] = [];
-  const mailErrors: string[] = [];
+  const mailErrors: { orderId: string; code: string }[] = [];
 
   for (const order of orders) {
-    const label = order.pickup_code ?? `#${order.order_number}`;
-    const { error: updateError } = await supabase.rpc("set_order_status", {
-      p_order_id: order.id,
-      p_status: "delivered",
-      p_note: "Dowiezione do punktu",
-    });
-    if (updateError) {
-      statusErrors.push(label);
+    const steps = stepsToArrived(order.status);
+    if (steps.length === 0) {
       continue;
     }
-    delivered += 1;
+    const label = order.pickup_code ?? `#${order.order_number}`;
+    let reachedDelivered = false;
+    for (const next of steps) {
+      const { error: updateError } = await supabase.rpc("set_order_status", {
+        p_order_id: order.id,
+        p_status: next,
+        p_note: next === "in_production" ? "Oznaczone przy dojeździe" : "Dowiezione do punktu",
+      });
+      if (updateError) {
+        statusErrors.push(label);
+        reachedDelivered = false;
+        break;
+      }
+      reachedDelivered = next === "delivered";
+    }
+    if (!reachedDelivered) {
+      continue;
+    }
     const mail = await sendOrderDelivered(order.id);
     if (!mail.ok) {
-      mailErrors.push(label);
+      mailErrors.push({ orderId: order.id, code: label });
+    }
+  }
+
+  const { data: logs } = await supabase
+    .from("email_log")
+    .select("order_id, status, created_at")
+    .eq("kind", "order_delivered")
+    .in(
+      "order_id",
+      orders.map((order) => order.id),
+    );
+  const notices = noticesFromLogs((logs ?? []) as DeliveryLogRow[]);
+  let notified = 0;
+  let notifiedAt: string | null = null;
+  for (const order of orders) {
+    const notice = notices.get(order.id);
+    if (!notice?.sent || !notice.sentAt) {
+      continue;
+    }
+    notified += 1;
+    if (!notifiedAt || notice.sentAt > notifiedAt) {
+      notifiedAt = notice.sentAt;
     }
   }
 
   revalidatePath("/admin", "layout");
-  return { ok: true as const, delivered, statusErrors, mailErrors };
+  return {
+    ok: true as const,
+    notified,
+    total: orders.length,
+    notifiedAt,
+    statusErrors,
+    mailErrors,
+  };
 }
 
 function statusErrorMessage(error: { message: string; details?: string; hint?: string }): string {
@@ -196,11 +236,11 @@ export async function getReadyToPickUp(day: string, pointId: string) {
   await requireRole("staff", "/admin");
 
   if (!daySchema.test(day) || !/^[0-9a-f-]{36}$/i.test(pointId)) {
-    return { ok: false as const, items: [] as HandoverReadyItem[] };
+    return { ok: false as const, items: [] as HandoverReadyItem[], pickedUpCount: 0, totalCount: 0 };
   }
 
-  const items = await queryReadyToPickUp(day, pointId);
-  return { ok: true as const, items };
+  const ready = await queryReadyToPickUp(day, pointId);
+  return { ok: true as const, ...ready };
 }
 
 export async function markOrderPickedUp(orderId: string) {

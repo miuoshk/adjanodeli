@@ -1,3 +1,4 @@
+import { noticesFromLogs, type DeliveryLogRow } from "@/lib/admin/delivery-notices";
 import { warsawDateIso } from "@/lib/dates";
 import { createServerClient } from "@/lib/supabase/server";
 import type { Json, Tables } from "@/lib/supabase/database.types";
@@ -23,7 +24,12 @@ export type DashboardPointRow = {
   pointId: string;
   name: string;
   orderCount: number;
+  paidCount: number;
+  inProductionCount: number;
+  deliveredCount: number;
   pickedUpCount: number;
+  notifiedCount: number;
+  notifiedAt: string | null;
 };
 
 export type DashboardRecentOrder = {
@@ -47,6 +53,19 @@ export type DashboardData = {
 
 function isCounted(status: string): boolean {
   return (COUNTED_STATUSES as readonly string[]).includes(status);
+}
+
+async function loadDeliveryNotices(orderIds: string[]) {
+  if (orderIds.length === 0) {
+    return noticesFromLogs([]);
+  }
+  const supabase = await createServerClient();
+  const { data } = await supabase
+    .from("email_log")
+    .select("order_id, status, created_at")
+    .eq("kind", "order_delivered")
+    .in("order_id", orderIds);
+  return noticesFromLogs((data ?? []) as DeliveryLogRow[]);
 }
 
 function pointNameOf(value: RecentOrder["pickup_points"]): string {
@@ -95,9 +114,17 @@ export async function getDashboardData(day: string): Promise<DashboardData> {
       pointId: point.id,
       name: point.name,
       orderCount: 0,
+      paidCount: 0,
+      inProductionCount: 0,
+      deliveredCount: 0,
       pickedUpCount: 0,
+      notifiedCount: 0,
+      notifiedAt: null,
     });
   }
+
+  const countedIds: string[] = [];
+  const pointOfOrder = new Map<string, string>();
 
   for (const order of dayOrders) {
     if (order.status === "pending_payment") {
@@ -112,13 +139,36 @@ export async function getDashboardData(day: string): Promise<DashboardData> {
     paidOrderCount += 1;
     revenueGrosze += order.total_grosze;
     productionQty += order.order_items.reduce((sum, item) => sum + item.qty, 0);
+    countedIds.push(order.id);
+    pointOfOrder.set(order.id, order.pickup_point_id);
 
     const row = byPoint.get(order.pickup_point_id);
     if (row) {
       row.orderCount += 1;
-      if (order.status === "picked_up") {
+      if (order.status === "paid") {
+        row.paidCount += 1;
+      } else if (order.status === "in_production") {
+        row.inProductionCount += 1;
+      } else if (order.status === "delivered") {
+        row.deliveredCount += 1;
+      } else if (order.status === "picked_up") {
         row.pickedUpCount += 1;
       }
+    }
+  }
+
+  const notices = await loadDeliveryNotices(countedIds);
+  for (const [orderId, notice] of notices) {
+    if (!notice.sent || !notice.sentAt) {
+      continue;
+    }
+    const row = byPoint.get(pointOfOrder.get(orderId) ?? "");
+    if (!row) {
+      continue;
+    }
+    row.notifiedCount += 1;
+    if (!row.notifiedAt || notice.sentAt > row.notifiedAt) {
+      row.notifiedAt = notice.sentAt;
     }
   }
 
@@ -601,9 +651,18 @@ export type PackageItem = {
   note: string | null;
 };
 
+export type PackageMailFailure = {
+  orderId: string;
+  code: string;
+};
+
 export type PackageSection = {
   point: PickupPointRow;
+  paidCount: number;
   inProductionCount: number;
+  notifiedCount: number;
+  notifiedAt: string | null;
+  failedMails: PackageMailFailure[];
   packages: PackageItem[];
 };
 
@@ -640,12 +699,12 @@ export async function getPackagesData(day: string): Promise<PackagesData> {
 
   const orders = (ordersResult.data ?? []) as PackageOrder[];
   const points = pointsResult.data ?? [];
+  const notices = await loadDeliveryNotices(orders.map((order) => order.id));
 
   const sections: PackageSection[] = points
     .map((point) => {
-      const packages = orders
-        .filter((order) => order.pickup_point_id === point.id)
-        .map((order) => ({
+      const pointOrders = orders.filter((order) => order.pickup_point_id === point.id);
+      const packages = pointOrders.map((order) => ({
           id: order.id,
           pickupCode: order.pickup_code ?? "—",
           customerName: order.customer_name,
@@ -659,9 +718,31 @@ export async function getPackagesData(day: string): Promise<PackagesData> {
           note: order.note,
         }));
 
+      let notifiedCount = 0;
+      let notifiedAt: string | null = null;
+      const failedMails: PackageMailFailure[] = [];
+      for (const order of pointOrders) {
+        const notice = notices.get(order.id);
+        if (notice?.sent && notice.sentAt) {
+          notifiedCount += 1;
+          if (!notifiedAt || notice.sentAt > notifiedAt) {
+            notifiedAt = notice.sentAt;
+          }
+        } else if (notice?.failed) {
+          failedMails.push({
+            orderId: order.id,
+            code: order.pickup_code ?? `#${order.id.slice(0, 4)}`,
+          });
+        }
+      }
+
       return {
         point,
+        paidCount: packages.filter((item) => item.status === "paid").length,
         inProductionCount: packages.filter((item) => item.status === "in_production").length,
+        notifiedCount,
+        notifiedAt,
+        failedMails,
         packages,
       };
     })
@@ -774,22 +855,32 @@ export async function queryOrdersFallback(day: string, rawQuery: string): Promis
   return ((data ?? []) as HandoverOrderRow[]).map(mapHandoverOrder);
 }
 
-export async function queryReadyToPickUp(
-  day: string,
-  pointId: string,
-): Promise<HandoverReadyItem[]> {
+export type ReadyToPickUp = {
+  items: HandoverReadyItem[];
+  pickedUpCount: number;
+  totalCount: number;
+};
+
+export async function queryReadyToPickUp(day: string, pointId: string): Promise<ReadyToPickUp> {
   const supabase = await createServerClient();
   const { data } = await supabase
     .from("orders")
-    .select("id, pickup_code, customer_name")
+    .select("id, pickup_code, customer_name, status")
     .eq("pickup_date", day)
     .eq("pickup_point_id", pointId)
-    .eq("status", "delivered")
+    .in("status", [...COUNTED_STATUSES])
     .order("pickup_code", { ascending: true });
 
-  return (data ?? []).map((order) => ({
-    id: order.id,
-    pickupCode: order.pickup_code ?? "—",
-    customerName: order.customer_name,
-  }));
+  const rows = data ?? [];
+  return {
+    items: rows
+      .filter((order) => order.status === "delivered")
+      .map((order) => ({
+        id: order.id,
+        pickupCode: order.pickup_code ?? "—",
+        customerName: order.customer_name,
+      })),
+    pickedUpCount: rows.filter((order) => order.status === "picked_up").length,
+    totalCount: rows.length,
+  };
 }

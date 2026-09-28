@@ -42,6 +42,8 @@ export async function resendOrderDeliveredMail(orderId: string) {
 
   const result = await sendOrderDelivered(orderId, { force: true });
   revalidatePath(`/admin/zamowienia/${orderId}`);
+  revalidatePath("/admin/paczki");
+  revalidatePath("/admin");
   if (!result.ok) {
     return { ok: false as const, message: result.message };
   }

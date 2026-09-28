@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { DayPlan } from "@/components/admin/day-plan";
 import { DashboardDayPicker } from "@/components/admin/dashboard-day-picker";
 import { PageHeader } from "@/components/admin/page-header";
 import { RefreshButton } from "@/components/admin/refresh-button";
@@ -52,6 +53,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       </PageHeader>
 
       <DashboardDayPicker selected={day} />
+
+      <DayPlan day={day} paidReadyCount={data.paidReadyCount} points={data.points} />
 
       <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Tile label="Opłacone zamówienia" value={String(data.paidOrderCount)} />

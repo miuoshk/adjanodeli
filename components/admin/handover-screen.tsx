@@ -10,6 +10,7 @@ import {
   markOrderPickedUp,
   searchHandoverOrder,
 } from "@/lib/admin/actions";
+import { readArrivedPoint } from "@/lib/admin/arrived-point";
 import type { HandoverOrder, HandoverPoint, HandoverReadyItem } from "@/lib/admin/queries";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,8 @@ export function HandoverScreen({ day, points }: HandoverScreenProps) {
   const [fallbackOrders, setFallbackOrders] = useState<HandoverOrder[] | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [ready, setReady] = useState<HandoverReadyItem[]>([]);
+  const [pickedUpCount, setPickedUpCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
   const [successName, setSuccessName] = useState<string | null>(null);
   const [isSearching, startSearch] = useTransition();
   const [isIssuing, startIssue] = useTransition();
@@ -60,36 +63,44 @@ export function HandoverScreen({ day, points }: HandoverScreenProps) {
     lastCodeRef.current = "";
   }
 
-  function clearToEmptyField() {
-    setCode("");
-    resetLookup();
-    requestAnimationFrame(() => inputRef.current?.focus());
-  }
-
   async function refreshReady(nextPointId: string) {
     if (!nextPointId) {
       setReady([]);
+      setPickedUpCount(0);
+      setTotalCount(0);
       return;
     }
     const result = await getReadyToPickUp(day, nextPointId);
     setReady(result.items);
+    setPickedUpCount(result.pickedUpCount);
+    setTotalCount(result.totalCount);
   }
 
   function showSuccess(name: string) {
     setSuccessName(firstNameOf(name));
-    window.setTimeout(() => {
-      setSuccessName(null);
-      clearToEmptyField();
-      void refreshReady(pointId);
-    }, 1500);
+    setCode("");
+    resetLookup();
+    void refreshReady(pointId);
+    requestAnimationFrame(() => inputRef.current?.focus());
   }
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(POINT_STORAGE_KEY);
-    const next =
-      (saved && points.some((point) => point.id === saved) ? saved : null) ?? points[0]?.id ?? "";
+    let arrived: string | null = null;
+    try {
+      arrived = readArrivedPoint(window.localStorage, day);
+    } catch {
+      arrived = null;
+    }
+    let saved: string | null = null;
+    try {
+      saved = window.localStorage.getItem(POINT_STORAGE_KEY);
+    } catch {
+      saved = null;
+    }
+    const known = (id: string | null) => Boolean(id && points.some((point) => point.id === id));
+    const next = (known(arrived) ? arrived : null) ?? (known(saved) ? saved : null) ?? points[0]?.id ?? "";
     setPointId(next);
-  }, [points]);
+  }, [points, day]);
 
   useEffect(() => {
     if (!pointId) {
@@ -102,6 +113,7 @@ export function HandoverScreen({ day, points }: HandoverScreenProps) {
   useEffect(() => {
     resetLookup();
     setCode("");
+    setSuccessName(null);
   }, [day]);
 
   function lookupCode(nextCode: string) {
@@ -185,18 +197,33 @@ export function HandoverScreen({ day, points }: HandoverScreenProps) {
     });
   }
 
-  if (successName) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-green-600 px-6 text-white">
-        <p className="font-heading text-center text-5xl font-semibold leading-tight">
-          Wydano ✓ {successName}
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
+      <label className="block space-y-2">
+        <span className="text-sm font-medium">Kod odbioru</span>
+        {/* TODO Faza 3: skaner QR */}
+        <input
+          ref={inputRef}
+          value={code}
+          onChange={(event) => onCodeChange(event.target.value)}
+          maxLength={4}
+          inputMode="text"
+          autoCapitalize="characters"
+          autoFocus
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="ABCD"
+          className="h-16 w-full rounded-md border border-input bg-card px-3 text-center font-mono text-[32px] tracking-[0.3em] uppercase outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        />
+      </label>
+
+      {successName ? (
+        <p className="rounded-xl bg-green-700 px-4 py-4 text-2xl font-semibold text-white">
+          Wydano · {successName}
+        </p>
+      ) : null}
+
       <label className="block space-y-2">
         <span className="text-sm font-medium">Punkt odbioru</span>
         <select
@@ -211,24 +238,6 @@ export function HandoverScreen({ day, points }: HandoverScreenProps) {
             </option>
           ))}
         </select>
-      </label>
-
-      <label className="block space-y-2">
-        <span className="text-sm font-medium">Kod odbioru</span>
-        {/* TODO Faza 3: skaner QR */}
-        <input
-          ref={inputRef}
-          value={code}
-          onChange={(event) => onCodeChange(event.target.value)}
-          maxLength={4}
-          inputMode="text"
-          autoFocus
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-          placeholder="ABCD"
-          className="h-16 w-full rounded-md border border-input bg-card px-3 text-center font-mono text-[32px] tracking-[0.3em] uppercase outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-        />
       </label>
 
       {isSearching && !order ? <p className="text-sm text-muted-foreground">Szukam…</p> : null}
@@ -291,6 +300,9 @@ export function HandoverScreen({ day, points }: HandoverScreenProps) {
 
       <section className="space-y-3">
         <h2 className="text-2xl font-semibold">Do wydania w tym punkcie</h2>
+        <p className="text-lg font-medium">
+          Wydane {pickedUpCount} z {totalCount}
+        </p>
         {ready.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nic nie czeka na odbiór.</p>
         ) : (

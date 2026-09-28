@@ -17,9 +17,14 @@ import {
 type StartProductionButtonProps = {
   day: string;
   paidCount: number;
+  label?: string;
 };
 
-export function StartProductionButton({ day, paidCount }: StartProductionButtonProps) {
+export function StartProductionButton({
+  day,
+  paidCount,
+  label = "Start produkcji dnia",
+}: StartProductionButtonProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -31,7 +36,7 @@ export function StartProductionButton({ day, paidCount }: StartProductionButtonP
         disabled={paidCount === 0}
         onClick={() => setOpen(true)}
       >
-        Start produkcji dnia
+        {label}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>

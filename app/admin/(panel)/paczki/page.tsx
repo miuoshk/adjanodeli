@@ -5,7 +5,7 @@ import { MarkPointDeliveredButton } from "@/components/admin/mark-point-delivere
 import { PageHeader } from "@/components/admin/page-header";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { getNearestOrderDay, getPackagesData } from "@/lib/admin/queries";
-import { parseDateOnly } from "@/lib/dates";
+import { formatCutoff, parseDateOnly } from "@/lib/dates";
 import { formatDatePl, formatTimeRange } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 
@@ -44,28 +44,30 @@ export default async function PackagesPage({ searchParams }: PackagesPageProps) 
         <div className="mt-8 space-y-10">
           {data.sections.map((section) => (
             <section key={section.point.id} className="space-y-4">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <h2 className="text-2xl font-semibold">{section.point.name}</h2>
-                  <p className="text-sm text-muted-foreground">
-                    {formatTimeRange(section.point.pickup_from, section.point.pickup_to)} · {section.point.address}
-                  </p>
-                  <p className="pt-1 text-sm">{packCountLabel(section.packages.length)}</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button asChild variant="outline" className="min-h-12">
-                    <Link href={`/admin/paczki/drukuj?dzien=${day}&punkt=${section.point.id}`}>
-                      Drukuj etykiety
-                    </Link>
-                  </Button>
-                  <MarkPointDeliveredButton
-                    day={day}
-                    pointId={section.point.id}
-                    pointName={section.point.name}
-                    count={section.inProductionCount}
-                  />
-                </div>
+              <div>
+                <h2 className="text-2xl font-semibold">{section.point.name}</h2>
+                <p className="text-sm text-muted-foreground">
+                  {formatTimeRange(section.point.pickup_from, section.point.pickup_to)} · {section.point.address}
+                </p>
+                <p className="pt-1 text-sm">{packCountLabel(section.packages.length)}</p>
               </div>
+              <MarkPointDeliveredButton
+                day={day}
+                pointId={section.point.id}
+                pointName={section.point.name}
+                readyCount={section.paidCount + section.inProductionCount}
+                unstartedCount={section.paidCount}
+                until={formatCutoff(section.point.pickup_to)}
+                notifiedCount={section.notifiedCount}
+                totalCount={section.packages.length}
+                notifiedAt={section.notifiedAt}
+                failedMails={section.failedMails}
+              />
+              <Button asChild variant="outline" className="min-h-12 w-full sm:w-auto">
+                <Link href={`/admin/paczki/drukuj?dzien=${day}&punkt=${section.point.id}`}>
+                  Drukuj etykiety
+                </Link>
+              </Button>
 
               <div className="overflow-x-auto rounded-xl border border-[var(--adj-cream-dark)] bg-card">
                 <table className="w-full min-w-[720px] text-left text-sm">

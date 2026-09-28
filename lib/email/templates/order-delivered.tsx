@@ -11,6 +11,7 @@ type OrderDeliveredEmailProps = {
   pickupCode: string;
   detailsUrl: string;
   pointName: string;
+  pointAddress: string | null;
   pickupTo: string;
   ownerPhone: string | null;
 };
@@ -19,6 +20,7 @@ export function OrderDeliveredEmail({
   pickupCode,
   detailsUrl,
   pointName,
+  pointAddress,
   pickupTo,
   ownerPhone,
 }: OrderDeliveredEmailProps) {
@@ -88,6 +90,24 @@ export function OrderDeliveredEmail({
             {pointName}
           </td>
         </tr>
+        {pointAddress ? (
+          <tr>
+            <td
+              style={{
+                padding: "4px 12px 4px 0",
+                color: soft,
+                fontFamily: labelFont,
+                fontSize: "13px",
+                verticalAlign: "top",
+              }}
+            >
+              Adres
+            </td>
+            <td style={{ padding: "4px 0", color: ink, fontFamily: textFont, fontSize: "16px" }}>
+              {pointAddress}
+            </td>
+          </tr>
+        ) : null}
         <tr>
           <td
             style={{
@@ -105,6 +125,9 @@ export function OrderDeliveredEmail({
           </td>
         </tr>
       </table>
+      <p style={{ margin: "0 0 20px", fontFamily: textFont, fontSize: "17px" }}>
+        Pokaż ten kod przy odbiorze.
+      </p>
       <p style={{ margin: 0 }}>
         <a
           href={detailsUrl}

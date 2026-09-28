@@ -204,7 +204,7 @@ Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprze
 - Limit dzienny per produkt. Menu pokazuje remaining; przy remaining <= 5 pokazuje "zostało N"; przy 0 produkt widoczny jako "wyprzedane na ten dzień", nie do dodania.
 - Ilość jednego produktu w zamówieniu <= settings.max_qty_per_item. Powyżej: link do formularza zamówienia specjalnego.
 - Zamówienie pending_payment żyje pending_order_ttl_minutes (30). Sesja Stripe Checkout ma expires_at = 30 minut.
-- Po opłaceniu: e-mail z kodem odbioru, QR, punktem, oknem godzinowym, listą pozycji. Po delivered: e-mail "Twoja paczka czeka w [punkt] do [pickup_to]".
+- Po opłaceniu: e-mail z kodem odbioru, QR, punktem, oknem godzinowym, listą pozycji. Po delivered: e-mail "Twoja paczka czeka — {punkt}, do {pickup_to}".
 - Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprzedzającego pickup_date (czyli do momentu, w którym Justyna zaczyna wiedzieć, co produkować). Anulowanie: paid → cancelled → refunded automatycznie przez Stripe Refund API. settings.customer_cancellation_enabled boolean default true. Jeśli pickup_date to poniedziałek, granica to niedziela o cutoff (nie piątek).
 - Zwroty po anulowaniu klienta idą przez Stripe Refund API; gdy się nie uda — zamówienie zostaje cancelled, owner dostaje mail „Zwrot ręczny wymagany”. Owner może też zwrócić ręcznie i ustawić refunded.
 - Klient może zaznaczyć w koszyku 'Chcę fakturę na firmę' i podać NIP, nazwę, adres. Dane trafiają do zamówienia; fakturę wystawia właścicielka poza systemem. NIP walidowany (10 cyfr + suma kontrolna).
@@ -250,10 +250,10 @@ Sklep, grupa (shop):
 Linki do menu (dawne "/" i "/?dzien=") prowadzą na /sklep (i /sklep?dzien=). Logo w headerze prowadzi na "/". Wejście na "/?dzien=" przekierowuje na "/sklep?dzien=" (redirect, nie permanent). „Moje zamówienia” jest w nagłówku na komputerze i w menu na telefonie. Przy zamówieniu `delivered` przy linku jest kropka w karminie.
 Admin:
 - /admin/logowanie — login i hasło do panelu (nie OTP)
-- /admin — dziś/jutro: liczby (zamówień, paczek per punkt, do produkcji), szybkie akcje
+- /admin — dziś/jutro: plan dnia (produkcja, etykiety, dostawy, wydawanie), liczby, szybkie akcje
 - /admin/zamowienia — lista z filtrami (dzień, punkt, status), podgląd, zmiana statusu
 - /admin/produkcja — zestawienie produkcyjne na dzień + wersja do druku (/admin/produkcja/drukuj?day=)
-- /admin/paczki — lista paczek per punkt na dzień, "Dowiezione" per punkt (bulk delivered), wersja do druku etykiet
+- /admin/paczki — lista paczek per punkt na dzień, „Jestem na miejscu — powiadom klientów” (paid idzie najpierw na in_production, potem delivered; mail raz), wersja do druku etykiet
 - /admin/wydawanie — mobilny ekran: wpisz/zeskanuj kod → szczegóły → "Wydano"
 - /admin/kategorie, /admin/kategorie/[id] — CRUD kategorii (zdjęcie, opis, lead_days); bez usuwania, gdy są produkty — tylko dezaktywacja
 - /admin/produkty, /admin/produkty/[id] — CRUD, zdjęcie, limit domyślny, alergeny
@@ -291,7 +291,7 @@ API:
 - Zdjęcia produktów (białe tło) zawsze z klasą adj-cutout na papierze, bez ramek i bez czarnych gradientów.
 ## 11. E-maile (Resend, szablony w lib/email/templates/)
 - order-paid: temat "Zamówienie #{order_number} — kod odbioru {code}". Treść: kod dużą czcionką, QR (data URL), punkt, adres, okno godzinowe, data, lista pozycji, suma, telefon do piekarni.
-- order-delivered: temat "Twoja paczka czeka — {punkt}". Treść: kod, punkt, do której godziny.
+- order-delivered: temat "Twoja paczka czeka — {punkt}, do {pickup_to}". Treść: duży kod odbioru, punkt, adres, „do {pickup_to}”, zdanie „Pokaż ten kod przy odbiorze.”, link do zamówienia, telefon z ustawień.
 - special-request-owner: do owner_email, nowe zamówienie specjalne.
 - paid_after_expiry_owner: do owner_email, gdy webhook dostanie płatność za zamówienie już wygasłe. Temat "Klient zapłacił za wygasłe zamówienie #{numer}".
 - Każda próba wysyłki ląduje w email_log (sent / failed / skipped) z order_id, kind, odbiorcą i błędem. Odczyt: staff. Zapis: tylko service_role.
