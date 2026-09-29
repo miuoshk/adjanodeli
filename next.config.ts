@@ -5,6 +5,7 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
   : null;
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["resend", "@react-email/render"],
   images: {
     remotePatterns: supabaseHost
       ? [
