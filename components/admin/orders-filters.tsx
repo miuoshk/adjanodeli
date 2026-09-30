@@ -1,3 +1,4 @@
+import type { AdminOrderDay } from "@/lib/admin/order-days";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/orders/status-labels";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl } from "@/lib/format";
@@ -6,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type OrdersFiltersProps = {
-  dates: string[];
+  dates: AdminOrderDay[];
   points: { id: string; name: string }[];
   day: string;
   pointId: string;
@@ -39,11 +40,11 @@ export function OrdersFilters({
           >
             <option value="wszystkie">Wszystkie</option>
             {dates.map((value) => (
-              <option key={value} value={value}>
-                {formatDatePl(parseDateOnly(value))}
+              <option key={value.day} value={value.day}>
+                {formatDatePl(parseDateOnly(value.day))} ({value.count})
               </option>
             ))}
-            {day !== "wszystkie" && !dates.includes(day) ? (
+            {day !== "wszystkie" && !dates.some((value) => value.day === day) ? (
               <option value={day}>{formatDatePl(parseDateOnly(day))}</option>
             ) : null}
           </select>

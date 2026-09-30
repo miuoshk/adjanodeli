@@ -1,4 +1,5 @@
 import { noticesFromLogs, type DeliveryLogRow } from "@/lib/admin/delivery-notices";
+import { buildAdminOrderDays, type AdminOrderDay } from "@/lib/admin/order-days";
 import { warsawDateIso } from "@/lib/dates";
 import { createServerClient } from "@/lib/supabase/server";
 import type { Json, Tables } from "@/lib/supabase/database.types";
@@ -469,10 +470,21 @@ export async function getAdminOrderDetail(id: string): Promise<AdminOrderDetail 
   };
 }
 
-export async function getAdminFilterOptions() {
+export async function getAdminFilterOptions(): Promise<{
+  dates: AdminOrderDay[];
+  points: { id: string; name: string; sort_order: number }[];
+}> {
   const supabase = await createServerClient();
-  const [datesResult, pointsResult] = await Promise.all([
-    supabase.rpc("available_pickup_dates"),
+  const today = warsawDateIso(0);
+  const from = warsawDateIso(-14);
+  const to = warsawDateIso(30);
+  const [ordersResult, pointsResult] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("pickup_date")
+      .in("status", [...COUNTED_STATUSES])
+      .gte("pickup_date", from)
+      .lte("pickup_date", to),
     supabase
       .from("pickup_points")
       .select("id, name, sort_order")
@@ -481,7 +493,11 @@ export async function getAdminFilterOptions() {
   ]);
 
   return {
-    dates: (datesResult.data ?? []).map((value) => value.slice(0, 10)),
+    dates: buildAdminOrderDays(
+      today,
+      warsawDateIso(1),
+      (ordersResult.data ?? []).map((row) => row.pickup_date.slice(0, 10)),
+    ),
     points: pointsResult.data ?? [],
   };
 }

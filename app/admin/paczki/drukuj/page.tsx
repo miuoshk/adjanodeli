@@ -2,10 +2,11 @@ import { PrintButton } from "@/components/admin/print-button";
 import { getNearestOrderDay, getPackagesData } from "@/lib/admin/queries";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl } from "@/lib/format";
+import { labelCustomerLines, type LabelCustomerInfo } from "@/lib/labels/customer-info";
 import { LABEL_FORMATS, type LabelFormat } from "@/lib/labels/formats";
 import { chunkForPages, fitLabelItems } from "@/lib/labels/fit-label";
-import { maskCustomerName } from "@/lib/labels/mask-customer-name";
 import { labelItemLines, labelPrintCss } from "@/lib/labels/print-css";
+import { createServerClient } from "@/lib/supabase/server";
 
 type PackageLabelsPageProps = {
   searchParams: Promise<{ dzien?: string; punkt?: string; format?: string; linie?: string }>;
@@ -13,6 +14,16 @@ type PackageLabelsPageProps = {
 
 function chosenFormat(value: string | undefined): LabelFormat {
   return value === "a4" ? "a4" : "etykieta";
+}
+
+async function labelCustomerMode(): Promise<LabelCustomerInfo> {
+  const supabase = await createServerClient();
+  const { data } = await supabase.from("settings").select("label_customer_info").eq("id", 1).maybeSingle();
+  const value = data?.label_customer_info;
+  if (value === "masked" || value === "full" || value === "masked_email") {
+    return value;
+  }
+  return "masked_email";
 }
 
 function printHref(
@@ -38,6 +49,7 @@ export default async function PackageLabelsPage({ searchParams }: PackageLabelsP
       ? params.dzien
       : await getNearestOrderDay();
   const format = chosenFormat(params.format);
+  const customerMode = await labelCustomerMode();
   const cutLines = format === "a4" && params.linie !== "0";
   const data = await getPackagesData(day);
   const sections = params.punkt
@@ -99,6 +111,7 @@ export default async function PackageLabelsPage({ searchParams }: PackageLabelsP
             <section key={page[0]?.id ?? pageIndex} className="label-sheet">
               {page.map((item) => {
                 const lines = fitLabelItems(item.items, maxItemLines);
+                const customer = labelCustomerLines(customerMode, item.customerName, item.customerEmail);
                 return (
                   <article key={item.id} className="pack-label">
                     <div className="pack-label-body">
@@ -107,7 +120,8 @@ export default async function PackageLabelsPage({ searchParams }: PackageLabelsP
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src="/brand/logo/adjano-deli-tusz.svg" alt="" className="pack-label-logo" />
                       </div>
-                      <p className="pack-label-name">{maskCustomerName(item.customerName)}</p>
+                      <p className="pack-label-name">{customer.name}</p>
+                      {customer.email ? <p className="pack-label-meta">{customer.email}</p> : null}
                       <p className="pack-label-meta">
                         {item.pointName} · {formatDatePl(parseDateOnly(day))}
                       </p>

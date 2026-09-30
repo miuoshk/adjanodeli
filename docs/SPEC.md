@@ -36,6 +36,7 @@ Tworzony triggerem handle_new_user po insercie do auth.users.
 - owner_email text not null
 - owner_phone text
 - currency text not null default 'PLN'
+- label_customer_info text not null default 'masked_email' check (label_customer_info in ('masked','masked_email','full')) — dane klienta na etykiecie: skrócone imię i nazwisko, to samo plus skrócony e-mail, albo pełne imię, nazwisko i e-mail.
 
 ### pickup_points
 - name text not null (np. "Sąd Rejonowy w Mikołowie")
@@ -251,9 +252,9 @@ Linki do menu (dawne "/" i "/?dzien=") prowadzą na /sklep (i /sklep?dzien=). Lo
 Admin:
 - /admin/logowanie — login i hasło do panelu (nie OTP)
 - /admin — dziś/jutro: plan dnia (produkcja, etykiety, dostawy, wydawanie), liczby, szybkie akcje
-- /admin/zamowienia — lista z filtrami (dzień, punkt, status), podgląd, zmiana statusu
+- /admin/zamowienia — lista z filtrami (dzień, punkt, status), podgląd, zmiana statusu. Dzień: przyciski „Dziś”, „Jutro”, „Wybierz datę” oraz lista: dziś, jutro i `pickup_date` zamówień `paid`, `in_production`, `delivered`, `picked_up` od 14 dni wstecz do 30 dni naprzód, bez duplikatów, z liczbą zamówień. Bez parametru domyślny dzień to najbliższy z zamówieniem (`getNearestOrderDay`), nie `available_pickup_dates`.
 - /admin/produkcja — zestawienie produkcyjne na dzień + wersja do druku (/admin/produkcja/drukuj?day=)
-- /admin/paczki — lista paczek per punkt na dzień, „Jestem na miejscu — powiadom klientów” (paid idzie najpierw na in_production, potem delivered; mail raz), druk etykiet w dwóch formatach (`?format=etykieta` 75×60 mm, jedna na stronę, albo `?format=a4`, 8 na stronie). Na etykiecie nie ma e-maila; na dole jest numer zamówienia.
+- /admin/paczki — lista paczek per punkt na dzień, „Jestem na miejscu — powiadom klientów” (paid idzie najpierw na in_production, potem delivered; mail raz), druk etykiet w dwóch formatach (`?format=etykieta` 75×60 mm, jedna na stronę, albo `?format=a4`, 8 na stronie). Dane klienta na etykiecie bierze `settings.label_customer_info` (domyślnie skrócone imię i nazwisko oraz skrócony e-mail). Na dole jest numer zamówienia.
 - /admin/pomoc — instrukcja dla właścicielki (dzień, etykiety, dojazd, wydawanie, maile, anulowanie). /admin/pomoc/trasa — ściąga A4 dla kierowcy, telefon z settings.owner_phone. Link „Pomoc” w menu panelu, dla staff i owner.
 - /admin/wydawanie — mobilny ekran: wpisz/zeskanuj kod → szczegóły → "Wydano"
 - /admin/kategorie, /admin/kategorie/[id] — CRUD kategorii (zdjęcie, opis, lead_days); bez usuwania, gdy są produkty — tylko dezaktywacja
@@ -262,7 +263,7 @@ Admin:
 - /admin/kody-rabatowe — owner: kody rabatowe (lista, formularz, użycia)
 - /admin/limity — kalendarz: per dzień nadpisanie limitu/dostępności (blokada dzienna)
 - /admin/punkty-odbioru — CRUD
-- /admin/ustawienia — settings
+- /admin/ustawienia — settings, w tym karta „Etykiety” (`label_customer_info`)
 - /admin/statystyki — zakres dat, kafelki, wykresy, top produkty, punkty, wyprzedania (owner)
 - /admin/zamowienia-specjalne — lista special_requests
 API:

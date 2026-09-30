@@ -945,6 +945,7 @@ export type Database = {
           owner_email: string
           owner_phone: string | null
           pending_order_ttl_minutes: number
+          label_customer_info: string
           updated_at: string
         }
         Insert: {
@@ -961,6 +962,7 @@ export type Database = {
           owner_email: string
           owner_phone?: string | null
           pending_order_ttl_minutes?: number
+          label_customer_info?: string
           updated_at?: string
         }
         Update: {
@@ -977,6 +979,7 @@ export type Database = {
           owner_email?: string
           owner_phone?: string | null
           pending_order_ttl_minutes?: number
+          label_customer_info?: string
           updated_at?: string
         }
         Relationships: []

@@ -112,7 +112,8 @@ export default async function HelpPage() {
           <li>
             Na etykiecie jest kod odbioru, skrócone imię i nazwisko (dwie pierwsze litery, reszta gwiazdki),
             punkt i dzień, produkty jak „2× Chleb żytni”, ewentualnie uwaga, na dole numer zamówienia.
-            Pełnego e-maila nie ma. Druk nikomu nie pisze.
+            Ile danych klienta widać, ustawiasz w <strong>Ustawienia</strong>, karta „Etykiety”: skrócone imię i
+            nazwisko, to samo ze skróconym e-mailem, albo pełne dane. Druk nikomu nie pisze.
           </li>
         </ol>
       </section>

@@ -4,7 +4,7 @@ Każdy prompt to jedno zadanie dla Cursora (Agent). Jeden prompt = jeden nowy cz
 
 ## Stan
 
-Prompty 01–06 i 08–09 są wykonane (marka Adjano Deli jest w repo, ostatnio też minimum 10 zł i etykiety na etykieciarkę). Teraz kolej na rundę 1 poprawek z uwag Justyny: prompty 10–14, opis niżej.
+Prompty 01–06, 08–09 i runda 1 (10–14) są wykonane. Teraz runda 2 z uwag Justyny: prompty 15–17, opis niżej. Najpierw ręcznie konto pracownika, potem 15 → 16 → 17.
 
 ## Kolejność
 
@@ -64,6 +64,33 @@ Wynik wpisz Cursorowi na początku czatu z promptem 10 („Resend: domena niezwe
 4. **Miłosz:** przegląd diffu, `npm test && npm run lint && npm run build`, kroki z sekcji „Odbiór”, commit z numerem promptu, push (Vercel wdraża sam), migracje `npx supabase db push`.
 5. **Justyna testuje** na produkcji według krótkiej listy od Miłosza (3–5 kroków z „Odbioru”) i daje znać: działa albo zrzut ekranu.
 6. Zamykamy temat w `docs/CHANGELOG.md`.
+
+## Runda 2 poprawek — uwagi Justyny z 30.09
+
+| # | Plik | Uwaga Justyny | Co robi |
+|---|------|---------------|---------|
+| — | ręcznie, 5 minut | „chcę dodać pracownika, na dziś” | Konto pracownika przez Supabase, bez czekania na 16 (instrukcja niżej) |
+| **15** | `15-dzien-w-zamowieniach-i-dane-na-etykiecie.md` | „nie widzę zamówień na jutro” i „mail zniknął z etykiety” | Filtr dnia w Zamówieniach bierze dni z zamówieniami, nie dni do zamawiania; w Ustawieniach wybór, co drukować o kliencie |
+| **16** | `16-zespol-i-uprawnienia.md` | „pracownik ma widzieć Zamówienia, Produkcję, Paczki, Wydawanie” | Ekran „Zespół”: dodawanie pracowników, zestawy uprawnień, hasło tymczasowe, wyłączanie dostępu, współwłaściciel |
+| **17** | `17-opcje-produktu.md` | „wybór sosu, bez sosu nie przejdzie dalej” | Grupy opcji przy produkcie, okno wyboru w sklepie, opcje w koszyku, mailach, produkcji i na etykietach |
+
+### Pracownik na dziś (przed promptem 16)
+
+Rola `staff` już istnieje i daje dokładnie to, o co prosi Justyna: Dziś, Zamówienia, Produkcja, Paczki, Wydawanie, Zamówienia specjalne i Pomoc. Anulować, zwracać ani zmieniać produktów i ustawień nie może.
+
+1. Supabase → Authentication → Users → „Add user” → „Create new user”: e-mail pracownika, hasło (min. 10 znaków), zaznacz „Auto Confirm User”. Jeśli Supabase odpowie, że adres już istnieje, to znaczy, że pracownik ma konto klienta w sklepie. Najprościej użyj innego adresu (np. służbowego). Konto klienta przejmie ekran „Zespół” z promptu 16.
+2. Supabase → SQL Editor:
+
+   ```sql
+   update public.profiles
+   set role = 'staff', full_name = 'Imię Nazwisko'
+   where lower(email) = lower('adres@pracownika.pl');
+   ```
+
+   Powinno zwrócić „1 row affected”. Jeśli 0, sprawdź pisownię adresu.
+3. Pracownik loguje się na `https://adjanodeli.pl/admin/logowanie`: login = e-mail albo część przed @, hasło z kroku 1. Hasło przekaż osobiście albo telefonicznie.
+
+Po prompcie 16 ten pracownik pojawi się na ekranie „Zespół” z pełnym zestawem uprawnień i Justyna sama może go ograniczyć.
 
 ## Po wdrożeniu 08–09 (ręcznie, poza kodem)
 

@@ -22,6 +22,7 @@ import { saveSettings } from "@/lib/admin/owner-actions";
 import type { OwnerSettings } from "@/lib/admin/owner-queries";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl } from "@/lib/format";
+import { labelCustomerLines, type LabelCustomerInfo } from "@/lib/labels/customer-info";
 
 const schema = z.object({
   bakeryName: z.string().min(1, "Podaj nazwę."),
@@ -33,6 +34,7 @@ const schema = z.object({
   ownerEmail: z.string().email("Podaj e-mail."),
   ownerPhone: z.string(),
   customerCancellationEnabled: z.boolean(),
+  labelCustomerInfo: z.enum(["masked", "masked_email", "full"]),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -56,6 +58,10 @@ export function SettingsForm({ settings }: { settings: OwnerSettings }) {
       ownerEmail: settings.owner_email,
       ownerPhone: settings.owner_phone ?? "",
       customerCancellationEnabled: settings.customer_cancellation_enabled,
+      labelCustomerInfo:
+        settings.label_customer_info === "masked" || settings.label_customer_info === "full"
+          ? settings.label_customer_info
+          : "masked_email",
     },
   });
 
@@ -280,10 +286,66 @@ export function SettingsForm({ settings }: { settings: OwnerSettings }) {
           )}
         />
 
+        <FormField
+          control={form.control}
+          name="labelCustomerInfo"
+          render={({ field }) => (
+            <FormItem>
+              <section className="space-y-3 rounded-xl border border-[var(--adj-cream-dark)] bg-card p-4">
+                <h2 className="text-2xl font-semibold">Etykiety</h2>
+                <div className="space-y-2">
+                  {(
+                    [
+                      ["masked", "Skrócone imię i nazwisko"],
+                      ["masked_email", "Skrócone imię i nazwisko + skrócony e-mail"],
+                      ["full", "Pełne dane"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <label key={value} className="flex min-h-12 items-center gap-3 text-base">
+                      <input
+                        type="radio"
+                        name={field.name}
+                        value={value}
+                        checked={field.value === value}
+                        onChange={() => field.onChange(value)}
+                        className="size-5 shrink-0"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+                <LabelPreview mode={field.value} />
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Paczki stoją w punktach, gdzie widzą je inni. Pełne dane wybierz tylko, jeśli naprawdę ich
+                  potrzebujesz.
+                </p>
+              </section>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <Button type="submit" className="min-h-12" disabled={saving}>
           Zapisz ustawienia
         </Button>
       </form>
     </Form>
+  );
+}
+
+const PREVIEW_NAME = "Justyna Kowalska";
+const PREVIEW_EMAIL = "justyna@gmail.com";
+
+function LabelPreview({ mode }: { mode: LabelCustomerInfo }) {
+  const customer = labelCustomerLines(mode, PREVIEW_NAME, PREVIEW_EMAIL);
+  return (
+    <div className="max-w-[75mm] overflow-hidden rounded-md border border-[var(--adj-cream-dark)] bg-white p-3 text-[var(--adj-ink)]">
+      <p className="font-mono text-2xl font-bold tracking-wide">AB12</p>
+      <p className="truncate text-sm font-semibold">{customer.name}</p>
+      {customer.email ? <p className="truncate text-xs">{customer.email}</p> : null}
+      <p className="truncate text-xs">Sąd Rejonowy · czwartek, 1 października</p>
+      <p className="mt-1 text-xs">2× Chleb żytni</p>
+      <p className="mt-2 text-[10px]">#1043</p>
+    </div>
   );
 }

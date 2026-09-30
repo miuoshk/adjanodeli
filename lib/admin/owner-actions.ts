@@ -645,6 +645,7 @@ export type SettingsPayload = {
   ownerEmail: string;
   ownerPhone: string;
   customerCancellationEnabled: boolean;
+  labelCustomerInfo: "masked" | "masked_email" | "full";
 };
 
 export async function saveSettings(payload: SettingsPayload) {
@@ -674,6 +675,13 @@ export async function saveSettings(payload: SettingsPayload) {
   if (!emailSchema.test(payload.ownerEmail.trim())) {
     return { ok: false as const, message: "Podaj e-mail." };
   }
+  if (
+    payload.labelCustomerInfo !== "masked" &&
+    payload.labelCustomerInfo !== "masked_email" &&
+    payload.labelCustomerInfo !== "full"
+  ) {
+    return { ok: false as const, message: "Wybierz, co ma być na etykiecie." };
+  }
 
   const supabase = await createServerClient();
   const { error } = await supabase
@@ -689,6 +697,7 @@ export async function saveSettings(payload: SettingsPayload) {
       owner_email: payload.ownerEmail.trim(),
       owner_phone: payload.ownerPhone.trim() || null,
       customer_cancellation_enabled: payload.customerCancellationEnabled,
+      label_customer_info: payload.labelCustomerInfo,
     })
     .eq("id", 1);
 
@@ -698,6 +707,7 @@ export async function saveSettings(payload: SettingsPayload) {
 
   revalidatePath("/");
   revalidatePath("/sklep");
+  revalidatePath("/admin/paczki/drukuj");
   return { ok: true as const };
 }
 

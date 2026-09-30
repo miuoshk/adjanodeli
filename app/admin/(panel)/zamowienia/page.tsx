@@ -1,10 +1,11 @@
 import Link from "next/link";
 
+import { AdminDayPicker } from "@/components/admin/admin-day-picker";
 import { OrderActions } from "@/components/admin/order-actions";
 import { OrdersFilters } from "@/components/admin/orders-filters";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatusBadge } from "@/components/admin/status-badge";
-import { getAdminFilterOptions, getAdminOrderList } from "@/lib/admin/queries";
+import { getAdminFilterOptions, getAdminOrderList, getNearestOrderDay } from "@/lib/admin/queries";
 import { getProfile, requireRole } from "@/lib/auth";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl, formatPrice } from "@/lib/format";
@@ -86,13 +87,12 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
   const isOwner = profile?.role === "owner";
 
   const { dates, points } = await getAdminFilterOptions();
-  const defaultDay = dates[0] ?? "wszystkie";
   const day =
     params.dzien === "wszystkie"
       ? "wszystkie"
       : params.dzien && /^\d{4}-\d{2}-\d{2}$/.test(params.dzien)
         ? params.dzien
-        : defaultDay;
+        : await getNearestOrderDay();
   const statuses = parseStatuses(params.status);
   const page = Math.max(1, Number.parseInt(params.strona ?? "1", 10) || 1);
 
@@ -119,6 +119,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
           </Link>
         ) : null}
       </PageHeader>
+      <AdminDayPicker selected={day === "wszystkie" ? "" : day} basePath="/admin/zamowienia" />
       <OrdersFilters
         dates={dates}
         points={points}
