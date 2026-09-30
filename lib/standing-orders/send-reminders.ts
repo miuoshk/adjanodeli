@@ -1,6 +1,13 @@
 import { sendStandingReminder } from "@/lib/email/send-standing-reminder";
 import { isoWeekday } from "@/lib/dates";
+import { assembleShopOptionGroups } from "@/lib/orders/assemble-option-groups";
+import { itemNameWithOptions } from "@/lib/orders/item-options";
 import { parseStandingItems } from "@/lib/standing-orders/items";
+import {
+  standingChosenOptions,
+  standingOptionIssue,
+  standingOptionMessage,
+} from "@/lib/standing-orders/option-check";
 import { isWarsawAround17 } from "@/lib/standing-orders/warsaw-window";
 import { createClient } from "@/lib/supabase/admin";
 
@@ -54,6 +61,23 @@ export async function sendStandingReminders(): Promise<{
     : { data: [] };
 
   const productById = new Map((products ?? []).map((product) => [product.id, product]));
+  const { data: groups } = productIds.length
+    ? await admin
+        .from("product_option_groups")
+        .select("id, product_id, name, is_required, max_choices, sort_order")
+        .in("product_id", productIds)
+        .order("sort_order")
+    : { data: [] };
+  const groupIds = (groups ?? []).map((group) => group.id);
+  const { data: options } = groupIds.length
+    ? await admin
+        .from("product_options")
+        .select("id, group_id, name, price_delta_grosze, is_active, sort_order")
+        .in("group_id", groupIds)
+        .eq("is_active", true)
+        .order("sort_order")
+    : { data: [] };
+  const groupsByProduct = assembleShopOptionGroups(groups ?? [], options ?? []);
   const ownerPhone = settingsResult.data?.owner_phone ?? null;
   const base = appUrl();
   let sent = 0;
@@ -77,16 +101,29 @@ export async function sendStandingReminders(): Promise<{
       continue;
     }
 
+    const skipped: string[] = [];
     const items = parseStandingItems(row.items).flatMap((item) => {
       const product = productById.get(item.product_id);
       if (!product) {
         return [];
       }
+      const issue = standingOptionIssue(groupsByProduct[product.id] ?? [], item.option_ids);
+      if (issue) {
+        skipped.push(standingOptionMessage(product.name, issue));
+        return [];
+      }
+      const chosen = standingChosenOptions(groupsByProduct[product.id] ?? [], item.option_ids);
       return [
         {
-          name: product.name,
+          name: itemNameWithOptions(
+            product.name,
+            chosen.options.map((option) => ({
+              group_name: option.groupName,
+              option_name: option.optionName,
+            })),
+          ),
           qty: item.qty,
-          unitPriceGrosze: product.price_grosze,
+          unitPriceGrosze: product.price_grosze + chosen.delta,
         },
       ];
     });
@@ -96,6 +133,7 @@ export async function sendStandingReminders(): Promise<{
       standingName: row.name,
       pickupDate: firstDate,
       items,
+      skipped,
       orderUrl: `${base}/zamow-jak-zwykle?s=${row.id}&d=${firstDate}`,
       ownerPhone,
     });

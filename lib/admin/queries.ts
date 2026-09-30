@@ -1,6 +1,7 @@
 import { noticesFromLogs, type DeliveryLogRow } from "@/lib/admin/delivery-notices";
 import { buildAdminOrderDays, type AdminOrderDay } from "@/lib/admin/order-days";
 import { warsawDateIso } from "@/lib/dates";
+import { formatItemLine, itemNameWithOptions, parseItemOptions } from "@/lib/orders/item-options";
 import { createServerClient } from "@/lib/supabase/server";
 import type { Json, Tables } from "@/lib/supabase/database.types";
 
@@ -234,15 +235,17 @@ type ListOrder = Pick<
   | "status"
   | "pickup_code"
 > & {
-  order_items: { product_name: string; qty: number }[];
+  order_items: { product_name: string; qty: number; options?: unknown }[];
   pickup_points: Pick<PickupPointRow, "name"> | Pick<PickupPointRow, "name">[] | null;
 };
 
-function summarizeItems(items: { product_name: string; qty: number }[]): string {
+function summarizeItems(items: { product_name: string; qty: number; options?: unknown }[]): string {
   if (items.length === 0) {
     return "—";
   }
-  return items.map((item) => `${item.qty}× ${item.product_name}`).join(", ");
+  return items
+    .map((item) => formatItemLine(item.qty, item.product_name, parseItemOptions(item.options)))
+    .join(", ");
 }
 
 function escapeIlike(value: string): string {
@@ -260,7 +263,7 @@ export async function getAdminOrderList(
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, customer_name, customer_phone, pickup_date, total_grosze, status, pickup_code, order_items(product_name, qty), pickup_points(name)",
+      "id, order_number, customer_name, customer_phone, pickup_date, total_grosze, status, pickup_code, order_items(product_name, qty, options), pickup_points(name)",
       { count: "exact" },
     )
     .order("pickup_date", { ascending: true })
@@ -502,6 +505,26 @@ export async function getAdminFilterOptions(): Promise<{
   };
 }
 
+function optionBreakdown(value: Json | null): string {
+  if (!Array.isArray(value)) {
+    return "";
+  }
+  return value
+    .map((entry) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        return "";
+      }
+      const label = "label" in entry ? entry.label : null;
+      const qty = "qty" in entry ? entry.qty : null;
+      if (typeof label !== "string" || typeof qty !== "number" || qty <= 0) {
+        return "";
+      }
+      return `${label} ${qty}`;
+    })
+    .filter(Boolean)
+    .join(" · ");
+}
+
 function asByPoint(value: Json | null): Record<string, number> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return {};
@@ -523,6 +546,7 @@ export type ProductionRow = {
   productSort: number;
   totalQty: number;
   byPoint: Record<string, number>;
+  optionBreakdown: string;
 };
 
 export type ProductionNote = {
@@ -616,6 +640,7 @@ export async function getProductionData(day: string): Promise<ProductionData> {
       productSort: info?.productSort ?? 999,
       totalQty: row.total_qty,
       byPoint: asByPoint(row.by_point),
+      optionBreakdown: optionBreakdown(row.by_option),
     };
   });
 
@@ -696,7 +721,7 @@ export async function getPackagesData(day: string): Promise<PackagesData> {
     supabase
       .from("orders")
       .select(
-        "id, order_number, pickup_point_id, pickup_code, customer_name, customer_email, status, note, order_items(product_name, qty)",
+        "id, order_number, pickup_point_id, pickup_code, customer_name, customer_email, status, note, order_items(product_name, qty, options)",
       )
       .eq("pickup_date", day)
       .in("status", [...COUNTED_STATUSES])
@@ -712,7 +737,7 @@ export async function getPackagesData(day: string): Promise<PackagesData> {
     customer_email: string;
     status: string;
     note: string | null;
-    order_items: { product_name: string; qty: number }[];
+    order_items: { product_name: string; qty: number; options?: unknown }[];
   };
 
   const orders = (ordersResult.data ?? []) as PackageOrder[];
@@ -728,7 +753,7 @@ export async function getPackagesData(day: string): Promise<PackagesData> {
           customerName: order.customer_name,
           customerEmail: order.customer_email,
           items: (order.order_items ?? []).map((item) => ({
-            name: item.product_name,
+            name: itemNameWithOptions(item.product_name, parseItemOptions(item.options)),
             qty: item.qty,
           })),
           itemsSummary: summarizeItems(order.order_items ?? []),
@@ -807,7 +832,7 @@ type HandoverOrderRow = Pick<
   | "pickup_point_id"
   | "pickup_date"
 > & {
-  order_items: { product_name: string; qty: number }[];
+  order_items: { product_name: string; qty: number; options?: unknown }[];
   pickup_points: Pick<PickupPointRow, "name"> | Pick<PickupPointRow, "name">[] | null;
 };
 
@@ -824,14 +849,14 @@ function mapHandoverOrder(order: HandoverOrderRow): HandoverOrder {
     pickupPointName: pointNameOf(order.pickup_points),
     pickupDate: order.pickup_date,
     items: (order.order_items ?? []).map((item) => ({
-      name: item.product_name,
+      name: itemNameWithOptions(item.product_name, parseItemOptions(item.options)),
       qty: item.qty,
     })),
   };
 }
 
 const HANDOVER_SELECT =
-  "id, order_number, pickup_code, customer_name, status, note, picked_up_at, pickup_point_id, pickup_date, order_items(product_name, qty), pickup_points(name)";
+  "id, order_number, pickup_code, customer_name, status, note, picked_up_at, pickup_point_id, pickup_date, order_items(product_name, qty, options), pickup_points(name)";
 
 export async function getHandoverPoints(): Promise<HandoverPoint[]> {
   const supabase = await createServerClient();

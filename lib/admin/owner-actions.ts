@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 
 import { PRICE_RE, priceToGrosze } from "@/lib/admin/catalog";
+import {
+  parseProductOptionDrafts,
+  type ProductOptionGroupDraft,
+} from "@/lib/admin/product-option-drafts";
+import { parseItemOptions } from "@/lib/orders/item-options";
 import { requireRole } from "@/lib/auth";
 import { isValidAccessCode, normalizeAccessCode } from "@/lib/pickup/access-code";
 import { createServerClient } from "@/lib/supabase/server";
@@ -1128,5 +1133,128 @@ export async function setDiscountCodeActive(id: string, isActive: boolean) {
     return { ok: false as const, message: "Nie udało się zapisać." };
   }
   revalidatePath("/admin/kody-rabatowe");
+  return { ok: true as const };
+}
+
+export async function saveProductOptions(productId: string, drafts: ProductOptionGroupDraft[]) {
+  await requireRole("owner", "/admin/produkty");
+  if (!uuidSchema.test(productId)) {
+    return { ok: false as const, message: "Zły produkt." };
+  }
+  const parsed = parseProductOptionDrafts(drafts);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  const supabase = await createServerClient();
+  const { data: product } = await supabase.from("products").select("id").eq("id", productId).maybeSingle();
+  if (!product) {
+    return { ok: false as const, message: "Nie ma takiego produktu." };
+  }
+
+  const { data: existingGroups } = await supabase
+    .from("product_option_groups")
+    .select("id")
+    .eq("product_id", productId);
+  const groupIds = (existingGroups ?? []).map((group) => group.id);
+  const { data: existingOptions } = groupIds.length
+    ? await supabase.from("product_options").select("id, group_id").in("group_id", groupIds)
+    : { data: [] };
+
+  const { data: itemRows } = await supabase.from("order_items").select("options").eq("product_id", productId);
+  const used = new Set<string>();
+  for (const row of itemRows ?? []) {
+    for (const option of parseItemOptions(row.options)) {
+      if (option.option_id) {
+        used.add(option.option_id);
+      }
+    }
+  }
+
+  const keptOptionIds = new Set(
+    parsed.groups.flatMap((group) => group.options.flatMap((option) => (option.id ? [option.id] : []))),
+  );
+  for (const option of existingOptions ?? []) {
+    if (keptOptionIds.has(option.id)) {
+      continue;
+    }
+    if (used.has(option.id)) {
+      return { ok: false as const, message: "Tej opcji nie da się usunąć. Wyłącz ją." };
+    }
+    const { error } = await supabase.from("product_options").delete().eq("id", option.id);
+    if (error) {
+      return { ok: false as const, message: "Nie udało się zapisać opcji." };
+    }
+  }
+
+  const keptGroupIds = new Set(parsed.groups.flatMap((group) => (group.id ? [group.id] : [])));
+  for (const group of existingGroups ?? []) {
+    if (keptGroupIds.has(group.id)) {
+      continue;
+    }
+    const leftover = (existingOptions ?? []).some((option) => option.group_id === group.id && used.has(option.id));
+    if (leftover) {
+      return { ok: false as const, message: "Tej grupy nie da się usunąć, bo opcja jest w zamówieniach." };
+    }
+    const { error } = await supabase.from("product_option_groups").delete().eq("id", group.id);
+    if (error) {
+      return { ok: false as const, message: "Nie udało się zapisać opcji." };
+    }
+  }
+
+  for (const [groupIndex, group] of parsed.groups.entries()) {
+    let groupId = group.id;
+    if (groupId && groupIds.includes(groupId)) {
+      const { error } = await supabase
+        .from("product_option_groups")
+        .update({
+          name: group.name,
+          is_required: group.isRequired,
+          max_choices: group.maxChoices,
+          sort_order: groupIndex,
+        })
+        .eq("id", groupId)
+        .eq("product_id", productId);
+      if (error) {
+        return { ok: false as const, message: "Nie udało się zapisać opcji." };
+      }
+    } else {
+      const { data, error } = await supabase
+        .from("product_option_groups")
+        .insert({
+          product_id: productId,
+          name: group.name,
+          is_required: group.isRequired,
+          max_choices: group.maxChoices,
+          sort_order: groupIndex,
+        })
+        .select("id")
+        .single();
+      if (error || !data) {
+        return { ok: false as const, message: "Nie udało się zapisać opcji." };
+      }
+      groupId = data.id;
+    }
+
+    for (const [optionIndex, option] of group.options.entries()) {
+      const row = {
+        group_id: groupId,
+        name: option.name,
+        price_delta_grosze: option.priceDeltaGrosze,
+        is_active: option.isActive,
+        sort_order: optionIndex,
+      };
+      const exists = Boolean(option.id && (existingOptions ?? []).some((current) => current.id === option.id));
+      const { error } = exists
+        ? await supabase.from("product_options").update(row).eq("id", option.id ?? "")
+        : await supabase.from("product_options").insert(row);
+      if (error) {
+        return { ok: false as const, message: "Nie udało się zapisać opcji." };
+      }
+    }
+  }
+
+  revalidateCatalog();
+  revalidatePath(`/admin/produkty/${productId}`);
   return { ok: true as const };
 }

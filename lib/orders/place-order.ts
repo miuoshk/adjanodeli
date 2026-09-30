@@ -17,6 +17,7 @@ const placeOrderSchema = z.object({
       z.object({
         productId: z.string().uuid(),
         qty: z.number().int().min(1),
+        optionIds: z.array(z.string().uuid()).default([]),
       }),
     )
     .min(1)
@@ -52,6 +53,8 @@ export type PlaceOrderResult =
         | "DISCOUNT_INVALID"
         | "TOTAL_BELOW_MINIMUM"
         | "INVALID_INVOICE"
+        | "OPTIONS_REQUIRED"
+        | "OPTIONS_INVALID"
         | "UNKNOWN";
       message: string;
     };
@@ -66,6 +69,8 @@ const errorMessages = {
   DISCOUNT_INVALID: "Ten kod już nie działa. Sprawdź go albo zamów bez.",
   TOTAL_BELOW_MINIMUM: `Zamówienie musi mieć min. ${formatPrice(ORDER_MIN_GROSZE)}. Dodaj jeszcze coś.`,
   INVALID_INVOICE: "Sprawdź NIP, nazwę i adres do faktury.",
+  OPTIONS_REQUIRED: "Wybierz brakujący dodatek w koszyku.",
+  OPTIONS_INVALID: "Te dodatki już nie pasują do produktu. Wybierz je jeszcze raz.",
   UNKNOWN: "Nie udało się złożyć zamówienia. Spróbuj jeszcze raz.",
 } as const;
 
@@ -115,6 +120,17 @@ function parseRpcError(text: string): PlaceOrderResult {
   if (text.includes("TOTAL_BELOW_MINIMUM")) {
     return { ok: false, code: "TOTAL_BELOW_MINIMUM", message: errorMessages.TOTAL_BELOW_MINIMUM };
   }
+  const optionsRequired = text.match(/OPTIONS_REQUIRED:[0-9a-f-]{36}:(.+)/i);
+  if (optionsRequired) {
+    return {
+      ok: false,
+      code: "OPTIONS_REQUIRED",
+      message: `Wybierz: ${optionsRequired[1].trim()}`,
+    };
+  }
+  if (text.includes("OPTIONS_INVALID")) {
+    return { ok: false, code: "OPTIONS_INVALID", message: errorMessages.OPTIONS_INVALID };
+  }
   if (text.includes("INVALID_INVOICE")) {
     return { ok: false, code: "INVALID_INVOICE", message: errorMessages.INVALID_INVOICE };
   }
@@ -146,6 +162,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
     p_items: parsed.data.items.map((item) => ({
       product_id: item.productId,
       qty: item.qty,
+      option_ids: item.optionIds,
     })),
     p_note: parsed.data.note,
     p_discount: parsed.data.discountCode

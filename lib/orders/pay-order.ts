@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { requireUser } from "@/lib/auth";
 import { formatPrice } from "@/lib/format";
+import { itemNameWithOptions, parseItemOptions } from "@/lib/orders/item-options";
 import { ORDER_MIN_GROSZE } from "@/lib/loyalty/discount";
 import { getStripe } from "@/lib/stripe/client";
 import { createClient } from "@/lib/supabase/admin";
@@ -19,7 +20,7 @@ export type PayOrderResult =
 
 type OrderItemRow = Pick<
   Tables<"order_items">,
-  "id" | "product_name" | "unit_price_grosze" | "qty"
+  "id" | "product_name" | "unit_price_grosze" | "qty" | "options"
 >;
 
 type PayableOrder = Pick<
@@ -75,7 +76,7 @@ export async function payOrder(orderId: string): Promise<PayOrderResult> {
   const { data } = await supabase
     .from("orders")
     .select(
-      "id, status, expires_at, customer_email, stripe_checkout_session_id, discount_grosze, order_items(id, product_name, unit_price_grosze, qty)",
+      "id, status, expires_at, customer_email, stripe_checkout_session_id, discount_grosze, order_items(id, product_name, unit_price_grosze, qty, options)",
     )
     .eq("id", parsedId.data)
     .maybeSingle();
@@ -132,7 +133,9 @@ export async function payOrder(orderId: string): Promise<PayOrderResult> {
         price_data: {
           currency: "pln",
           unit_amount: item.unit_price_grosze,
-          product_data: { name: item.product_name },
+          product_data: {
+            name: itemNameWithOptions(item.product_name, parseItemOptions(item.options)),
+          },
         },
       })),
       ...(discounts.length > 0 ? { discounts } : {}),

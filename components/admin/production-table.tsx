@@ -71,7 +71,14 @@ export function ProductionTable({ data, variant }: ProductionTableProps) {
               </tr>
               {group.rows.map((row) => (
                 <tr key={row.productId} className={isPrint ? "print-block" : "border-b border-[var(--adj-cream-dark)]"}>
-                  <td className={isPrint ? undefined : "px-4 py-3"}>{row.productName}</td>
+                  <td className={isPrint ? undefined : "px-4 py-3"}>
+                    <div>{row.productName}</div>
+                    {row.optionBreakdown ? (
+                      <div className={isPrint ? undefined : "mt-1 text-xs text-muted-foreground"}>
+                        {row.optionBreakdown}
+                      </div>
+                    ) : null}
+                  </td>
                   <td className={isPrint ? "num" : "px-4 py-3 text-right font-medium"}>{row.totalQty}</td>
                   {data.pointNames.map((name) => (
                     <td key={name} className={isPrint ? "num" : "px-4 py-3 text-right"}>

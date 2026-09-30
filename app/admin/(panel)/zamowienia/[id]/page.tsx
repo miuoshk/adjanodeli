@@ -15,6 +15,7 @@ import { requireStaffPermission } from "@/lib/auth";
 import { parseDateOnly } from "@/lib/dates";
 import { EXPIRED_PAID_NOTE } from "@/lib/email/send-paid-after-expiry";
 import { formatDatePl, formatPrice, formatTimeRange } from "@/lib/format";
+import { formatItemLine, parseItemOptions } from "@/lib/orders/item-options";
 import { orderStatusMeta } from "@/lib/orders/status-labels";
 
 type PageProps = {
@@ -97,7 +98,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
           {items.map((item) => (
             <li key={item.id} className="flex justify-between gap-3 text-sm">
               <span>
-                {item.product_name} × {item.qty}
+                {formatItemLine(item.qty, item.product_name, parseItemOptions(item.options))}
               </span>
               <span>{formatPrice(item.unit_price_grosze * item.qty)}</span>
             </li>

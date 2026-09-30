@@ -1,6 +1,7 @@
 export type StandingOrderItem = {
   product_id: string;
   qty: number;
+  option_ids: string[];
 };
 
 export const WEEKDAY_LABELS: { id: number; label: string }[] = [

@@ -88,7 +88,8 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     notFound();
   }
 
-  const [datesResult, categoriesResult, productsResult, settingsResult, tagsResult] = await Promise.all([
+  const [datesResult, categoriesResult, productsResult, settingsResult, tagsResult, groupsResult, optionsResult] =
+    await Promise.all([
     supabase.rpc("available_pickup_dates"),
     supabase
       .from("categories")
@@ -104,6 +105,15 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       .order("sort_order"),
     supabase.from("settings").select("max_qty_per_item, cutoff_time").eq("id", 1).maybeSingle(),
     supabase.from("product_tags").select("name, color"),
+    supabase
+      .from("product_option_groups")
+      .select("id, product_id, name, is_required, max_choices, sort_order")
+      .order("sort_order"),
+    supabase
+      .from("product_options")
+      .select("id, group_id, name, price_delta_grosze, is_active, sort_order")
+      .eq("is_active", true)
+      .order("sort_order"),
   ]);
 
   const pickupDates = (datesResult.data ?? [])
@@ -135,6 +145,32 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   });
   const availabilityByProduct = new Map((availability ?? []).map((row) => [row.product_id, row]));
   const tagColorByName = new Map((tagsResult.data ?? []).map((row) => [row.name, row.color]));
+  const optionsByGroup = new Map<string, { id: string; name: string; priceDeltaGrosze: number; isActive: boolean }[]>();
+  for (const option of optionsResult.data ?? []) {
+    const list = optionsByGroup.get(option.group_id) ?? [];
+    list.push({
+      id: option.id,
+      name: option.name,
+      priceDeltaGrosze: option.price_delta_grosze,
+      isActive: option.is_active,
+    });
+    optionsByGroup.set(option.group_id, list);
+  }
+  const groupsByProduct = new Map<
+    string,
+    { id: string; name: string; isRequired: boolean; maxChoices: number; options: { id: string; name: string; priceDeltaGrosze: number; isActive: boolean }[] }[]
+  >();
+  for (const group of groupsResult.data ?? []) {
+    const list = groupsByProduct.get(group.product_id) ?? [];
+    list.push({
+      id: group.id,
+      name: group.name,
+      isRequired: group.is_required,
+      maxChoices: group.max_choices,
+      options: optionsByGroup.get(group.id) ?? [],
+    });
+    groupsByProduct.set(group.product_id, list);
+  }
 
   const products = (productsResult.data ?? []).filter(
     (product) => product.category_id === category.id && product.weekdays.includes(dayWeekday),
@@ -186,6 +222,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
                   color: tagColorByName.get(name) ?? "gold",
                 }))}
                 unitPriceGrosze={stockPromo(stock, product.price_grosze).effective}
+                optionGroups={groupsByProduct.get(product.id) ?? []}
                 regularPriceGrosze={product.price_grosze}
                 isPromo={stockPromo(stock, product.price_grosze).isPromo}
                 imagePath={product.image_path}

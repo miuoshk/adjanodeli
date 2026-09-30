@@ -17,6 +17,7 @@ type StandingReminderEmailProps = {
   standingName: string;
   pickupDateLabel: string;
   items: StandingReminderItem[];
+  skipped?: string[];
   total: string;
   orderUrl: string;
   ownerPhone: string | null;
@@ -26,6 +27,7 @@ export function StandingReminderEmail({
   standingName,
   pickupDateLabel,
   items,
+  skipped = [],
   total,
   orderUrl,
   ownerPhone,
@@ -65,6 +67,11 @@ export function StandingReminderEmail({
         ))}
       </table>
       <p style={{ margin: "12px 0 20px", fontWeight: 700, fontSize: "18px" }}>Suma: {total}</p>
+      {skipped.map((line) => (
+        <p key={line} style={{ margin: "0 0 8px", color: red }}>
+          {line}
+        </p>
+      ))}
       <p style={{ margin: 0 }}>
         <a
           href={orderUrl}

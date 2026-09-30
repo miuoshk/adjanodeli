@@ -14,6 +14,7 @@ export async function sendStandingReminder(input: {
   standingName: string;
   pickupDate: string;
   items: ReminderItem[];
+  skipped?: string[];
   orderUrl: string;
   ownerPhone: string | null;
 }): Promise<{ ok: true } | { ok: false }> {
@@ -31,6 +32,7 @@ export async function sendStandingReminder(input: {
         qty: item.qty,
         lineTotal: formatPrice(item.unitPriceGrosze * item.qty),
       })),
+      skipped: input.skipped ?? [],
       total: formatPrice(total),
       orderUrl: input.orderUrl,
       ownerPhone: input.ownerPhone,

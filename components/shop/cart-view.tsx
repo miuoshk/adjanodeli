@@ -25,9 +25,12 @@ import { isValidNip } from "@/lib/validation/nip";
 import { checkDiscountCode } from "@/lib/orders/check-discount-code";
 import { getAvailability, type ProductAvailability } from "@/lib/orders/availability";
 import { blockingLeadItem, cartEarliestDate } from "@/lib/orders/lead-time";
+import { cartOptionLine, hasUnknownOption, missingRequiredGroupName, optionDeltaGrosze, type ShopOptionGroup } from "@/lib/orders/item-options";
+import { loadShopOptionGroups } from "@/lib/orders/load-option-groups";
 import { placeOrder } from "@/lib/orders/place-order";
+import { ProductOptionSheet } from "@/components/shop/product-option-sheet";
 import type { UnlockedPickupPoint } from "@/lib/pickup/unlock-point";
-import { selectSubtotal, useCart, type CartItem } from "@/lib/store/cart";
+import { lineKeyOf, selectSubtotal, useCart, type CartItem } from "@/lib/store/cart";
 import { UnlockPointForm } from "@/components/shop/unlock-point-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -129,6 +132,9 @@ export function CartView({
   const [codeMessage, setCodeMessage] = useState<string | null>(null);
   const [appliedCode, setAppliedCode] = useState<{ code: string; discountGrosze: number } | null>(null);
   const [unlockedPoints, setUnlockedPoints] = useState<CartPickupPoint[]>([]);
+  const [groupsByProduct, setGroupsByProduct] = useState<Record<string, ShopOptionGroup[]>>({});
+  const [groupsReady, setGroupsReady] = useState(false);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
 
   const items = useCart((state) => state.items);
   const day = useCart((state) => state.day);
@@ -141,11 +147,31 @@ export function CartView({
   const setPickupPoint = useCart((state) => state.setPickupPoint);
   const setNote = useCart((state) => state.setNote);
   const clear = useCart((state) => state.clear);
+  const add = useCart((state) => state.add);
 
   useEffect(() => {
     setHydrated(useCart.persist.hasHydrated());
     return useCart.persist.onFinishHydration(() => setHydrated(true));
   }, []);
+
+  const productKey = items.map((item) => item.productId).join(",");
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+    const ids = [...new Set(items.map((item) => item.productId))];
+    if (ids.length === 0) {
+      setGroupsByProduct({});
+      setGroupsReady(true);
+      return;
+    }
+    setGroupsReady(false);
+    void loadShopOptionGroups(ids).then((groups) => {
+      setGroupsByProduct(groups);
+      setGroupsReady(true);
+    });
+  }, [hydrated, productKey, items]);
 
   useEffect(() => {
     if (!hydrated || !day) {
@@ -248,10 +274,14 @@ export function CartView({
     if (!availabilityReady) {
       return issues;
     }
+    const qtyByProduct = new Map<string, number>();
     for (const item of items) {
-      const remaining = remainingFor(availability, item.productId);
-      if (remaining !== null && item.qty > remaining) {
-        issues.set(item.productId, remaining);
+      qtyByProduct.set(item.productId, (qtyByProduct.get(item.productId) ?? 0) + item.qty);
+    }
+    for (const [productId, qty] of qtyByProduct) {
+      const remaining = remainingFor(availability, productId);
+      if (remaining !== null && qty > remaining) {
+        issues.set(productId, remaining);
       }
     }
     return issues;
@@ -264,6 +294,17 @@ export function CartView({
     address: invoiceAddress,
   });
 
+  function optionProblem(item: CartItem): string | null {
+    const groups = groupsByProduct[item.productId] ?? [];
+    if (hasUnknownOption(groups, item.optionIds)) {
+      return missingRequiredGroupName(groups, []) ?? "dodatek";
+    }
+    return missingRequiredGroupName(groups, item.optionIds);
+  }
+
+  const optionsBlocked = items.some((item) => optionProblem(item));
+  const editingItem = items.find((item) => lineKeyOf(item) === editingKey) ?? null;
+
   const canPay =
     items.length > 0 &&
     Boolean(day) &&
@@ -272,6 +313,8 @@ export function CartView({
     pointServesDay &&
     availabilityReady &&
     overstock.size === 0 &&
+    groupsReady &&
+    !optionsBlocked &&
     termsAccepted &&
     !belowMinimum &&
     invoiceOk;
@@ -299,11 +342,14 @@ export function CartView({
       );
       return;
     }
-    if (nextQty > remaining) {
+    const used = items
+      .filter((entry) => entry.productId === item.productId)
+      .reduce((sum, entry) => sum + entry.qty, 0);
+    if (used + 1 > remaining) {
       toast(`Na ten dzień zostało ${remaining} szt.`);
       return;
     }
-    setQty(item.productId, nextQty);
+    setQty(lineKeyOf(item), item.qty + 1);
   }
 
   async function applyCode() {
@@ -364,7 +410,11 @@ export function CartView({
       const result = await placeOrder({
         pickupPointId,
         pickupDate: day,
-        items: items.map((item) => ({ productId: item.productId, qty: item.qty })),
+        items: items.map((item) => ({
+          productId: item.productId,
+          qty: item.qty,
+          optionIds: item.optionIds,
+        })),
         note,
         voucherId: useVoucher && !usingCode ? voucherId : null,
         discountCode: usingCode ? appliedCode?.code ?? null : null,
@@ -392,10 +442,17 @@ export function CartView({
       }
 
       if (result.code === "OUT_OF_STOCK") {
-        if (result.remaining <= 0) {
-          remove(result.productId);
-        } else {
-          setQty(result.productId, result.remaining);
+        let left = result.remaining;
+        for (const entry of items.filter((item) => item.productId === result.productId)) {
+          const key = lineKeyOf(entry);
+          if (left <= 0) {
+            remove(key);
+          } else if (entry.qty > left) {
+            setQty(key, left);
+            left = 0;
+          } else {
+            left -= entry.qty;
+          }
         }
         const name =
           items.find((item) => item.productId === result.productId)?.name ?? "ten produkt";
@@ -468,7 +525,15 @@ export function CartView({
             >
               Zmień na {formatDatePl(parseDateOnly(leadBlock.earliestDate))}
             </Button>
-            <Button type="button" variant="outline" onClick={() => remove(leadBlock.productId)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                for (const entry of items.filter((item) => item.productId === leadBlock.productId)) {
+                  remove(lineKeyOf(entry));
+                }
+              }}
+            >
               Usuń {leadBlock.name}
             </Button>
           </div>
@@ -480,17 +545,21 @@ export function CartView({
 
       <ul className="border-t border-[var(--adj-ink)]">
         {items.map((item) => {
+          const key = lineKeyOf(item);
           const remaining = overstock.get(item.productId);
           const hasIssue = remaining !== undefined;
+          const missing = optionProblem(item);
+          const choice = cartOptionLine(item.options);
           return (
             <li
-              key={item.productId}
+              key={key}
               className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-3 border-b border-[rgba(43,42,31,0.18)] py-5"
             >
               <div>
                 <p className="font-heading text-[20px] leading-[1.2] font-medium lg:text-[22px]">
                   {nbsp(displayName(item.name))}
                 </p>
+                {choice ? <p className="mt-1 text-sm text-[var(--adj-ink-soft)]">{choice}</p> : null}
                 <p className="adj-ui text-sm text-[var(--adj-ink-soft)]">
                   <Price grosze={item.unitPriceGrosze} /> / szt.
                 </p>
@@ -500,18 +569,26 @@ export function CartView({
                 <QtyStepper
                   value={item.qty}
                   label={item.name}
-                  onDecrease={() => setQty(item.productId, item.qty - 1)}
+                  onDecrease={() => setQty(key, item.qty - 1)}
                   onIncrease={() => tryIncrease(item)}
                 />
                 <Button
                   type="button"
                   variant="link"
                   className="h-auto px-1"
-                  onClick={() => remove(item.productId)}
+                  onClick={() => remove(key)}
                 >
                   Usuń
                 </Button>
               </div>
+              {missing ? (
+                <div className="col-span-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <p className="text-sm text-[var(--adj-red)]">Wybierz {missing.toLocaleLowerCase("pl")}</p>
+                  <Button type="button" variant="outline" className="min-h-12" onClick={() => setEditingKey(key)}>
+                    Wybierz
+                  </Button>
+                </div>
+              ) : null}
               {hasIssue ? (
                 <p className="col-span-2 text-sm text-[var(--adj-red)]">
                   Zostało tylko {remaining} — zmniejsz ilość
@@ -793,7 +870,7 @@ export function CartView({
           </span>
         </label>
 
-        {overstock.size > 0 || dayExpired || belowMinimum ? (
+        {overstock.size > 0 || dayExpired || belowMinimum || optionsBlocked ? (
           <Button type="button" size="lg" className="mt-5 w-full" disabled>
             Przejdź do płatności · {formatPrice(payableGrosze)}
           </Button>
@@ -819,6 +896,45 @@ export function CartView({
         )}
       </aside>
       </div>
+      {editingItem ? (
+        <ProductOptionSheet
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingKey(null);
+            }
+          }}
+          productName={editingItem.name}
+          basePriceGrosze={Math.max(
+            0,
+            editingItem.unitPriceGrosze - optionDeltaGrosze(groupsByProduct[editingItem.productId] ?? [], editingItem.optionIds),
+          )}
+          groups={groupsByProduct[editingItem.productId] ?? []}
+          initialOptionIds={editingItem.optionIds}
+          onConfirm={(optionIds) => {
+            const groups = groupsByProduct[editingItem.productId] ?? [];
+            const chosen = groups.flatMap((group) =>
+              group.options
+                .filter((option) => option.isActive && optionIds.includes(option.id))
+                .map((option) => ({ groupName: group.name, optionName: option.name })),
+            );
+            const base = Math.max(0, editingItem.unitPriceGrosze - optionDeltaGrosze(groups, editingItem.optionIds));
+            remove(lineKeyOf(editingItem));
+            add(
+              {
+                productId: editingItem.productId,
+                name: editingItem.name,
+                unitPriceGrosze: base + optionDeltaGrosze(groups, optionIds),
+                qty: editingItem.qty,
+                optionIds,
+                options: chosen,
+              },
+              day ?? "",
+            );
+            setEditingKey(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

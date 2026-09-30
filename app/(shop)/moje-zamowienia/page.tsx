@@ -16,7 +16,10 @@ export default async function MyOrdersPage() {
   const supabase = await createServerClient();
   const [profile, ordersResult] = await Promise.all([
     getProfile(),
-    supabase.from("orders").select("*, pickup_points(*)").order("created_at", { ascending: false }),
+    supabase
+      .from("orders")
+      .select("*, pickup_points(*), order_items(product_name, qty, options)")
+      .order("created_at", { ascending: false }),
   ]);
 
   const orders = (ordersResult.data ?? []) as CustomerOrder[];

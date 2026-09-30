@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/email/resend";
 import { OrderPaidEmail } from "@/lib/email/templates/order-paid";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl, formatPrice, formatTimeRange } from "@/lib/format";
+import { itemNameWithOptions, parseItemOptions } from "@/lib/orders/item-options";
 import { voucherLabel, type VoucherType } from "@/lib/loyalty/discount";
 import { parseLoyaltyStatus } from "@/lib/loyalty/status";
 import { createClient } from "@/lib/supabase/admin";
@@ -114,7 +115,7 @@ export async function sendOrderPaid(
         timeRange: formatTimeRange(point.pickup_from, point.pickup_to),
         pickupDateLabel: formatDatePl(parseDateOnly(order.pickup_date)),
         items: (order.order_items ?? []).map((item) => ({
-          name: item.product_name,
+          name: itemNameWithOptions(item.product_name, parseItemOptions(item.options)),
           qty: item.qty,
           lineTotal: formatPrice(item.unit_price_grosze * item.qty),
         })),

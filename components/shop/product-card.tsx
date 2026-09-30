@@ -12,7 +12,9 @@ import { Price } from "@/components/brand/price";
 import { QtyStepper } from "@/components/brand/qty-stepper";
 import { formatDatePl } from "@/lib/format";
 import { parseDateOnly } from "@/lib/dates";
-import { useCart } from "@/lib/store/cart";
+import { ProductOptionSheet } from "@/components/shop/product-option-sheet";
+import { optionDeltaGrosze, type ShopOptionGroup } from "@/lib/orders/item-options";
+import { lineKeyOf, useCart } from "@/lib/store/cart";
 import { nbsp } from "@/lib/typography";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -42,6 +44,7 @@ type ProductCardProps = {
   earliestDate?: string | null;
   regularPriceGrosze?: number;
   isPromo?: boolean;
+  optionGroups?: ShopOptionGroup[];
 };
 
 export function ProductCard({
@@ -61,18 +64,28 @@ export function ProductCard({
   earliestDate = null,
   regularPriceGrosze,
   isPromo = false,
+  optionGroups = [],
 }: ProductCardProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [leadConfirmOpen, setLeadConfirmOpen] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const cartDay = useCart((state) => state.day);
   const cartItems = useCart((state) => state.items);
-  const qty = useCart((state) =>
-    state.day === day
-      ? (state.items.find((item) => item.productId === productId)?.qty ?? 0)
-      : 0,
-  );
+  const hasOptions = optionGroups.some((group) => group.options.some((option) => option.isActive));
+  const plainKey = lineKeyOf({ productId, optionIds: [] });
+  const qty = useCart((state) => {
+    if (state.day !== day) {
+      return 0;
+    }
+    if (hasOptions) {
+      return state.items
+        .filter((item) => item.productId === productId)
+        .reduce((sum, item) => sum + item.qty, 0);
+    }
+    return state.items.find((item) => lineKeyOf(item) === plainKey)?.qty ?? 0;
+  });
   const add = useCart((state) => state.add);
   const setQty = useCart((state) => state.setQty);
   const clear = useCart((state) => state.clear);
@@ -105,13 +118,34 @@ export function ProductCard({
     goToEarliest();
   }
 
-  function addOne() {
+  function addPlain() {
     add(
       {
         productId,
         name,
         unitPriceGrosze,
         qty: 1,
+        optionIds: [],
+        options: [],
+      },
+      day,
+    );
+  }
+
+  function addWithOptions(optionIds: string[]) {
+    const chosen = optionGroups.flatMap((group) =>
+      group.options
+        .filter((option) => option.isActive && optionIds.includes(option.id))
+        .map((option) => ({ groupName: group.name, optionName: option.name })),
+    );
+    add(
+      {
+        productId,
+        name,
+        unitPriceGrosze: unitPriceGrosze + optionDeltaGrosze(optionGroups, optionIds),
+        qty: 1,
+        optionIds,
+        options: chosen,
       },
       day,
     );
@@ -140,17 +174,26 @@ export function ProductCard({
       return;
     }
 
-    if (qty === 0) {
-      addOne();
+    if (hasOptions) {
+      setOptionsOpen(true);
       return;
     }
-    setQty(productId, nextQty);
+
+    if (qty === 0) {
+      addPlain();
+      return;
+    }
+    setQty(plainKey, nextQty);
   }
 
   function confirmDayChange() {
     clear();
-    addOne();
     setConfirmOpen(false);
+    if (hasOptions) {
+      setOptionsOpen(true);
+      return;
+    }
+    addPlain();
   }
 
   return (
@@ -208,20 +251,29 @@ export function ProductCard({
             <p className="adj-ui text-right text-sm text-[var(--adj-ink-soft)]">
               Wyprzedane na ten dzień
             </p>
-          ) : qty === 0 ? (
+          ) : hasOptions || qty === 0 ? (
             <Button type="button" className="min-w-[112px]" onClick={tryIncrease}>
-              Dodaj
+              {hasOptions && qty > 0 ? `Dodaj (${qty})` : "Dodaj"}
             </Button>
           ) : (
             <QtyStepper
               value={qty}
               label={name}
-              onDecrease={() => setQty(productId, qty - 1)}
+              onDecrease={() => setQty(plainKey, qty - 1)}
               onIncrease={tryIncrease}
             />
           )}
         </div>
       </div>
+
+      <ProductOptionSheet
+        open={optionsOpen}
+        onOpenChange={setOptionsOpen}
+        productName={name}
+        basePriceGrosze={unitPriceGrosze}
+        groups={optionGroups}
+        onConfirm={addWithOptions}
+      />
 
       <Dialog open={leadConfirmOpen} onOpenChange={setLeadConfirmOpen}>
         <DialogContent>

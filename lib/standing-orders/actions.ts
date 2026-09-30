@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { getSession } from "@/lib/auth";
 import { isoWeekday } from "@/lib/dates";
+import { parseItemOptions } from "@/lib/orders/item-options";
 import { parseStandingItems } from "@/lib/standing-orders/items";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -42,7 +43,7 @@ export async function saveStandingOrderFromPaid(input: {
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, status, pickup_point_id, pickup_date, note, order_items(product_id, qty)")
+    .select("id, status, pickup_point_id, pickup_date, note, order_items(product_id, qty, options)")
     .eq("id", orderId.data)
     .eq("user_id", session.user.id)
     .maybeSingle();
@@ -53,7 +54,15 @@ export async function saveStandingOrderFromPaid(input: {
 
   const items = parseStandingItems(
     (order.order_items ?? []).flatMap((item) =>
-      item.product_id ? [{ product_id: item.product_id, qty: item.qty }] : [],
+      item.product_id
+        ? [
+            {
+              product_id: item.product_id,
+              qty: item.qty,
+              option_ids: parseItemOptions(item.options).map((option) => option.option_id),
+            },
+          ]
+        : [],
     ),
   );
 

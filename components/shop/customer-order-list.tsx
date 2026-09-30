@@ -4,6 +4,7 @@ import { LabelTag, type LabelTone } from "@/components/brand/label-tag";
 import { Price } from "@/components/brand/price";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl, formatTimeRange } from "@/lib/format";
+import { formatItemLine, parseItemOptions } from "@/lib/orders/item-options";
 import { orderStatusMeta } from "@/lib/orders/status-labels";
 import type { Tables } from "@/lib/supabase/database.types";
 import { nbsp } from "@/lib/typography";
@@ -13,7 +14,14 @@ type PickupPointRow = Tables<"pickup_points">;
 
 export type CustomerOrder = OrderRow & {
   pickup_points: PickupPointRow | PickupPointRow[] | null;
+  order_items?: { product_name: string; qty: number; options?: unknown }[] | null;
 };
+
+function itemsLine(order: CustomerOrder): string {
+  return (order.order_items ?? [])
+    .map((item) => formatItemLine(item.qty, item.product_name, parseItemOptions(item.options)))
+    .join(", ");
+}
 
 export function pointOf(order: CustomerOrder): PickupPointRow | null {
   const point = Array.isArray(order.pickup_points)
@@ -56,6 +64,9 @@ export function OrderWaitingCard({
           ? `${formatDatePl(parseDateOnly(order.pickup_date))}, ${hours}`
           : formatDatePl(parseDateOnly(order.pickup_date))}
       </p>
+      {itemsLine(order) ? (
+        <p className="mt-2 text-[15px]">{itemsLine(order)}</p>
+      ) : null}
       <Link href={`/zamowienie/${order.id}`} className="adj-link mt-4 inline-block">
         Szczegóły
       </Link>
@@ -80,6 +91,7 @@ export function CustomerOrderRow({ order }: { order: CustomerOrder }) {
           <p className="mt-1 text-[15px] text-[var(--adj-ink-soft)]">
             {point ? nbsp(point.name) : "Punkt odbioru"}
           </p>
+          {itemsLine(order) ? <p className="mt-1 text-[15px]">{itemsLine(order)}</p> : null}
         </div>
         <div className="flex flex-col items-end gap-2">
           <Price grosze={order.total_grosze} />

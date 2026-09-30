@@ -1,4 +1,7 @@
 import { isoWeekday, parseDateOnly, warsawDateIso } from "@/lib/dates";
+import { groszeToPriceInput } from "@/lib/admin/catalog";
+import type { ProductOptionGroupDraft } from "@/lib/admin/product-option-drafts";
+import { parseItemOptions } from "@/lib/orders/item-options";
 import { createServerClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/supabase/database.types";
 
@@ -102,6 +105,57 @@ export async function getOwnerProduct(id: string): Promise<OwnerProduct | null> 
   const supabase = await createServerClient();
   const { data } = await supabase.from("products").select("*").eq("id", id).maybeSingle();
   return data;
+}
+
+export async function getOwnerProductOptionGroups(productId: string): Promise<ProductOptionGroupDraft[]> {
+  const supabase = await createServerClient();
+  const { data: groups } = await supabase
+    .from("product_option_groups")
+    .select("id, name, is_required, max_choices, sort_order")
+    .eq("product_id", productId)
+    .order("sort_order");
+
+  const groupIds = (groups ?? []).map((group) => group.id);
+  const [{ data: options }, { data: itemRows }] = await Promise.all([
+    groupIds.length
+      ? supabase
+          .from("product_options")
+          .select("id, group_id, name, price_delta_grosze, is_active, sort_order")
+          .in("group_id", groupIds)
+          .order("sort_order")
+      : Promise.resolve({ data: [] }),
+    supabase.from("order_items").select("options").eq("product_id", productId),
+  ]);
+
+  const used = new Set<string>();
+  for (const row of itemRows ?? []) {
+    for (const option of parseItemOptions(row.options)) {
+      if (option.option_id) {
+        used.add(option.option_id);
+      }
+    }
+  }
+
+  const optionsByGroup = new Map<string, ProductOptionGroupDraft["options"]>();
+  for (const option of options ?? []) {
+    const list = optionsByGroup.get(option.group_id) ?? [];
+    list.push({
+      id: option.id,
+      name: option.name,
+      price: groszeToPriceInput(option.price_delta_grosze),
+      isActive: option.is_active,
+      used: used.has(option.id),
+    });
+    optionsByGroup.set(option.group_id, list);
+  }
+
+  return (groups ?? []).map((group) => ({
+    id: group.id,
+    name: group.name,
+    isRequired: group.is_required,
+    maxChoices: group.max_choices,
+    options: optionsByGroup.get(group.id) ?? [],
+  }));
 }
 
 function countNameUse(values: string[][], name: string): number {

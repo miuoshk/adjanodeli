@@ -32,7 +32,10 @@ export default async function AccountPage() {
       .select("granted_at, pickup_points(name)")
       .eq("user_id", session.user.id)
       .order("granted_at", { ascending: false }),
-    supabase.from("orders").select("*, pickup_points(*)").order("created_at", { ascending: false }),
+    supabase
+      .from("orders")
+      .select("*, pickup_points(*), order_items(product_name, qty, options)")
+      .order("created_at", { ascending: false }),
   ]);
 
   const accesses = (accessResult.data ?? []).flatMap((row) => {

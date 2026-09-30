@@ -22,6 +22,7 @@ import {
   formatCustomerCancelDeadline,
 } from "@/lib/orders/cancel-deadline";
 import { EXPIRED_PAID_NOTE } from "@/lib/email/send-paid-after-expiry";
+import { formatItemLine, parseItemOptions } from "@/lib/orders/item-options";
 import { createServerClient } from "@/lib/supabase/server";
 import type { CartItem } from "@/lib/store/cart";
 import type { Tables } from "@/lib/supabase/database.types";
@@ -38,12 +39,20 @@ type PickupPointRow = Tables<"pickup_points">;
 function toCartItems(items: OrderItemRow[]): CartItem[] {
   return items
     .filter((item): item is OrderItemRow & { product_id: string } => Boolean(item.product_id))
-    .map((item) => ({
-      productId: item.product_id,
-      name: item.product_name,
-      unitPriceGrosze: item.unit_price_grosze,
-      qty: item.qty,
-    }));
+    .map((item) => {
+      const options = parseItemOptions(item.options);
+      return {
+        productId: item.product_id,
+        name: item.product_name,
+        unitPriceGrosze: item.unit_price_grosze,
+        qty: item.qty,
+        optionIds: options.map((option) => option.option_id),
+        options: options.map((option) => ({
+          groupName: option.group_name,
+          optionName: option.option_name,
+        })),
+      };
+    });
 }
 
 function OrderLines({ items, totalGrosze }: { items: OrderItemRow[]; totalGrosze: number }) {
@@ -56,7 +65,7 @@ function OrderLines({ items, totalGrosze }: { items: OrderItemRow[]; totalGrosze
             className="flex justify-between gap-4 border-b border-[rgba(43,42,31,0.18)] py-3 text-[16px]"
           >
             <span>
-              {item.qty}× {nbsp(item.product_name)}
+              {nbsp(formatItemLine(item.qty, item.product_name, parseItemOptions(item.options)))}
             </span>
             <Price grosze={item.unit_price_grosze * item.qty} />
           </li>

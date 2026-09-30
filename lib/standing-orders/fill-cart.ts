@@ -1,4 +1,10 @@
+import { loadShopOptionGroups } from "@/lib/orders/load-option-groups";
 import { parseStandingItems } from "@/lib/standing-orders/items";
+import {
+  standingChosenOptions,
+  standingOptionIssue,
+  standingOptionMessage,
+} from "@/lib/standing-orders/option-check";
 import { createServerClient } from "@/lib/supabase/server";
 import type { CartItem } from "@/lib/store/cart";
 
@@ -56,6 +62,7 @@ export async function prepareStandingCart(
     );
 
   const productById = new Map((products ?? []).map((product) => [product.id, product]));
+  const groupsByProduct = await loadShopOptionGroups(wanted.map((item) => item.product_id));
   const items: CartItem[] = [];
   const skipped: string[] = [];
 
@@ -67,12 +74,22 @@ export async function prepareStandingCart(
       continue;
     }
 
+    const groups = groupsByProduct[product.id] ?? [];
+    const issue = standingOptionIssue(groups, line.option_ids);
+    if (issue) {
+      skipped.push(standingOptionMessage(product.name, issue));
+      continue;
+    }
+
+    const chosen = standingChosenOptions(groups, line.option_ids);
     const qty = Math.min(line.qty, stock.remaining, maxQty);
     items.push({
       productId: product.id,
       name: product.name,
-      unitPriceGrosze: product.price_grosze,
+      unitPriceGrosze: product.price_grosze + chosen.delta,
       qty,
+      optionIds: line.option_ids,
+      options: chosen.options,
     });
     if (qty < line.qty) {
       skipped.push(`${product.name} (zostało ${qty})`);

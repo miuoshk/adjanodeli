@@ -105,6 +105,22 @@ Licznik nieudanych prób odblokowania kodem (limit 5 / 15 min).
 - lead_days int null — null = użyj categories.lead_days; efektywny lead = coalesce(products.lead_days, categories.lead_days)
 - promo_price_grosze int null, promo_from date null, promo_to date null — cena promocyjna, gdy dziś ∈ [promo_from, promo_to]
 
+### product_option_groups
+- product_id uuid not null references products on delete cascade
+- name text not null (np. „Sos”)
+- is_required boolean not null default true
+- max_choices int not null default 1 check (max_choices >= 1)
+- sort_order int not null default 0
+Odczyt dla wszystkich. Zapis tylko owner.
+
+### product_options
+- group_id uuid not null references product_option_groups on delete cascade
+- name text not null
+- price_delta_grosze int not null default 0 check (price_delta_grosze >= 0)
+- is_active boolean not null default true
+- sort_order int not null default 0
+Odczyt aktywnych dla wszystkich (owner widzi też wyłączone). Zapis tylko owner. Opcji użytej w zamówieniu nie usuwa się, tylko wyłącza.
+
 ### allergens
 - name text unique not null
 - sort_order int not null default 0
@@ -178,8 +194,9 @@ Słownik tagów (keto, wege, bez laktozy, ostre, nowość). UI produktu wybiera 
 - order_id uuid references orders on delete cascade
 - product_id uuid references products
 - product_name text not null (snapshot)
-- unit_price_grosze int not null (snapshot)
+- unit_price_grosze int not null (snapshot ceny efektywnej plus dopłaty opcji)
 - qty int not null check (qty > 0)
+- options jsonb not null default '[]' — zdjęcie wyboru: [{group_id, group_name, option_id, option_name, price_delta_grosze}]
 
 ### special_requests (zamówienia specjalne / duże)
 - name text, phone text, email text, wanted_date date, description text not null, status text default 'new' check (status in ('new','contacted','closed'))
@@ -192,11 +209,11 @@ Słownik tagów (keto, wege, bez laktozy, ostre, nowość). UI produktu wybiera 
 - available_pickup_dates(p_lead_days int default 1) returns setof date — daty, na które można teraz zamawiać. Cutoff decyduje o starcie (jutro jeśli teraz < cutoff, pojutrze jeśli >= cutoff). Pierwsza data przesuwa się o (p_lead_days − 1) dni roboczych (order_weekdays minus closed_dates) względem tego startu, potem max_days_ahead dni kalendarzowych, tylko order_weekdays, bez closed_dates, tylko gdy jest aktywny pickup_point na ten dzień tygodnia widoczny dla wołającego (anon: tylko publiczne; authenticated: publiczne + z pickup_point_access; is_staff(): wszystkie). available_pickup_dates() bez argumentu to wrapper wołający wersję z 1.
 - product_availability(p_day date) returns table(product_id uuid, cap int, reserved int, remaining int, is_available boolean, lead_days int, earliest_date date, effective_price_grosze int, is_promo boolean) — dla każdego aktywnego produktu: cap = override.cap ?? daily_cap_default, reserved = daily_stock.reserved_qty ?? 0, is_available = false, gdy extract(isodow from p_day) nie należy do products.weekdays; w przeciwnym razie override.is_available ?? true. lead_days = coalesce(products.lead_days, categories.lead_days, 1). earliest_date = pierwsza data z available_pickup_dates(lead_days). is_promo = promo_price_grosze nie jest null i dziś (Europe/Warsaw) ∈ [promo_from, promo_to] (null na krańcu = bez ograniczenia). effective_price_grosze = promo_price_grosze gdy is_promo, inaczej price_grosze.
 - validate_discount_code(p_code text, p_subtotal int, p_pickup_point_id uuid) returns jsonb {valid, discount_grosze, message} — SECURITY DEFINER, authenticated. Klient nie ma SELECT na discount_codes. Sprawdza aktywność, daty, min_order, max_uses, per_user_once, punkt; liczy rabat od subtotal z limitem max_discount_grosze.
-- create_order(p_pickup_point_id uuid, p_pickup_date date, p_items jsonb, p_note text, p_discount jsonb default null, p_invoice jsonb default null) returns uuid — SECURITY DEFINER, wykonywana jako zalogowany user (auth.uid()). W jednej transakcji: sprawdza, że pickup_date jest w available_pickup_dates() i punkt obsługuje ten dzień; sprawdza, że p_pickup_date ∈ available_pickup_dates(max lead_days z pozycji) — inaczej raise 'LEAD_TIME:<product_id>:<earliest_date>'; dla każdego itemu robi upsert do daily_stock (cap z product_availability), blokuje wiersz (FOR UPDATE), sprawdza reserved_qty + qty <= cap oraz qty <= settings.max_qty_per_item, inkrementuje reserved_qty; liczy sumy ze snapshotem ceny efektywnej; p_discount to {"voucher_id": uuid} albo {"code": text} — kod i voucher się nie łączą; waliduje rabat, zapisuje użycie kodu (discount_code_uses, uses_count + 1) albo used_order_id vouchera; generuje pickup_code unikalny dla pickup_date (pętla z retry); wstawia orders (expires_at = now() + pending_order_ttl_minutes) i order_items; loguje order_events. Przy braku limitu rzuca wyjątek z komunikatem 'OUT_OF_STOCK:<product_id>:<remaining>'. p_items to jsonb array [{product_id, qty}]. Przy cancelled/refunded/expired — zwolnienie użycia kodu (usuń z discount_code_uses, uses_count − 1) razem z restore_loyalty_for_order.
+- create_order(p_pickup_point_id uuid, p_pickup_date date, p_items jsonb, p_note text, p_discount jsonb default null, p_invoice jsonb default null) returns uuid — SECURITY DEFINER, wykonywana jako zalogowany user (auth.uid()). W jednej transakcji: sprawdza, że pickup_date jest w available_pickup_dates() i punkt obsługuje ten dzień; sprawdza, że p_pickup_date ∈ available_pickup_dates(max lead_days z pozycji) — inaczej raise 'LEAD_TIME:<product_id>:<earliest_date>'; dla każdego itemu robi upsert do daily_stock (cap z product_availability), blokuje wiersz (FOR UPDATE), sprawdza reserved_qty + qty <= cap oraz qty <= settings.max_qty_per_item, inkrementuje reserved_qty; liczy sumy ze snapshotem ceny efektywnej; p_discount to {"voucher_id": uuid} albo {"code": text} — kod i voucher się nie łączą; waliduje rabat, zapisuje użycie kodu (discount_code_uses, uses_count + 1) albo used_order_id vouchera; generuje pickup_code unikalny dla pickup_date (pętla z retry); wstawia orders (expires_at = now() + pending_order_ttl_minutes) i order_items; loguje order_events. Przy braku limitu rzuca wyjątek z komunikatem 'OUT_OF_STOCK:<product_id>:<remaining>'. p_items to jsonb array [{product_id, qty, option_ids}]; brak option_ids znaczy pustą listę. resolve_order_item_options sprawdza, że każda opcja należy do aktywnej grupy tego produktu, że wymagana grupa ma wybór i że w grupie nie ma więcej niż max_choices. Błędy: OPTIONS_REQUIRED:<product_id>:<nazwa grupy>, OPTIONS_INVALID:<product_id>. Cena jednostkowa = cena efektywna + suma dopłat. Ten sam produkt z różnymi opcjami to osobne wiersze order_items. Limit dzienny nadal per produkt (suma ilości ze wszystkich wariantów). Przy cancelled/refunded/expired — zwolnienie użycia kodu (usuń z discount_code_uses, uses_count − 1) razem z restore_loyalty_for_order.
 - release_order_stock(p_order_id uuid) — dekrementuje daily_stock o ilości z order_items (nie poniżej 0). Używana przy expired/cancelled.
 - expire_pending_orders() — ustawia status expired dla pending_payment z expires_at < now(), wywołuje release_order_stock, loguje event. Uruchamiana przez pg_cron co 5 minut.
 - set_order_status(p_order_id uuid, p_status text, p_note text) — dla staff/owner; sprawdza dozwolone przejścia (patrz sekcja 5), ustawia timestampy, loguje order_events. Przy cancelled wywołuje release_order_stock.
-- production_summary(p_day date) returns table(product_id uuid, product_name text, total_qty int, by_point jsonb) — sumy per produkt z zamówień w statusach paid, in_production, delivered, picked_up na dany dzień; by_point = {pickup_point_name: qty}.
+- production_summary(p_day date) returns table(product_id uuid, product_name text, total_qty int, by_point jsonb, by_option jsonb) — sumy per produkt z zamówień w statusach paid, in_production, delivered, picked_up na dany dzień; by_point = {pickup_point_name: qty}. by_option to lista {label, qty} dla kombinacji opcji (nazwy po przecinku); pusta, gdy produkt nie ma opcji.
 - rename_allergen(p_old text, p_new text) — SECURITY DEFINER, tylko owner. Zmienia allergens.name i w products.allergens robi array_replace(old, new).
 - rename_tag(p_old text, p_new text) — analogicznie dla product_tags.name i products.tags.
 - unlock_pickup_point(p_code text) — SECURITY DEFINER, authenticated. Po poprawnym access_code wstawia pickup_point_access (granted_via='code') i zwraca punkt. Limit 5 nieudanych prób / 15 min (pickup_point_unlock_attempts). Błędny kod: UNLOCK_INVALID (bez podpowiedzi).
@@ -218,7 +235,7 @@ Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprze
 ## 6. Reguły biznesowe
 - Cutoff: settings.cutoff_time w Europe/Warsaw. Decyduje available_pickup_dates(), nigdy klient.
 - Każdy produkt ma efektywny lead_days = coalesce(products.lead_days, categories.lead_days). Zamówienie może mieć pickup_date nie wcześniejszą niż pierwsza dostępna data dla lead_days = max(lead_days pozycji w koszyku). Domyślnie 1 (na jutro). Kategoria "Torty" może mieć 2 (na pojutrze).
-- Cena efektywna produktu = promo_price_grosze, jeśli dziś ∈ [promo_from, promo_to], inaczej price_grosze. Snapshot ceny w order_items bierze cenę efektywną na moment zamówienia. Kod rabatowy i voucher lojalnościowy NIE łączą się — klient wybiera jeden. Rabat z kodu liczony od subtotal, ograniczony max_discount_grosze. Total zamówienia (także po rabacie) ≥ 1000 gr (10,00 zł) — minimum sklepu, powyżej progu Stripe 200 gr. Poniżej UI nie puszcza do płatności i prosi o dodanie produktu. create_order rzuca TOTAL_BELOW_MINIMUM.
+- Cena efektywna produktu = promo_price_grosze, jeśli dziś ∈ [promo_from, promo_to], inaczej price_grosze. Snapshot ceny w order_items bierze cenę efektywną na moment zamówienia plus sumę dopłat wybranych opcji. Kod rabatowy i voucher lojalnościowy NIE łączą się — klient wybiera jeden. Rabat z kodu liczony od subtotal, ograniczony max_discount_grosze. Total zamówienia (także po rabacie) ≥ 1000 gr (10,00 zł) — minimum sklepu, powyżej progu Stripe 200 gr. Poniżej UI nie puszcza do płatności i prosi o dodanie produktu. create_order rzuca TOTAL_BELOW_MINIMUM.
 - Limit dzienny per produkt. Menu pokazuje remaining; przy remaining <= 5 pokazuje "zostało N"; przy 0 produkt widoczny jako "wyprzedane na ten dzień", nie do dodania.
 - Ilość jednego produktu w zamówieniu <= settings.max_qty_per_item. Powyżej: link do formularza zamówienia specjalnego.
 - Zamówienie pending_payment żyje pending_order_ttl_minutes (30). Sesja Stripe Checkout ma expires_at = 30 minut.
@@ -257,8 +274,8 @@ Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprze
 Sklep, grupa (shop):
 - / — strona wizytówka (landing): pasek z najbliższym dniem odbioru, hero z produktami, po hero sekcja „Polecamy” (do 4 produktów z is_featured dostępnych na najbliższy dzień), menu na najbliższy dzień odbioru (kafle kategorii), jak to działa w 3 krokach + punkty odbioru (tylko publiczne + informacja o punktach na kod), w „Jak to działa” blok „Dla stałych klientów” (pieczątki, stałe zamówienie, faktura), o nas ze zdjęciami z pieca, CTA na wzorze Adjano.
 - /sklep — kafelki kategorii + (opcjonalnie) sekcja "Popularne dziś"; dzień docelowy u góry (?dzien=YYYY-MM-DD)
-- /sklep/[kategoria] — lista produktów jednej kategorii, day-picker, inne kategorie; 404 dla nieznanego sluga
-- /koszyk — koszyk + wybór punktu odbioru + dnia + uwagi → "Przejdź do płatności"
+- /sklep/[kategoria] — lista produktów jednej kategorii, day-picker, inne kategorie; 404 dla nieznanego sluga. Produkt z opcjami: „Dodaj” otwiera okno od dołu ekranu (jeden wybór = pola jednokrotne, więcej = wielokrotne z limitem). Wymagana grupa ma dopisek „wymagane”. Przycisk liczy cenę z dopłatami i dopóki brakuje wyboru mówi „Wybierz: Sos”. Produkt bez opcji dodaje się jednym kliknięciem.
+- /koszyk — koszyk + wybór punktu odbioru + dnia + uwagi → "Przejdź do płatności". Klucz pozycji to produkt i posortowane id opcji. Pod nazwą linijka „Sos: czosnkowy”. Pozycja bez wymaganego wyboru blokuje płatność i ma przycisk „Wybierz”.
 - /zamowienie/[id] — potwierdzenie/status zamówienia, kod odbioru, QR. Po powrocie ze Stripe (`?status=success`), dopóki status to `pending_payment`: „Potwierdzamy płatność…” i `router.refresh()` co 3 s przez najwyżej 60 s. Po 60 s: „Płatność jeszcze się przetwarza. Mail z kodem odbioru przyjdzie za chwilę, a zamówienie znajdziesz w Moich zamówieniach.” i link do /moje-zamowienia. Gdy status przejdzie na `paid`: zwykły widok z kodem. Status `expired` ze zdarzeniem „Opłacone po wygaśnięciu”: „Płatność doszła po czasie. Skontaktujemy się z Tobą” i telefon z ustawień.
 - /moje-zamowienia — historia. Pod nagłówkiem: „Zalogowana jako {email}” i „To nie Ty? Wyloguj”.
 - /logowanie — e-mail → kod
@@ -340,7 +357,7 @@ UI: /konto sekcja "Pieczątki": pasek 7/10, lista voucherów. W koszyku: "Masz v
 Stripe: przy discount_grosze > 0 utwórz coupon (amount_off = discount_grosze, currency pln, duration once, name "Voucher AdjanoDeli") i przekaż w discounts.
 
 ## 14. Stałe zamówienia
-Tabela standing_orders: user_id, name (np. "Moje śniadanie"), pickup_point_id, weekdays int[], items jsonb [{product_id, qty}], note, is_active, remind boolean default true. RLS: własne. Max 3 na użytkownika.
+Tabela standing_orders: user_id, name (np. "Moje śniadanie"), pickup_point_id, weekdays int[], items jsonb [{product_id, qty, option_ids}], note, is_active, remind boolean default true. RLS: własne. Max 3 na użytkownika. Zapis z opłaconego zamówienia kopiuje option_ids ze zdjęcia pozycji. Wypełnienie koszyka i przypomnienie pomijają pozycję, gdy opcja jest wyłączona albo brakuje wymaganej grupy, z informacją „Kanapka z szynką: wybierz sos jeszcze raz”.
 Codziennie o 17:00 (Europe/Warsaw) cron wysyła e-mail "Zamówić jak zwykle na jutro?" do użytkowników, którzy mają aktywne standing_order obejmujące dzień tygodnia pierwszej dostępnej daty i NIE mają jeszcze opłaconego zamówienia na tę datę. Mail zawiera listę pozycji, sumę i przycisk "Zamawiam" → /zamow-jak-zwykle?s={id}&d={date} (wymaga logowania) → strona wypełnia koszyk (sprawdzając dostępność, pomijając niedostępne z informacją) i przekierowuje do /koszyk. Nie ma automatycznego obciążenia.
 Cron: Vercel Cron (vercel.json) → GET /api/cron/standing-reminders, Authorization Bearer CRON_SECRET. Harmonogram w UTC: 15:00 (czas letni) — dodaj komentarz o zmianie na 16:00 zimą albo zaplanuj dwa wpisy i w kodzie sprawdzaj, czy w Warszawie jest ~17:00 (tolerancja 30 min), żeby nie wysłać dwa razy.
 UI: /konto/stale-zamowienia — lista, tworzenie z aktualnego koszyka ("Zapisz jako stałe zamówienie" w koszyku po opłaceniu — na stronie zamówienia paid), edycja dni i punktu, włącz/wyłącz.

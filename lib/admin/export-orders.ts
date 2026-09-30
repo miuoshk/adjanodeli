@@ -1,6 +1,7 @@
 import { getProfile } from "@/lib/auth";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl, formatPrice } from "@/lib/format";
+import { optionPhrase, parseItemOptions } from "@/lib/orders/item-options";
 import { createServerClient } from "@/lib/supabase/server";
 import { orderStatusMeta } from "@/lib/orders/status-labels";
 import type { Tables } from "@/lib/supabase/database.types";
@@ -22,6 +23,7 @@ type ExportOrder = Pick<
   | "invoice_address"
 > & {
   pickup_points: { name: string } | { name: string }[] | null;
+  order_items: { product_name: string; options: unknown }[] | null;
 };
 
 function csvCell(value: string): string {
@@ -58,7 +60,7 @@ export async function buildOrdersCsv(filters: {
   let query = supabase
     .from("orders")
     .select(
-      "order_number, customer_name, customer_email, customer_phone, pickup_date, status, total_grosze, discount_grosze, discount_code_id, invoice_requested, invoice_nip, invoice_company, invoice_address, pickup_points(name)",
+      "order_number, customer_name, customer_email, customer_phone, pickup_date, status, total_grosze, discount_grosze, discount_code_id, invoice_requested, invoice_nip, invoice_company, invoice_address, pickup_points(name), order_items(product_name, options)",
     )
     .order("pickup_date", { ascending: true })
     .order("order_number", { ascending: true });
@@ -107,7 +109,18 @@ export async function buildOrdersCsv(filters: {
     "nip",
     "firma",
     "adres",
+    "opcje",
   ];
+
+  function optionsCell(order: ExportOrder): string {
+    return (order.order_items ?? [])
+      .map((item) => {
+        const phrase = optionPhrase(parseItemOptions(item.options));
+        return phrase ? `${item.product_name}: ${phrase}` : "";
+      })
+      .filter(Boolean)
+      .join("; ");
+  }
 
   const lines = [
     header.join(","),
@@ -127,6 +140,7 @@ export async function buildOrdersCsv(filters: {
         order.invoice_nip ?? "",
         order.invoice_company ?? "",
         order.invoice_address ?? "",
+        optionsCell(order),
       ]
         .map((cell) => csvCell(cell))
         .join(","),

@@ -452,12 +452,95 @@ export type Database = {
           },
         ]
       }
+      product_option_groups: {
+        Row: {
+          created_at: string
+          id: string
+          is_required: boolean
+          max_choices: number
+          name: string
+          product_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          max_choices?: number
+          name: string
+          product_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          max_choices?: number
+          name?: string
+          product_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_option_groups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_options: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          is_active: boolean
+          name: string
+          price_delta_grosze: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          is_active?: boolean
+          name: string
+          price_delta_grosze?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_delta_grosze?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_options_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "product_option_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
           id: string
           order_id: string
           product_id: string | null
+          options: Json
           product_name: string
           qty: number
           unit_price_grosze: number
@@ -468,6 +551,7 @@ export type Database = {
           id?: string
           order_id: string
           product_id?: string | null
+          options?: Json
           product_name: string
           qty: number
           unit_price_grosze: number
@@ -478,6 +562,7 @@ export type Database = {
           id?: string
           order_id?: string
           product_id?: string | null
+          options?: Json
           product_name?: string
           qty?: number
           unit_price_grosze?: number
@@ -1158,6 +1243,7 @@ export type Database = {
       production_summary: {
         Args: { p_day: string }
         Returns: {
+          by_option: Json
           by_point: Json
           product_id: string
           product_name: string

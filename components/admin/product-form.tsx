@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -20,7 +20,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PRICE_RE, WEEKDAYS, groszeToPriceInput, priceToGrosze, slugifyName } from "@/lib/admin/catalog";
-import { createProduct, updateProduct } from "@/lib/admin/owner-actions";
+import { createProduct, saveProductOptions, updateProduct } from "@/lib/admin/owner-actions";
+import type { ProductOptionGroupDraft } from "@/lib/admin/product-option-drafts";
+import { ProductOptionsEditor } from "@/components/admin/product-options-editor";
 import type { OwnerCategory, OwnerDictionaryOption, OwnerProduct } from "@/lib/admin/owner-queries";
 import { productPublicUrl } from "@/lib/products/image";
 import { deleteProductImage, uploadProductImage } from "@/lib/products/upload";
@@ -81,6 +83,7 @@ type ProductFormProps = {
   allergens: OwnerDictionaryOption[];
   tags: OwnerDictionaryOption[];
   product?: OwnerProduct;
+  optionGroups?: ProductOptionGroupDraft[];
 };
 
 function visibleOptions(items: OwnerDictionaryOption[], selected: string[]) {
@@ -98,7 +101,7 @@ function productLeadChoice(product?: OwnerProduct): FormValues["leadDays"] {
   return "";
 }
 
-export function ProductForm({ categories, allergens, tags, product }: ProductFormProps) {
+export function ProductForm({ categories, allergens, tags, product, optionGroups = [] }: ProductFormProps) {
   const router = useRouter();
   const slugTouched = useRef(Boolean(product));
   const [imagePath, setImagePath] = useState(product?.image_path ?? null);
@@ -107,6 +110,12 @@ export function ProductForm({ categories, allergens, tags, product }: ProductFor
     product?.image_path ? productPublicUrl(product.image_path) : null,
   );
   const [saving, setSaving] = useState(false);
+  const [options, setOptions] = useState(optionGroups);
+  const optionGroupsKey = JSON.stringify(optionGroups);
+
+  useEffect(() => {
+    setOptions(JSON.parse(optionGroupsKey) as ProductOptionGroupDraft[]);
+  }, [optionGroupsKey]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -174,6 +183,12 @@ export function ProductForm({ categories, allergens, tags, product }: ProductFor
           toast(created.message);
           return;
         }
+        const savedOptions = await saveProductOptions(created.id, options);
+        if (!savedOptions.ok) {
+          toast(savedOptions.message);
+          router.push(`/admin/produkty/${created.id}`);
+          return;
+        }
         const image = await persistImage(created.id, null);
         if (!image.ok) {
           toast(image.message);
@@ -199,6 +214,11 @@ export function ProductForm({ categories, allergens, tags, product }: ProductFor
       const result = await updateProduct(product.id, toPayload(values, image.path));
       if (!result.ok) {
         toast(result.message);
+        return;
+      }
+      const savedOptions = await saveProductOptions(product.id, options);
+      if (!savedOptions.ok) {
+        toast(savedOptions.message);
         return;
       }
       setImagePath(image.path);
@@ -607,6 +627,8 @@ export function ProductForm({ categories, allergens, tags, product }: ProductFor
             ) : null}
           </div>
         </div>
+
+        <ProductOptionsEditor groups={options} onChange={setOptions} />
 
         <Button type="submit" className="min-h-12" disabled={saving}>
           {product ? "Zapisz" : "Dodaj produkt"}
