@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/auth";
+import { landingAfterLogin } from "@/lib/admin/staff-access";
 import { safeNextPath } from "@/lib/safe-next";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -205,14 +206,22 @@ export async function signInAdmin(input: { username: string; password: string; n
   } = await supabase.auth.getUser();
 
   const { data: profile } = user
-    ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle()
+    ? await supabase
+        .from("profiles")
+        .select("role, is_active, must_change_password, staff_permissions")
+        .eq("id", user.id)
+        .maybeSingle()
     : { data: null };
 
-  if (profile?.role !== "staff" && profile?.role !== "owner") {
+  if (
+    !profile ||
+    (profile.role !== "staff" && profile.role !== "owner") ||
+    !profile.is_active
+  ) {
     await supabase.auth.signOut();
     return { error: "Zły login albo hasło." };
   }
 
   revalidatePath("/", "layout");
-  redirect(safeAdminNext(input.next));
+  redirect(landingAfterLogin(profile, safeAdminNext(input.next)));
 }

@@ -1,5 +1,10 @@
 import { redirect } from "next/navigation";
 
+import {
+  canAccessSection,
+  firstAllowedSection,
+  type StaffPermission,
+} from "@/lib/admin/staff-access";
 import { safeNextPath } from "@/lib/safe-next";
 import { createServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/database.types";
@@ -74,21 +79,64 @@ export async function requireUser(next = "/") {
   return session;
 }
 
+function isAdminPath(path: string): boolean {
+  return path === "/admin" || path.startsWith("/admin/");
+}
+
 export async function requireRole(role: AppRole, next = "/") {
   await requireUser(next);
   const profile = await getProfile();
-
+  const path = safeNextPath(next);
   const hasStaffAccess = profile?.role === "staff" || profile?.role === "owner";
   const hasOwnerAccess = profile?.role === "owner";
-  const allowed = role === "owner" ? hasOwnerAccess : hasStaffAccess;
 
-  if (!allowed) {
-    const path = safeNextPath(next);
-    if (path === "/admin" || path.startsWith("/admin/")) {
+  if (!profile || !hasStaffAccess) {
+    if (isAdminPath(path)) {
       redirect(`/admin/logowanie?next=${encodeURIComponent(path)}`);
     }
     redirect("/brak-dostepu");
   }
 
+  if (isAdminPath(path) && !profile.is_active) {
+    const supabase = await createServerClient();
+    await supabase.auth.signOut();
+    redirect(`/admin/logowanie?next=${encodeURIComponent(path)}`);
+  }
+
+  if (isAdminPath(path) && profile.must_change_password && path !== "/admin/konto") {
+    redirect("/admin/konto");
+  }
+
+  if (role === "owner" && !hasOwnerAccess) {
+    redirect("/admin/brak-dostepu");
+  }
+
+  return profile;
+}
+
+export async function requireStaffPermission(permission: StaffPermission, next = "/admin") {
+  const profile = await requireRole("staff", next);
+  if (!canAccessSection(profile, permission)) {
+    redirect("/admin/brak-dostepu");
+  }
+  return profile;
+}
+
+export async function requireAnyStaffPermission(
+  permissions: readonly StaffPermission[],
+  next = "/admin",
+) {
+  const profile = await requireRole("staff", next);
+  if (!permissions.some((permission) => canAccessSection(profile, permission))) {
+    redirect("/admin/brak-dostepu");
+  }
+  return profile;
+}
+
+export async function requireDashboard() {
+  const profile = await requireRole("staff", "/admin");
+  if (!canAccessSection(profile, "dashboard")) {
+    redirect(firstAllowedSection(profile));
+  }
   return profile;
 }

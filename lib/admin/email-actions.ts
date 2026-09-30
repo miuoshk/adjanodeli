@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requireRole } from "@/lib/auth";
+import { requireAnyStaffPermission, requireRole, requireStaffPermission } from "@/lib/auth";
 import { sendOrderDelivered } from "@/lib/email/send-order-delivered";
 import { sendOrderPaid } from "@/lib/email/send-order-paid";
 import { sendEmail } from "@/lib/email/resend";
@@ -18,7 +18,7 @@ async function orderStatus(orderId: string): Promise<string | null> {
 }
 
 export async function resendOrderPaidMail(orderId: string) {
-  await requireRole("staff", `/admin/zamowienia/${orderId}`);
+  await requireStaffPermission("orders", `/admin/zamowienia/${orderId}`);
   const status = await orderStatus(orderId);
   if (!status || !PAID_RESEND_STATUSES.includes(status)) {
     return { ok: false as const, message: "Potwierdzenie wyślemy dopiero po opłaceniu." };
@@ -34,7 +34,7 @@ export async function resendOrderPaidMail(orderId: string) {
 }
 
 export async function resendOrderDeliveredMail(orderId: string) {
-  await requireRole("staff", `/admin/zamowienia/${orderId}`);
+  await requireAnyStaffPermission(["orders", "packages"], `/admin/zamowienia/${orderId}`);
   const status = await orderStatus(orderId);
   if (status !== "delivered") {
     return { ok: false as const, message: "Ten mail idzie, gdy paczka już czeka." };

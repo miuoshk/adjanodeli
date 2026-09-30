@@ -7,10 +7,24 @@ Nazwa marki: AdjanoDeli. Brand nadrzędny: Adjano.
 
 ## 2. Role
 - customer — zalogowany klient (e-mail OTP). Widzi menu, składa zamówienia, widzi swoje zamówienia.
-- staff — pracownik. Widzi listę paczek, zmienia statusy dostawy, wydaje po kodzie. Nie edytuje produktów ani ustawień.
-- owner — właścicielka. Wszystko, co staff, plus produkty, limity, punkty, ustawienia, anulowanie/zwroty, eksporty.
-Rola przechowywana w profiles.role. Domyślnie customer. Zmiana roli tylko przez SQL (nie ma UI do nadawania ról w Fazie 1).
-Panel /admin ma osobne logowanie loginem i hasłem (/admin/logowanie). Sklep zostaje na OTP. Login to e-mail konta staff/owner w Supabase albo część przed @. Hasło jest hasłem tego użytkownika w Auth. Po zalogowaniu sesja Supabase z profiles.role = staff albo owner.
+- staff — pracownik. Widzi tylko te sekcje panelu, które ma w `profiles.staff_permissions`. Nie edytuje produktów, ustawień, statystyk ani zespołu. Anulowanie i zwrot zostają przy owner.
+- owner — właścicielka. Wszystko, także gdy lista uprawnień jest pusta. Produkty, limity, punkty, ustawienia, anulowanie, zwroty, eksporty i ekran Zespół.
+Role zostają trzy. Owner nadaje staff i drugiego ownera na `/admin/zespol` (imię, e-mail jako login, uprawnienia, hasło tymczasowe). Wyłączone konto (`is_active = false`) nie wchodzi do panelu: następne żądanie kończy sesję, a logowanie dostaje ten sam komunikat co przy złym haśle. `must_change_password` po nadaniu hasła kieruje na `/admin/konto` i nie puszcza dalej, dopóki pracownik nie ustawi własnego hasła (min. 10 znaków, dwa razy, bez obecnego hasła).
+
+Uprawnienia sekcji (zapis pojedynczych kluczy; zestawy to tylko skrót w formularzu):
+
+| Klucz | Sekcja | Zestaw |
+|---|---|---|
+| `dashboard` | Dziś | Produkcja i pakowanie, Pełny dostęp pracownika |
+| `orders` | Zamówienia | Pełny dostęp pracownika |
+| `production` | Produkcja | Produkcja i pakowanie, Pełny dostęp pracownika |
+| `packages` | Paczki i etykiety | Produkcja i pakowanie, Kierowca, Pełny dostęp pracownika |
+| `handover` | Wydawanie | Kierowca, Pełny dostęp pracownika |
+| `special_requests` | Zamówienia specjalne | Pełny dostęp pracownika |
+
+Zestawy: Produkcja i pakowanie (Dziś, Produkcja, Paczki), Kierowca (Paczki, Wydawanie), Pełny dostęp pracownika (wszystkie sześć). Pomoc widzi każdy, kto jest w panelu. Wejście na `/admin` bez `dashboard` idzie do pierwszej sekcji z tej kolejności.
+
+Panel /admin ma osobne logowanie loginem i hasłem (/admin/logowanie). Sklep zostaje na OTP. Login to e-mail konta staff/owner w Supabase albo część przed @. Hasło jest hasłem tego użytkownika w Auth. Po zalogowaniu sesja Supabase z profiles.role = staff albo owner i `is_active`.
 
 ## 3. Model danych (Postgres, schema public)
 Wszystkie tabele: id uuid primary key default gen_random_uuid(), created_at timestamptz default now(), updated_at timestamptz default now() (trigger set_updated_at). RLS enabled na każdej.
@@ -22,7 +36,10 @@ Wszystkie tabele: id uuid primary key default gen_random_uuid(), created_at time
 - phone text
 - role text not null default 'customer' check (role in ('customer','staff','owner'))
 - marketing_consent boolean default false
-Tworzony triggerem handle_new_user po insercie do auth.users.
+- staff_permissions text[] not null default '{}' — klucze sekcji panelu; check, że każdy element jest z listy dashboard, orders, production, packages, handover, special_requests
+- is_active boolean not null default true — false blokuje logowanie do panelu
+- must_change_password boolean not null default false — po haśle tymczasowym panel wymaga zmiany
+Tworzony triggerem handle_new_user po insercie do auth.users. Trigger `protect_profile_privileges` nie pozwala staff zmienić sobie roli, uprawnień, `is_active` ani `must_change_password`. Te kolumny zapisuje klient serwisowy (ekran Zespół i zmiana własnego hasła).
 
 ### settings (dokładnie jeden wiersz, id = 1)
 - id int PK check (id = 1)
@@ -221,7 +238,8 @@ Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprze
 ## 8. Autoryzacja i RLS
 - Logowanie sklepu: Supabase Auth, e-mail OTP (6–8 cyfr, tyle ile wysyła Auth), shouldCreateUser: true. Po pierwszym logowaniu, jeśli profiles.full_name jest null → przekierowanie na /konto/uzupelnij (imię, telefon).
 - Logowanie panelu /admin: /admin/logowanie, login + hasło z konta staff/owner w Supabase Auth (funkcja admin_login_email). Nie używa OTP ani zmiennych ADMIN_*. Niezalogowany na /admin/* → /admin/logowanie.
-- Helper is_staff() returns boolean — true dla role in ('staff','owner'); is_owner() — role = 'owner'.
+- Helper is_staff() returns boolean — true dla role in ('staff','owner'); is_owner() — role = 'owner'. Polityki RLS na danych zostają na is_staff().
+- has_staff_permission(p text) returns boolean — owner z aktywnym kontem zawsze true; staff z aktywnym kontem, gdy p jest w staff_permissions. Strony sekcji i akcje serwera sprawdzają to uprawnienie w aplikacji (`requireStaffPermission`). Samo ukrycie linku w menu nie wystarcza. Brak uprawnienia → /admin/brak-dostepu. Nieaktywne konto → wylogowanie i /admin/logowanie.
 - RLS:
   - profiles: select/update własny wiersz; staff select wszystkie.
   - settings, categories (is_active), products (is_active), allergens, product_tags: select dla wszystkich (anon też — menu jest publiczne). Update/insert/delete: owner.
@@ -233,7 +251,7 @@ Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprze
   - special_requests: insert anon i zalogowani; select/update staff.
   - discount_codes: brak SELECT dla klienta (walidacja tylko przez validate_discount_code). Write i select: owner.
   - discount_code_uses: select owner; write wyłącznie funkcje SECURITY DEFINER.
-- Ścieżki /admin/* (oprócz /admin/logowanie) chronione po stronie serwera helperem requireRole('staff' | 'owner') w layoucie i w każdej server action. Brak sesji → /admin/logowanie.
+- Ścieżki /admin/* (oprócz /admin/logowanie) chronione po stronie serwera helperem requireRole('staff' | 'owner') w layoucie i w każdej server action. Sekcje z tabeli uprawnień dodatkowo wołają requireStaffPermission. Brak sesji → /admin/logowanie.
 
 ## 9. Routing (App Router)
 Sklep, grupa (shop):
@@ -255,7 +273,10 @@ Admin:
 - /admin/zamowienia — lista z filtrami (dzień, punkt, status), podgląd, zmiana statusu. Dzień: przyciski „Dziś”, „Jutro”, „Wybierz datę” oraz lista: dziś, jutro i `pickup_date` zamówień `paid`, `in_production`, `delivered`, `picked_up` od 14 dni wstecz do 30 dni naprzód, bez duplikatów, z liczbą zamówień. Bez parametru domyślny dzień to najbliższy z zamówieniem (`getNearestOrderDay`), nie `available_pickup_dates`.
 - /admin/produkcja — zestawienie produkcyjne na dzień + wersja do druku (/admin/produkcja/drukuj?day=)
 - /admin/paczki — lista paczek per punkt na dzień, „Jestem na miejscu — powiadom klientów” (paid idzie najpierw na in_production, potem delivered; mail raz), druk etykiet w dwóch formatach (`?format=etykieta` 75×60 mm, jedna na stronę, albo `?format=a4`, 8 na stronie). Dane klienta na etykiecie bierze `settings.label_customer_info` (domyślnie skrócone imię i nazwisko oraz skrócony e-mail). Na dole jest numer zamówienia.
-- /admin/pomoc — instrukcja dla właścicielki (dzień, etykiety, dojazd, wydawanie, maile, anulowanie). /admin/pomoc/trasa — ściąga A4 dla kierowcy, telefon z settings.owner_phone. Link „Pomoc” w menu panelu, dla staff i owner.
+- /admin/pomoc — instrukcja dla właścicielki (dzień, etykiety, dojazd, wydawanie, maile, anulowanie, zespół). /admin/pomoc/trasa — ściąga A4 dla kierowcy, telefon z settings.owner_phone. Link „Pomoc” w menu panelu, dla każdego zalogowanego w panelu.
+- /admin/zespol — owner: lista pracowników, dodanie, uprawnienia, hasło tymczasowe, wyłączenie. Link obok Ustawień.
+- /admin/konto — zmiana hasła dla każdego w panelu. Przy must_change_password panel nie puszcza gdzie indziej.
+- /admin/brak-dostepu — brak uprawnienia do sekcji.
 - /admin/wydawanie — mobilny ekran: wpisz/zeskanuj kod → szczegóły → "Wydano"
 - /admin/kategorie, /admin/kategorie/[id] — CRUD kategorii (zdjęcie, opis, lead_days); bez usuwania, gdy są produkty — tylko dezaktywacja
 - /admin/produkty, /admin/produkty/[id] — CRUD, zdjęcie, limit domyślny, alergeny

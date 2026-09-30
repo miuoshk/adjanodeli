@@ -2,6 +2,7 @@ import { HandoverScreen } from "@/components/admin/handover-screen";
 import { AdminDayPicker } from "@/components/admin/admin-day-picker";
 import { PageHeader } from "@/components/admin/page-header";
 import { getHandoverPoints } from "@/lib/admin/queries";
+import { requireStaffPermission } from "@/lib/auth";
 import { parseDateOnly, warsawDateIso } from "@/lib/dates";
 import { formatDatePl } from "@/lib/format";
 
@@ -10,6 +11,7 @@ type HandoverPageProps = {
 };
 
 export default async function HandoverPage({ searchParams }: HandoverPageProps) {
+  await requireStaffPermission("handover", "/admin/wydawanie");
   const params = await searchParams;
   const day =
     params.dzien && /^\d{4}-\d{2}-\d{2}$/.test(params.dzien) ? params.dzien : warsawDateIso(0);

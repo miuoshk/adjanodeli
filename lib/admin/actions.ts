@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requireRole } from "@/lib/auth";
+import { requireStaffPermission } from "@/lib/auth";
 import {
   queryOrderByCode,
   queryOrdersFallback,
@@ -17,7 +17,7 @@ import { createServerClient } from "@/lib/supabase/server";
 const daySchema = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function startDayProduction(day: string) {
-  await requireRole("staff", "/admin");
+  await requireStaffPermission("production", "/admin");
 
   if (!daySchema.test(day)) {
     return { ok: false as const, message: "Zły dzień." };
@@ -59,7 +59,7 @@ const CHANGEABLE_STATUSES = [
 ] as const;
 
 export async function changeOrderStatus(orderId: string, status: string, note: string) {
-  await requireRole("staff", "/admin");
+  const profile = await requireStaffPermission("orders", `/admin/zamowienia/${orderId}`);
 
   if (!/^[0-9a-f-]{36}$/i.test(orderId) || !isOrderStatus(status)) {
     return { ok: false as const, message: "Nie da się zmienić statusu." };
@@ -69,6 +69,9 @@ export async function changeOrderStatus(orderId: string, status: string, note: s
   }
   if (status === "cancelled" && note.trim().length === 0) {
     return { ok: false as const, message: "Podaj powód anulowania." };
+  }
+  if ((status === "cancelled" || status === "refunded") && profile.role !== "owner") {
+    return { ok: false as const, message: "Brak uprawnień." };
   }
 
   const supabase = await createServerClient();
@@ -98,7 +101,7 @@ export async function changeOrderStatus(orderId: string, status: string, note: s
 }
 
 export async function markPointDelivered(day: string, pointId: string) {
-  await requireRole("staff", "/admin");
+  await requireStaffPermission("packages", "/admin/paczki");
 
   if (!daySchema.test(day) || !/^[0-9a-f-]{36}$/i.test(pointId)) {
     return { ok: false as const, message: "Złe dane." };
@@ -211,7 +214,7 @@ async function applyOrderStatus(orderId: string, status: string, note: string) {
 }
 
 export async function findOrderByCode(day: string, code: string) {
-  await requireRole("staff", "/admin");
+  await requireStaffPermission("handover", "/admin/wydawanie");
 
   if (!daySchema.test(day) || !/^[A-Z0-9]{4}$/.test(code)) {
     return { ok: false as const, message: "Zły kod albo dzień." };
@@ -222,7 +225,7 @@ export async function findOrderByCode(day: string, code: string) {
 }
 
 export async function searchHandoverOrder(day: string, query: string) {
-  await requireRole("staff", "/admin");
+  await requireStaffPermission("handover", "/admin/wydawanie");
 
   if (!daySchema.test(day) || query.trim().length === 0) {
     return { ok: false as const, message: "Podaj numer albo nazwisko." };
@@ -233,7 +236,7 @@ export async function searchHandoverOrder(day: string, query: string) {
 }
 
 export async function getReadyToPickUp(day: string, pointId: string) {
-  await requireRole("staff", "/admin");
+  await requireStaffPermission("handover", "/admin/wydawanie");
 
   if (!daySchema.test(day) || !/^[0-9a-f-]{36}$/i.test(pointId)) {
     return { ok: false as const, items: [] as HandoverReadyItem[], pickedUpCount: 0, totalCount: 0 };
@@ -244,7 +247,7 @@ export async function getReadyToPickUp(day: string, pointId: string) {
 }
 
 export async function markOrderPickedUp(orderId: string) {
-  await requireRole("staff", "/admin");
+  await requireStaffPermission("handover", "/admin/wydawanie");
 
   if (!/^[0-9a-f-]{36}$/i.test(orderId)) {
     return { ok: false as const, message: "Złe zamówienie." };
@@ -260,7 +263,7 @@ export async function markOrderPickedUp(orderId: string) {
 }
 
 export async function forceIssueOrder(orderId: string, status: string) {
-  await requireRole("staff", "/admin");
+  await requireStaffPermission("handover", "/admin/wydawanie");
 
   if (!/^[0-9a-f-]{36}$/i.test(orderId)) {
     return { ok: false as const, message: "Złe zamówienie." };
@@ -292,7 +295,7 @@ export async function forceIssueOrder(orderId: string, status: string) {
 const SPECIAL_STATUSES = ["new", "contacted", "closed"] as const;
 
 export async function changeSpecialRequestStatus(id: string, status: string) {
-  await requireRole("staff", "/admin/zamowienia-specjalne");
+  await requireStaffPermission("special_requests", "/admin/zamowienia-specjalne");
 
   if (!/^[0-9a-f-]{36}$/i.test(id) || !(SPECIAL_STATUSES as readonly string[]).includes(status)) {
     return { ok: false as const, message: "Zły status." };

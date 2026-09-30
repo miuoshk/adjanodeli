@@ -50,7 +50,7 @@ export async function buildOrdersCsv(filters: {
   invoiceOnly: boolean;
 }): Promise<{ ok: true; csv: string } | { ok: false }> {
   const profile = await getProfile();
-  if (profile?.role !== "owner") {
+  if (profile?.role !== "owner" || !profile.is_active || profile.must_change_password) {
     return { ok: false };
   }
 

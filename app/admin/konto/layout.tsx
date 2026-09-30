@@ -2,21 +2,20 @@ import { requireRole } from "@/lib/auth";
 import { permissionsForNav } from "@/lib/admin/staff-access";
 import { AdminShell } from "@/components/admin/admin-shell";
 
-export default async function AdminPanelLayout({
+export default async function AccountLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const profile = await requireRole("staff", "/admin");
-  const firstName = profile?.full_name?.trim().split(/\s+/)[0] || profile?.email || "Konto";
-  const isOwner = profile?.role === "owner";
-  const roleLabel = isOwner ? "Właścicielka" : "Pracownik";
+  const profile = await requireRole("staff", "/admin/konto");
+  const firstName = profile.full_name?.trim().split(/\s+/)[0] || profile.email || "Konto";
+  const isOwner = profile.role === "owner";
 
   return (
     <AdminShell
       isOwner={isOwner}
       firstName={firstName}
-      roleLabel={roleLabel}
+      roleLabel={isOwner ? "Właścicielka" : "Pracownik"}
       permissions={permissionsForNav(profile)}
     >
       {children}

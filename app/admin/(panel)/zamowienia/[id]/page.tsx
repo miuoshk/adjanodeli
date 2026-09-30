@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/admin/page-header";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { getAdminOrderDetail, getOrderEmailLog } from "@/lib/admin/queries";
 import { stripePaymentUrl } from "@/lib/admin/stripe-url";
-import { getProfile, requireRole } from "@/lib/auth";
+import { requireStaffPermission } from "@/lib/auth";
 import { parseDateOnly } from "@/lib/dates";
 import { EXPIRED_PAID_NOTE } from "@/lib/email/send-paid-after-expiry";
 import { formatDatePl, formatPrice, formatTimeRange } from "@/lib/format";
@@ -23,9 +23,8 @@ type PageProps = {
 
 export default async function AdminOrderDetailPage({ params }: PageProps) {
   const { id } = await params;
-  await requireRole("staff", `/admin/zamowienia/${id}`);
-  const profile = await getProfile();
-  const isOwner = profile?.role === "owner";
+  const profile = await requireStaffPermission("orders", `/admin/zamowienia/${id}`);
+  const isOwner = profile.role === "owner";
   const detail = await getAdminOrderDetail(id);
   const mails = await getOrderEmailLog(id);
 

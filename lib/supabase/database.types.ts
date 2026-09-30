@@ -901,9 +901,12 @@ export type Database = {
           full_name: string | null
           id: string
           invoice_defaults: Json | null
+          is_active: boolean
           marketing_consent: boolean | null
+          must_change_password: boolean
           phone: string | null
           role: string
+          staff_permissions: string[]
           updated_at: string
         }
         Insert: {
@@ -912,9 +915,12 @@ export type Database = {
           full_name?: string | null
           id: string
           invoice_defaults?: Json | null
+          is_active?: boolean
           marketing_consent?: boolean | null
+          must_change_password?: boolean
           phone?: string | null
           role?: string
+          staff_permissions?: string[]
           updated_at?: string
         }
         Update: {
@@ -923,9 +929,12 @@ export type Database = {
           full_name?: string | null
           id?: string
           invoice_defaults?: Json | null
+          is_active?: boolean
           marketing_consent?: boolean | null
+          must_change_password?: boolean
           phone?: string | null
           role?: string
+          staff_permissions?: string[]
           updated_at?: string
         }
         Relationships: []
@@ -1083,6 +1092,7 @@ export type Database = {
     }
     Functions: {
       admin_login_email: { Args: { p_login: string }; Returns: string }
+      has_staff_permission: { Args: { p: string }; Returns: boolean }
       available_pickup_dates:
         | { Args: never; Returns: string[] }
         | { Args: { p_lead_days: number }; Returns: string[] }

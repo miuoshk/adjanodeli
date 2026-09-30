@@ -9,6 +9,11 @@ type DayPlanProps = {
   day: string;
   paidReadyCount: number;
   points: DashboardPointRow[];
+  access: {
+    production: boolean;
+    packages: boolean;
+    handover: boolean;
+  };
 };
 
 function ordersPhrase(count: number): string {
@@ -45,7 +50,7 @@ function Step({
   );
 }
 
-export function DayPlan({ day, paidReadyCount, points }: DayPlanProps) {
+export function DayPlan({ day, paidReadyCount, points, access }: DayPlanProps) {
   const active = points.filter((point) => point.orderCount > 0);
   const startedCount = active.reduce(
     (sum, point) => sum + point.inProductionCount + point.deliveredCount + point.pickedUpCount,
@@ -63,25 +68,33 @@ export function DayPlan({ day, paidReadyCount, points }: DayPlanProps) {
     <ol className="mt-6 grid grid-cols-1 gap-3">
       <Step index={1} title="Produkcja" done={productionDone}>
         {paidReadyCount > 0 ? (
-          <StartProductionButton day={day} paidCount={paidReadyCount} label="Rozpocznij produkcję" />
+          access.production ? (
+            <StartProductionButton day={day} paidCount={paidReadyCount} label="Rozpocznij produkcję" />
+          ) : (
+            <p>Opłacone: {ordersPhrase(paidReadyCount)}</p>
+          )
         ) : startedCount > 0 ? (
           <p>Rozpoczęta: {ordersPhrase(startedCount)}</p>
         ) : (
           <p>Brak opłaconych zamówień.</p>
         )}
-        <Button asChild variant="outline" className="min-h-12 w-full sm:w-auto">
-          <Link href={`/admin/produkcja?dzien=${day}`}>Lista do pieczenia</Link>
-        </Button>
+        {access.production ? (
+          <Button asChild variant="outline" className="min-h-12 w-full sm:w-auto">
+            <Link href={`/admin/produkcja?dzien=${day}`}>Lista do pieczenia</Link>
+          </Button>
+        ) : null}
       </Step>
       <Step index={2} title="Etykiety" done={labelsDone}>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button asChild variant="outline" className="min-h-12 w-full sm:w-auto">
-            <Link href={`/admin/paczki/drukuj?dzien=${day}&format=etykieta`}>Etykiety: etykieciarka</Link>
-          </Button>
-          <Button asChild variant="outline" className="min-h-12 w-full sm:w-auto">
-            <Link href={`/admin/paczki/drukuj?dzien=${day}&format=a4`}>Etykiety: A4</Link>
-          </Button>
-        </div>
+        {access.packages ? (
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button asChild variant="outline" className="min-h-12 w-full sm:w-auto">
+              <Link href={`/admin/paczki/drukuj?dzien=${day}&format=etykieta`}>Etykiety: etykieciarka</Link>
+            </Button>
+            <Button asChild variant="outline" className="min-h-12 w-full sm:w-auto">
+              <Link href={`/admin/paczki/drukuj?dzien=${day}&format=a4`}>Etykiety: A4</Link>
+            </Button>
+          </div>
+        ) : null}
       </Step>
       <Step index={3} title="Dostawy" done={deliveriesDone}>
         {active.length === 0 ? (
@@ -102,9 +115,11 @@ export function DayPlan({ day, paidReadyCount, points }: DayPlanProps) {
             })}
           </ul>
         )}
-        <Button asChild variant="outline" className="min-h-12 w-full sm:w-auto">
-          <Link href={`/admin/paczki?dzien=${day}`}>Paczki</Link>
-        </Button>
+        {access.packages ? (
+          <Button asChild variant="outline" className="min-h-12 w-full sm:w-auto">
+            <Link href={`/admin/paczki?dzien=${day}`}>Paczki</Link>
+          </Button>
+        ) : null}
       </Step>
       <Step index={4} title="Wydawanie" done={handoverDone}>
         {active.length === 0 ? (
@@ -118,9 +133,11 @@ export function DayPlan({ day, paidReadyCount, points }: DayPlanProps) {
             ))}
           </ul>
         )}
-        <Button asChild variant="outline" className="min-h-12 w-full sm:w-auto">
-          <Link href={`/admin/wydawanie?dzien=${day}`}>Wydawanie</Link>
-        </Button>
+        {access.handover ? (
+          <Button asChild variant="outline" className="min-h-12 w-full sm:w-auto">
+            <Link href={`/admin/wydawanie?dzien=${day}`}>Wydawanie</Link>
+          </Button>
+        ) : null}
       </Step>
     </ol>
   );

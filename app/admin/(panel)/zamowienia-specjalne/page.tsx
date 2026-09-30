@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/admin/page-header";
 import { SpecialRequestStatus } from "@/components/admin/special-request-status";
-import { requireRole } from "@/lib/auth";
+import { requireStaffPermission } from "@/lib/auth";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl } from "@/lib/format";
 import { createServerClient } from "@/lib/supabase/server";
@@ -12,7 +12,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default async function SpecialRequestsAdminPage() {
-  await requireRole("staff", "/admin/zamowienia-specjalne");
+  await requireStaffPermission("special_requests", "/admin/zamowienia-specjalne");
   const supabase = await createServerClient();
   const { data } = await supabase
     .from("special_requests")

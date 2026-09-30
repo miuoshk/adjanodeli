@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Menu } from "lucide-react";
 
 import { AdminNav } from "@/components/admin/admin-nav";
+import type { StaffPermission } from "@/lib/admin/staff-access";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -19,10 +20,11 @@ type AdminShellProps = {
   isOwner: boolean;
   firstName: string;
   roleLabel: string;
+  permissions: StaffPermission[];
   children: ReactNode;
 };
 
-export function AdminShell({ isOwner, firstName, roleLabel, children }: AdminShellProps) {
+export function AdminShell({ isOwner, firstName, roleLabel, permissions, children }: AdminShellProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -39,7 +41,7 @@ export function AdminShell({ isOwner, firstName, roleLabel, children }: AdminShe
           />
         </Link>
         <div className="mt-2 h-px bg-[var(--adj-gold)]" aria-hidden />
-        <AdminNav isOwner={isOwner} firstName={firstName} roleLabel={roleLabel} />
+        <AdminNav isOwner={isOwner} firstName={firstName} roleLabel={roleLabel} permissions={permissions} />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -78,6 +80,7 @@ export function AdminShell({ isOwner, firstName, roleLabel, children }: AdminShe
                 isOwner={isOwner}
                 firstName={firstName}
                 roleLabel={roleLabel}
+                permissions={permissions}
                 onNavigate={() => setOpen(false)}
               />
             </SheetContent>

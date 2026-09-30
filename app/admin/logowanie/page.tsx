@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 
 import { AdminLoginForm } from "@/components/admin/admin-login-form";
+import { landingAfterLogin } from "@/lib/admin/staff-access";
 import { getProfile } from "@/lib/auth";
 import { safeNextPath } from "@/lib/safe-next";
+import { createServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +22,12 @@ export default async function AdminLoginPage({
 
   const profile = await getProfile();
   if (profile?.role === "staff" || profile?.role === "owner") {
-    redirect(next);
+    if (!profile.is_active) {
+      const supabase = await createServerClient();
+      await supabase.auth.signOut();
+    } else {
+      redirect(landingAfterLogin(profile, next));
+    }
   }
 
   return (

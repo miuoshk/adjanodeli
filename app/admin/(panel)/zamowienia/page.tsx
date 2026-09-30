@@ -6,7 +6,7 @@ import { OrdersFilters } from "@/components/admin/orders-filters";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { getAdminFilterOptions, getAdminOrderList, getNearestOrderDay } from "@/lib/admin/queries";
-import { getProfile, requireRole } from "@/lib/auth";
+import { requireStaffPermission } from "@/lib/auth";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl, formatPrice } from "@/lib/format";
 import { isOrderStatus } from "@/lib/orders/status-labels";
@@ -81,10 +81,9 @@ function buildPageHref(params: Search, page: number): string {
 }
 
 export default async function AdminOrdersPage({ searchParams }: PageProps) {
-  await requireRole("staff", "/admin/zamowienia");
+  const profile = await requireStaffPermission("orders", "/admin/zamowienia");
   const params = await searchParams;
-  const profile = await getProfile();
-  const isOwner = profile?.role === "owner";
+  const isOwner = profile.role === "owner";
 
   const { dates, points } = await getAdminFilterOptions();
   const day =

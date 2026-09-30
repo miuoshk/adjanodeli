@@ -6,6 +6,8 @@ import { PageHeader } from "@/components/admin/page-header";
 import { RefreshButton } from "@/components/admin/refresh-button";
 import { StartProductionButton } from "@/components/admin/start-production-button";
 import { getDashboardData } from "@/lib/admin/queries";
+import { canAccessSection } from "@/lib/admin/staff-access";
+import { requireDashboard } from "@/lib/auth";
 import { parseDateOnly, warsawDateIso } from "@/lib/dates";
 import { formatDatePl, formatPrice } from "@/lib/format";
 import { orderStatusMeta } from "@/lib/orders/status-labels";
@@ -42,9 +44,15 @@ function Tile({ label, value }: { label: string; value: string }) {
 }
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
+  const profile = await requireDashboard();
   const params = await searchParams;
   const day = resolveDay(params.dzien);
   const data = await getDashboardData(day);
+  const access = {
+    production: canAccessSection(profile, "production"),
+    packages: canAccessSection(profile, "packages"),
+    handover: canAccessSection(profile, "handover"),
+  };
 
   return (
     <div>
@@ -54,7 +62,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
       <DashboardDayPicker selected={day} />
 
-      <DayPlan day={day} paidReadyCount={data.paidReadyCount} points={data.points} />
+      <DayPlan day={day} paidReadyCount={data.paidReadyCount} points={data.points} access={access} />
 
       <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Tile label="Opłacone zamówienia" value={String(data.paidOrderCount)} />
@@ -98,13 +106,19 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       <section className="mt-8 space-y-3">
         <h2 className="text-2xl font-semibold">Szybkie akcje</h2>
         <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline" className="min-h-12">
-            <Link href={`/admin/produkcja?dzien=${day}`}>Zestawienie produkcyjne</Link>
-          </Button>
-          <StartProductionButton day={day} paidCount={data.paidReadyCount} />
-          <Button asChild variant="outline" className="min-h-12">
-            <Link href={`/admin/paczki?dzien=${day}`}>Lista paczek</Link>
-          </Button>
+          {access.production ? (
+            <>
+              <Button asChild variant="outline" className="min-h-12">
+                <Link href={`/admin/produkcja?dzien=${day}`}>Zestawienie produkcyjne</Link>
+              </Button>
+              <StartProductionButton day={day} paidCount={data.paidReadyCount} />
+            </>
+          ) : null}
+          {access.packages ? (
+            <Button asChild variant="outline" className="min-h-12">
+              <Link href={`/admin/paczki?dzien=${day}`}>Lista paczek</Link>
+            </Button>
+          ) : null}
         </div>
       </section>
 

@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 
-import { requireRole } from "@/lib/auth";
+import { requireStaffPermission } from "@/lib/auth";
 
 export default async function ProductionPrintLayout({ children }: { children: ReactNode }) {
-  await requireRole("staff", "/admin/produkcja/drukuj");
+  await requireStaffPermission("production", "/admin/produkcja/drukuj");
   return (
     <div className="print-root">
       <style>{`

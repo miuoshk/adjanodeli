@@ -16,6 +16,7 @@ const TOC = [
   { href: "#anulowanie", label: "Anulowanie i zwrot" },
   { href: "#wygasle", label: "Zapłaciła za wygasłe" },
   { href: "#specjalne", label: "Zamówienia specjalne" },
+  { href: "#zespol", label: "Zespół" },
   { href: "#zgloszenie", label: "Gdy coś nie działa" },
 ] as const;
 
@@ -250,6 +251,33 @@ export default async function HelpPage() {
             W panelu: <strong>Zamówienia specjalne</strong>. Przy zapytaniu jest lista: „Nowe”, „Skontaktowane”, „Zamknięte”.
           </li>
           <li>Odpowiadasz telefonem albo mailem z karty. Z panelu wiadomości do klienta nie wyślesz.</li>
+        </ol>
+      </section>
+
+      <section id="zespol" className="help-section space-y-3">
+        <h2 className="font-heading text-2xl font-semibold">Zespół: jak dodać pracownika</h2>
+        <p>
+          Przy pierwszym logowaniu panel prosi o zmianę hasła. Ustaw je, dopiero potem wejdziesz dalej.
+        </p>
+        <ol className="list-decimal pl-5">
+          <li>
+            Wejdź w <strong>Zespół</strong> (obok Ustawień). To widzisz tylko Ty.
+          </li>
+          <li>
+            <strong>Dodaj pracownika</strong>: imię i nazwisko, e-mail (to login) i uprawnienia. Zestaw „Produkcja i pakowanie” daje Dziś, Produkcję i Paczki. „Kierowca” daje Paczki i Wydawanie.
+          </li>
+          <li>
+            <strong>Wygeneruj</strong> hasło, <strong>Kopiuj</strong> i przekaż je osobiście albo telefonicznie. Na ekranie widać je tylko raz.
+          </li>
+          <li>
+            Żeby dołożyć sekcję, zapisz uprawnienia jeszcze raz. Pracownik zobaczy ją po odświeżeniu.
+          </li>
+          <li>
+            <strong>Wyłącz dostęp</strong>, gdy ktoś odchodzi. Następne kliknięcie wyrzuca go na logowanie, a stare hasło już nie działa.
+          </li>
+          <li>
+            „Pełny dostęp właściciela” znaczy, że ta osoba zobaczy i zmieni wszystko, także ustawienia i zespół. Zostaw to Adamowi albo sobie.
+          </li>
         </ol>
       </section>
 

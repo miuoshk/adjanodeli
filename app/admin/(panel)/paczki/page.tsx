@@ -5,6 +5,7 @@ import { MarkPointDeliveredButton } from "@/components/admin/mark-point-delivere
 import { PageHeader } from "@/components/admin/page-header";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { getNearestOrderDay, getPackagesData } from "@/lib/admin/queries";
+import { requireStaffPermission } from "@/lib/auth";
 import { formatCutoff, parseDateOnly } from "@/lib/dates";
 import { formatDatePl, formatTimeRange } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ function packCountLabel(count: number): string {
 }
 
 export default async function PackagesPage({ searchParams }: PackagesPageProps) {
+  await requireStaffPermission("packages", "/admin/paczki");
   const params = await searchParams;
   const day =
     params.dzien && /^\d{4}-\d{2}-\d{2}$/.test(params.dzien)
