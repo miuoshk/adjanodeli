@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAdminOrderDays } from "./order-days";
+import { buildAdminOrderDays, unpaidDayLabel } from "./order-days";
 
 describe("buildAdminOrderDays", () => {
   it("keeps today and tomorrow even when no order falls on them", () => {
@@ -25,5 +25,12 @@ describe("buildAdminOrderDays", () => {
       { day: "2026-10-01", count: 2 },
       { day: "2026-10-02", count: 1 },
     ]);
+  });
+});
+
+describe("unpaidDayLabel", () => {
+  it("hides a zero count and names the rest", () => {
+    expect(unpaidDayLabel(0)).toBeNull();
+    expect(unpaidDayLabel(2)).toBe("Niezapłacone: 2");
   });
 });

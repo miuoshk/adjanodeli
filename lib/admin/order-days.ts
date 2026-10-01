@@ -23,3 +23,11 @@ export function buildAdminOrderDays(
     .sort()
     .map((day) => ({ day, count: counts.get(day) ?? 0 }));
 }
+
+/** pending_payment i expired nie wchodzą do produkcji. Zero nie pokazujemy. */
+export function unpaidDayLabel(count: number): string | null {
+  if (count <= 0) {
+    return null;
+  }
+  return `Niezapłacone: ${count}`;
+}

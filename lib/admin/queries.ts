@@ -1,11 +1,15 @@
 import { noticesFromLogs, type DeliveryLogRow } from "@/lib/admin/delivery-notices";
 import { buildAdminOrderDays, type AdminOrderDay } from "@/lib/admin/order-days";
+import { buildProductionRows, type ProductionRow } from "@/lib/admin/production-rows";
 import { warsawDateIso } from "@/lib/dates";
 import { formatItemLine, itemNameWithOptions, parseItemOptions } from "@/lib/orders/item-options";
 import { createServerClient } from "@/lib/supabase/server";
-import type { Json, Tables } from "@/lib/supabase/database.types";
+import type { Tables } from "@/lib/supabase/database.types";
 
 const COUNTED_STATUSES = ["paid", "in_production", "delivered", "picked_up"] as const;
+const UNPAID_STATUSES = ["pending_payment", "expired"] as const;
+
+export type { ProductionRow };
 
 type OrderRow = Tables<"orders">;
 type PickupPointRow = Tables<"pickup_points">;
@@ -48,6 +52,7 @@ export type DashboardData = {
   productionQty: number;
   revenueGrosze: number;
   pendingPaymentCount: number;
+  unpaidCount: number;
   paidReadyCount: number;
   points: DashboardPointRow[];
   recentOrders: DashboardRecentOrder[];
@@ -108,6 +113,7 @@ export async function getDashboardData(day: string): Promise<DashboardData> {
   let productionQty = 0;
   let revenueGrosze = 0;
   let pendingPaymentCount = 0;
+  let expiredCount = 0;
   let paidReadyCount = 0;
 
   const byPoint = new Map<string, DashboardPointRow>();
@@ -131,6 +137,9 @@ export async function getDashboardData(day: string): Promise<DashboardData> {
   for (const order of dayOrders) {
     if (order.status === "pending_payment") {
       pendingPaymentCount += 1;
+    }
+    if (order.status === "expired") {
+      expiredCount += 1;
     }
     if (order.status === "paid") {
       paidReadyCount += 1;
@@ -179,6 +188,7 @@ export async function getDashboardData(day: string): Promise<DashboardData> {
     productionQty,
     revenueGrosze,
     pendingPaymentCount,
+    unpaidCount: pendingPaymentCount + expiredCount,
     paidReadyCount,
     points: [...byPoint.values()],
     recentOrders: recent.map((order) => ({
@@ -505,50 +515,6 @@ export async function getAdminFilterOptions(): Promise<{
   };
 }
 
-function optionBreakdown(value: Json | null): string {
-  if (!Array.isArray(value)) {
-    return "";
-  }
-  return value
-    .map((entry) => {
-      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-        return "";
-      }
-      const label = "label" in entry ? entry.label : null;
-      const qty = "qty" in entry ? entry.qty : null;
-      if (typeof label !== "string" || typeof qty !== "number" || qty <= 0) {
-        return "";
-      }
-      return `${label} ${qty}`;
-    })
-    .filter(Boolean)
-    .join(" · ");
-}
-
-function asByPoint(value: Json | null): Record<string, number> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {};
-  }
-  const result: Record<string, number> = {};
-  for (const [key, qty] of Object.entries(value)) {
-    if (typeof qty === "number") {
-      result[key] = qty;
-    }
-  }
-  return result;
-}
-
-export type ProductionRow = {
-  productId: string;
-  productName: string;
-  categoryName: string;
-  categorySort: number;
-  productSort: number;
-  totalQty: number;
-  byPoint: Record<string, number>;
-  optionBreakdown: string;
-};
-
 export type ProductionNote = {
   orderNumber: number;
   note: string;
@@ -557,6 +523,8 @@ export type ProductionNote = {
 export type ProductionData = {
   day: string;
   orderCount: number;
+  unpaidCount: number;
+  summaryFailed: boolean;
   pointNames: string[];
   rows: ProductionRow[];
   notes: ProductionNote[];
@@ -590,10 +558,20 @@ export async function getNearestOrderDay(): Promise<string> {
   return latest?.pickup_date?.slice(0, 10) ?? today;
 }
 
+export async function getUnpaidOrderCount(day: string): Promise<number> {
+  const supabase = await createServerClient();
+  const { count } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("pickup_date", day)
+    .in("status", [...UNPAID_STATUSES]);
+  return count ?? 0;
+}
+
 export async function getProductionData(day: string): Promise<ProductionData> {
   const supabase = await createServerClient();
 
-  const [summaryResult, productsResult, pointsResult, ordersResult] = await Promise.all([
+  const [summaryResult, productsResult, pointsResult, ordersResult, unpaidResult] = await Promise.all([
     supabase.rpc("production_summary", { p_day: day }),
     supabase
       .from("products")
@@ -604,6 +582,11 @@ export async function getProductionData(day: string): Promise<ProductionData> {
       .select("order_number, note, status")
       .eq("pickup_date", day)
       .in("status", [...COUNTED_STATUSES]),
+    supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("pickup_date", day)
+      .in("status", [...UNPAID_STATUSES]),
   ]);
 
   type CategoryJoin = { name: string; sort_order: number | null };
@@ -614,48 +597,23 @@ export async function getProductionData(day: string): Promise<ProductionData> {
     categories: CategoryJoin | CategoryJoin[] | null;
   }[];
 
-  const meta = new Map(
-    products.map((product) => {
-      const category = Array.isArray(product.categories)
-        ? (product.categories[0] ?? null)
-        : product.categories;
-      return [
-        product.id,
-        {
-          categoryName: category?.name ?? "Inne",
-          categorySort: category?.sort_order ?? 999,
-          productSort: product.sort_order,
-        },
-      ] as const;
-    }),
-  );
-
-  const rows: ProductionRow[] = (summaryResult.data ?? []).map((row) => {
-    const info = meta.get(row.product_id);
-    return {
-      productId: row.product_id,
-      productName: row.product_name,
-      categoryName: info?.categoryName ?? "Inne",
-      categorySort: info?.categorySort ?? 999,
-      productSort: info?.productSort ?? 999,
-      totalQty: row.total_qty,
-      byPoint: asByPoint(row.by_point),
-      optionBreakdown: optionBreakdown(row.by_option),
-    };
-  });
-
-  rows.sort((a, b) => {
-    if (a.categorySort !== b.categorySort) {
-      return a.categorySort - b.categorySort;
-    }
-    if (a.categoryName !== b.categoryName) {
-      return a.categoryName.localeCompare(b.categoryName, "pl");
-    }
-    if (a.productSort !== b.productSort) {
-      return a.productSort - b.productSort;
-    }
-    return a.productName.localeCompare(b.productName, "pl");
-  });
+  const summaryFailed = Boolean(summaryResult.error);
+  const rows = summaryFailed
+    ? []
+    : buildProductionRows(
+        summaryResult.data ?? [],
+        products.map((product) => {
+          const category = Array.isArray(product.categories)
+            ? (product.categories[0] ?? null)
+            : product.categories;
+          return {
+            id: product.id,
+            sort_order: product.sort_order,
+            categoryName: category?.name ?? "Inne",
+            categorySort: category?.sort_order ?? 999,
+          };
+        }),
+      );
 
   const orderedPoints = (pointsResult.data ?? [])
     .map((point) => point.name)
@@ -675,6 +633,8 @@ export async function getProductionData(day: string): Promise<ProductionData> {
   return {
     day,
     orderCount: ordersResult.data?.length ?? 0,
+    unpaidCount: unpaidResult.count ?? 0,
+    summaryFailed,
     pointNames: [...orderedPoints, ...extras],
     rows,
     notes,
@@ -710,13 +670,14 @@ export type PackageSection = {
 
 export type PackagesData = {
   day: string;
+  unpaidCount: number;
   sections: PackageSection[];
 };
 
 export async function getPackagesData(day: string): Promise<PackagesData> {
   const supabase = await createServerClient();
 
-  const [pointsResult, ordersResult] = await Promise.all([
+  const [pointsResult, ordersResult, unpaidResult] = await Promise.all([
     supabase.from("pickup_points").select("*").order("sort_order"),
     supabase
       .from("orders")
@@ -726,6 +687,11 @@ export async function getPackagesData(day: string): Promise<PackagesData> {
       .eq("pickup_date", day)
       .in("status", [...COUNTED_STATUSES])
       .order("pickup_code", { ascending: true }),
+    supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("pickup_date", day)
+      .in("status", [...UNPAID_STATUSES]),
   ]);
 
   type PackageOrder = {
@@ -792,7 +758,7 @@ export async function getPackagesData(day: string): Promise<PackagesData> {
     })
     .filter((section) => section.packages.length > 0);
 
-  return { day, sections };
+  return { day, unpaidCount: unpaidResult.count ?? 0, sections };
 }
 
 export type HandoverOrder = {

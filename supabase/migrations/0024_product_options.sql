@@ -717,7 +717,7 @@ begin
     max(l.product_name),
     sum(l.qty)::int,
     jsonb_object_agg(l.point_name, l.qty),
-    coalesce(max(oa.by_option), '[]'::jsonb)
+    coalesce((max(oa.by_option::text))::jsonb, '[]'::jsonb)
   from lines l
   left join option_agg oa on oa.product_id = l.product_id
   group by l.product_id;

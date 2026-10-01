@@ -1,5 +1,6 @@
 import { PrintButton } from "@/components/admin/print-button";
 import { ProductionTable } from "@/components/admin/production-table";
+import { UnpaidDayNote } from "@/components/admin/unpaid-day-note";
 import { getNearestOrderDay, getProductionData } from "@/lib/admin/queries";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl } from "@/lib/format";
@@ -34,11 +35,16 @@ export default async function ProductionPrintPage({ searchParams }: ProductionPr
         <div>
           <h1 className="print-title">Produkcja na {formatDatePl(parseDateOnly(day))}</h1>
           <p>{orderCountLabel(data.orderCount)}</p>
+          <UnpaidDayNote count={data.unpaidCount} />
         </div>
         <PrintButton label="Drukuj" />
       </div>
 
-      <ProductionTable data={data} variant="print" />
+      {data.summaryFailed ? (
+        <p>Nie udało się wczytać zestawienia. Odśwież stronę.</p>
+      ) : (
+        <ProductionTable data={data} variant="print" />
+      )}
 
       <section className="print-notes">
         <h2>Uwagi klientów</h2>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AdminDayPicker } from "@/components/admin/admin-day-picker";
 import { PageHeader } from "@/components/admin/page-header";
 import { ProductionTable } from "@/components/admin/production-table";
+import { UnpaidDayNote } from "@/components/admin/unpaid-day-note";
 import { getNearestOrderDay, getProductionData } from "@/lib/admin/queries";
 import { requireStaffPermission } from "@/lib/auth";
 import { parseDateOnly } from "@/lib/dates";
@@ -44,9 +45,16 @@ export default async function ProductionPage({ searchParams }: ProductionPagePro
       </PageHeader>
 
       <AdminDayPicker selected={day} basePath="/admin/produkcja" />
+      <div className="mt-3">
+        <UnpaidDayNote count={data.unpaidCount} />
+      </div>
 
       <div className="mt-6">
-        <ProductionTable data={data} variant="screen" />
+        {data.summaryFailed ? (
+          <p className="text-sm">Nie udało się wczytać zestawienia. Odśwież stronę.</p>
+        ) : (
+          <ProductionTable data={data} variant="screen" />
+        )}
       </div>
     </div>
   );

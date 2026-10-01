@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { AdminDayPicker } from "@/components/admin/admin-day-picker";
 import { MarkPointDeliveredButton } from "@/components/admin/mark-point-delivered-button";
+import { UnpaidDayNote } from "@/components/admin/unpaid-day-note";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { getNearestOrderDay, getPackagesData } from "@/lib/admin/queries";
@@ -39,6 +40,9 @@ export default async function PackagesPage({ searchParams }: PackagesPageProps) 
     <div>
       <PageHeader title={`Paczki na ${formatDatePl(parseDateOnly(day))}`} />
       <AdminDayPicker selected={day} basePath="/admin/paczki" />
+      <div className="mt-3">
+        <UnpaidDayNote count={data.unpaidCount} />
+      </div>
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
         <Button asChild variant="outline" className="min-h-12">
           <Link href={`/admin/paczki/drukuj?dzien=${day}&format=etykieta`}>Etykiety: etykieciarka</Link>

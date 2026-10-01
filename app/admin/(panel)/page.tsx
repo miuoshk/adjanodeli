@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { DayPlan } from "@/components/admin/day-plan";
 import { DashboardDayPicker } from "@/components/admin/dashboard-day-picker";
+import { UnpaidDayNote } from "@/components/admin/unpaid-day-note";
 import { PageHeader } from "@/components/admin/page-header";
 import { RefreshButton } from "@/components/admin/refresh-button";
 import { StartProductionButton } from "@/components/admin/start-production-button";
@@ -61,6 +62,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       </PageHeader>
 
       <DashboardDayPicker selected={day} />
+      <div className="mt-3">
+        <UnpaidDayNote count={data.unpaidCount} />
+      </div>
 
       <DayPlan day={day} paidReadyCount={data.paidReadyCount} points={data.points} access={access} />
 

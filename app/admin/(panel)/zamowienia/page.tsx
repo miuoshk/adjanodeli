@@ -2,10 +2,11 @@ import Link from "next/link";
 
 import { AdminDayPicker } from "@/components/admin/admin-day-picker";
 import { OrderActions } from "@/components/admin/order-actions";
+import { UnpaidDayNote } from "@/components/admin/unpaid-day-note";
 import { OrdersFilters } from "@/components/admin/orders-filters";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatusBadge } from "@/components/admin/status-badge";
-import { getAdminFilterOptions, getAdminOrderList, getNearestOrderDay } from "@/lib/admin/queries";
+import { getAdminFilterOptions, getAdminOrderList, getNearestOrderDay, getUnpaidOrderCount } from "@/lib/admin/queries";
 import { requireStaffPermission } from "@/lib/auth";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl, formatPrice } from "@/lib/format";
@@ -96,6 +97,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
   const page = Math.max(1, Number.parseInt(params.strona ?? "1", 10) || 1);
 
   const invoiceOnly = params.faktura === "1";
+  const unpaidCount = day === "wszystkie" ? 0 : await getUnpaidOrderCount(day);
   const list = await getAdminOrderList({
     day,
     pointId: params.punkt || null,
@@ -119,6 +121,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
         ) : null}
       </PageHeader>
       <AdminDayPicker selected={day === "wszystkie" ? "" : day} basePath="/admin/zamowienia" />
+      <UnpaidDayNote count={unpaidCount} />
       <OrdersFilters
         dates={dates}
         points={points}

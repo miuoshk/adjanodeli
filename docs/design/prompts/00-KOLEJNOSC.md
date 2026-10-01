@@ -4,7 +4,7 @@ Każdy prompt to jedno zadanie dla Cursora (Agent). Jeden prompt = jeden nowy cz
 
 ## Stan
 
-Prompty 01–06, 08–09 i runda 1 (10–14) są wykonane. Teraz runda 2 z uwag Justyny: prompty 15–17, opis niżej. Najpierw ręcznie konto pracownika, potem 15 → 16 → 17.
+Prompty 01–06, 08–09, runda 1 (10–14) i runda 2 (15–17) są wykonane. Teraz runda 3 z uwag Justyny z 1.10: najpierw 5 minut ręcznie, potem 18 → 19 → 20. Opis niżej.
 
 ## Kolejność
 
@@ -61,7 +61,7 @@ Wynik wpisz Cursorowi na początku czatu z promptem 10 („Resend: domena niezwe
 1. **Justyna zgłasza:** co robiła, na którym ekranie, telefon czy komputer, godzina, numer zamówienia, zrzut ekranu (ten sam format jest w „Pomocy”, sekcja „Gdy coś nie działa”).
 2. **Miłosz z Claude'em** zamienia uwagi w prompty: jeden temat = jeden prompt, z audytem przed zmianami.
 3. **Cursor** (nowy czat na prompt): audyt → raport w `docs/audyt/` → zmiany → testy → lista zmienionych plików.
-4. **Miłosz:** przegląd diffu, `npm test && npm run lint && npm run build`, kroki z sekcji „Odbiór”, commit z numerem promptu, push (Vercel wdraża sam), migracje `npx supabase db push`.
+4. **Miłosz:** przegląd diffu, `npm test && npm run lint && npm run build`, kroki z sekcji „Odbiór”, commit z numerem promptu, push (Vercel wdraża sam). Migracje wgrywa Cursor przez MCP Supabase; `npx supabase db push` nie używamy, dopóki historia migracji nie zostanie naprawiona (`supabase migration repair`).
 5. **Justyna testuje** na produkcji według krótkiej listy od Miłosza (3–5 kroków z „Odbioru”) i daje znać: działa albo zrzut ekranu.
 6. Zamykamy temat w `docs/CHANGELOG.md`.
 
@@ -91,6 +91,51 @@ Rola `staff` już istnieje i daje dokładnie to, o co prosi Justyna: Dziś, Zam�
 3. Pracownik loguje się na `https://adjanodeli.pl/admin/logowanie`: login = e-mail albo część przed @, hasło z kroku 1. Hasło przekaż osobiście albo telefonicznie.
 
 Po prompcie 16 ten pracownik pojawi się na ekranie „Zespół” z pełnym zestawem uprawnień i Justyna sama może go ograniczyć.
+
+## Runda 3 poprawek — uwagi Justyny z 1.10
+
+| # | Plik | Uwaga Justyny | Co robi |
+|---|------|---------------|---------|
+| — | ręcznie, 5 minut | „nie widzę jutra, nie mogę wydrukować planu” | Sprawdzenie wdrożenia i migracji (lista niżej). Wynik wklej Cursorowi na start 18 |
+| **18** | `18-jutro-i-druk-produkcji.md` | „nie widzę zamówienia na jutro, planu produkcji nie mogę wydrukować” | Diagnoza z raportem, potem poprawka z testem |
+| **19** | `19-poziomy-dostepu.md` | „podgląd, a nic do zmiany, i żeby wydawała” | Każda sekcja: Brak / Podgląd / Pełny. Zestaw „Podgląd i wydawanie” |
+| **20** | `20-kod-punktu-odbioru.md` | „bez kodu nie puszczać dalej, bez kodu wpisz ADJANO” | Kod punktu wymagany przed płatnością, piekarnia jako punkt z kodem ADJANO, zmiana punktu w zamówieniu z panelu |
+
+### Zanim odpalisz 18 (ręcznie, 5 minut)
+
+- [ ] **Vercel → Deployments:** ostatnie wdrożenie produkcyjne to commit „let a product require a choice, such as a sauce…” ze statusem Ready.
+- [x] **Migracje (sprawdzone 1.10):** 0020–0024 są na bazie, wgrane przez MCP Supabase pod numerami z datą. `npx supabase db push` **nie uruchamiać**, bo spróbuje wgrać je drugi raz.
+- [ ] **Na produkcji:** otwórz `/admin/produkcja?dzien=` z jutrzejszą datą i obok `/admin/produkcja/drukuj?dzien=` z tą samą. Zapisz, co widać (pusta strona, błąd, brak zamówień).
+- [ ] **Vercel → Logs:** błędy z tych dwóch adresów z ostatniej godziny.
+- [ ] **Zamówienie tej klientki w panelu:** status (opłacone czy „Czeka na płatność”), dzień i punkt.
+
+### Przed 20: punkt w piekarni
+
+Justyna w **Punkty odbioru** zakłada (albo poprawia) punkt „Piekarnia Adjano” z adresem ul. Katowicka 120, godzinami odbioru i dniami, z kodem `ADJANO`. Bez tego klienci bez kodu nie będą mieli gdzie odebrać.
+
+## Historia migracji (stan z 1.10)
+
+Od `0020` migracje wgrywa Cursor przez MCP Supabase, więc na bazie mają numery z datą. Schemat jest zgodny z plikami, rozjechała się tylko historia. `npx supabase db push` **nie uruchamiać**, dopóki historia nie zostanie wyrównana.
+
+| Plik | Wpis na bazie |
+|---|---|
+| `0001`–`0019` | te same numery |
+| `0020_order_minimum_10pln` | `20260928000912` |
+| `0021_email_log` | `20260928211558` |
+| `0022_label_customer_info` | `20260930205821` |
+| `0023_staff_permissions` | `20260930211619` |
+| `0024_product_options` | `20260930213645`, `20260930213736`, `20260930213747` |
+| `0025_production_summary_jsonb` | `20261001214844` |
+
+Wyrównanie (tylko zapis w historii, tabele i funkcje zostają bez zmian), po zalogowaniu CLI na konto z projektem (`npx supabase logout`, `npx supabase login`):
+
+```
+npx supabase migration repair --status reverted 20260928000912 20260928211558 20260930205821 20260930211619 20260930213645 20260930213736 20260930213747 20261001214844
+npx supabase migration repair --status applied 0020 0021 0022 0023 0024 0025
+npx supabase migration list
+```
+
+Nowe migracje (od `0026`) dopisuj do tej tabeli, dopóki historia nie jest wyrównana.
 
 ## Po wdrożeniu 08–09 (ręcznie, poza kodem)
 
