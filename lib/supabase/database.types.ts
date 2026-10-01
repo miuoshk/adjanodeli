@@ -1039,6 +1039,7 @@ export type Database = {
           owner_email: string
           owner_phone: string | null
           pending_order_ttl_minutes: number
+          require_point_code: boolean
           label_customer_info: string
           updated_at: string
         }
@@ -1056,6 +1057,7 @@ export type Database = {
           owner_email: string
           owner_phone?: string | null
           pending_order_ttl_minutes?: number
+          require_point_code?: boolean
           label_customer_info?: string
           updated_at?: string
         }
@@ -1073,6 +1075,7 @@ export type Database = {
           owner_email?: string
           owner_phone?: string | null
           pending_order_ttl_minutes?: number
+          require_point_code?: boolean
           label_customer_info?: string
           updated_at?: string
         }
@@ -1184,6 +1187,10 @@ export type Database = {
       available_pickup_dates:
         | { Args: never; Returns: string[] }
         | { Args: { p_lead_days: number }; Returns: string[] }
+      change_order_pickup_point: {
+        Args: { p_note?: string | null; p_order_id: string; p_point_id: string }
+        Returns: undefined
+      }
       create_order: {
         Args: {
           p_discount?: Json

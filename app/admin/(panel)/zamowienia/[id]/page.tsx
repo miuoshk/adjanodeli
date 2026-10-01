@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 
+import { ChangePickupPoint } from "@/components/admin/change-pickup-point";
 import { CopyInvoiceButton } from "@/components/admin/copy-invoice-button";
 import { EmailLogList } from "@/components/admin/email-log-list";
 import { OrderActions } from "@/components/admin/order-actions";
@@ -14,7 +15,8 @@ import { getAdminOrderDetail, getOrderEmailLog } from "@/lib/admin/queries";
 import { stripePaymentUrl } from "@/lib/admin/stripe-url";
 import { requireStaffPermission } from "@/lib/auth";
 import { isViewOnly } from "@/lib/admin/staff-access";
-import { parseDateOnly } from "@/lib/dates";
+import { isoWeekday, parseDateOnly } from "@/lib/dates";
+import { createServerClient } from "@/lib/supabase/server";
 import { EXPIRED_PAID_NOTE } from "@/lib/email/send-paid-after-expiry";
 import { formatDatePl, formatPrice, formatTimeRange } from "@/lib/format";
 import { formatItemLine, parseItemOptions } from "@/lib/orders/item-options";
@@ -31,6 +33,15 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
   const canManage = !isViewOnly(profile, "orders");
   const detail = await getAdminOrderDetail(id);
   const mails = await getOrderEmailLog(id);
+  const supabase = await createServerClient();
+  const pointsResult = await supabase
+    .from("pickup_points")
+    .select("id, name, address, pickup_from, pickup_to, weekdays, is_active")
+    .eq("is_active", true)
+    .order("sort_order");
+  if (pointsResult.error) {
+    console.error("pickup_points", pointsResult.error.message);
+  }
 
   if (!detail) {
     notFound();
@@ -70,6 +81,26 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
         <p>{formatDatePl(parseDateOnly(order.pickup_date))}</p>
         {order.pickup_code ? (
           <p className="font-heading text-2xl tracking-[0.2em] text-primary">{order.pickup_code}</p>
+        ) : null}
+        {canManage && (order.status === "paid" || order.status === "in_production") ? (
+          <div className="pt-3">
+            <ChangePickupPoint
+              orderId={order.id}
+              choices={(pointsResult.data ?? [])
+                .filter(
+                  (candidate) =>
+                    candidate.id !== order.pickup_point_id &&
+                    candidate.weekdays.includes(isoWeekday(order.pickup_date)),
+                )
+                .map((candidate) => ({
+                  id: candidate.id,
+                  name: candidate.name,
+                  address: candidate.address,
+                  pickupFrom: candidate.pickup_from,
+                  pickupTo: candidate.pickup_to,
+                }))}
+            />
+          </div>
         ) : null}
         {order.note ? <p>Uwagi: {order.note}</p> : null}
         {order.invoice_requested ? (

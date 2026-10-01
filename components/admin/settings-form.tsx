@@ -34,6 +34,7 @@ const schema = z.object({
   ownerEmail: z.string().email("Podaj e-mail."),
   ownerPhone: z.string(),
   customerCancellationEnabled: z.boolean(),
+  requirePointCode: z.boolean(),
   labelCustomerInfo: z.enum(["masked", "masked_email", "full"]),
 });
 
@@ -58,6 +59,7 @@ export function SettingsForm({ settings }: { settings: OwnerSettings }) {
       ownerEmail: settings.owner_email,
       ownerPhone: settings.owner_phone ?? "",
       customerCancellationEnabled: settings.customer_cancellation_enabled,
+      requirePointCode: settings.require_point_code,
       labelCustomerInfo:
         settings.label_customer_info === "masked" || settings.label_customer_info === "full"
           ? settings.label_customer_info
@@ -252,6 +254,30 @@ export function SettingsForm({ settings }: { settings: OwnerSettings }) {
                   className="size-5 shrink-0"
                 />
                 Klient może anulować do cutoff dnia przed odbiorem
+              </label>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="requirePointCode"
+          render={({ field }) => (
+            <FormItem>
+              <label className="flex min-h-12 items-start gap-3 text-sm leading-relaxed">
+                <input
+                  type="checkbox"
+                  checked={field.value}
+                  onChange={(event) => field.onChange(event.target.checked)}
+                  className="mt-0.5 size-5 shrink-0"
+                />
+                <span>
+                  Klient musi wpisać kod punktu odbioru
+                  <span className="mt-1 block text-muted-foreground">
+                    Bez kodu nie wybierze punktu i nie przejdzie do płatności. Odbiór w piekarni to kod ADJANO.
+                  </span>
+                </span>
               </label>
               <FormMessage />
             </FormItem>

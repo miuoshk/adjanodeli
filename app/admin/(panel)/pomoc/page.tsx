@@ -17,6 +17,7 @@ const TOC = [
   { href: "#wygasle", label: "Zapłaciła za wygasłe" },
   { href: "#specjalne", label: "Zamówienia specjalne" },
   { href: "#zespol", label: "Zespół" },
+  { href: "#kod-punktu", label: "Kod punktu" },
   { href: "#zgloszenie", label: "Gdy coś nie działa" },
 ] as const;
 
@@ -279,6 +280,22 @@ export default async function HelpPage() {
             „Pełny dostęp właściciela” znaczy, że ta osoba zobaczy i zmieni wszystko, także ustawienia i zespół. Zostaw to Adamowi albo sobie.
           </li>
         </ol>
+      </section>
+
+      <section id="kod-punktu" className="help-section space-y-3">
+        <h2 className="font-heading text-2xl font-semibold">Kod punktu odbioru</h2>
+        <p>
+          Klient zamawia tylko do punktu, do którego ma dostęp. Dostęp daje kod, plakat z kodem QR, domena
+          e-maila albo ręczne nadanie. Dotyczy to też punktów publicznych.
+        </p>
+        <p>
+          Odbiór w piekarni to zwykły punkt z kodem <strong>ADJANO</strong>. Załóż go w{" "}
+          <strong>Punktach odbioru</strong>: nazwa, adres ul. Katowicka 120, godziny i dni, kod ADJANO.
+        </p>
+        <p>
+          W zamówieniu opłaconym albo w produkcji jest „Zmień punkt odbioru”. Wybierasz punkt, który działa
+          w dniu zamówienia. Domyślnie klient dostaje mail z nowym punktem, godzinami i kodem odbioru.
+        </p>
       </section>
 
       <section id="zgloszenie" className="help-section space-y-3">

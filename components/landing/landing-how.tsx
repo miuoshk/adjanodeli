@@ -14,7 +14,13 @@ export function LandingHow({ cutoff, points }: { cutoff: string; points: PublicP
     {
       big: `do ${cutoff}`,
       title: "Zamawiasz",
-      text: <>Wybierasz dzień i&nbsp;punkt odbioru. Płacisz BLIK-iem, kartą, Apple Pay albo Google Pay.</>,
+      text: (
+        <>
+          Wybierasz dzień i&nbsp;punkt odbioru. Kod dostajesz w&nbsp;pracy, a&nbsp;bez kodu wpisz ADJANO
+          i&nbsp;odbierz w&nbsp;piekarni przy ul.&nbsp;Katowickiej&nbsp;120. Płacisz BLIK-iem, kartą, Apple
+          Pay albo Google Pay.
+        </>
+      ),
     },
     {
       big: "rano",
@@ -81,7 +87,8 @@ export function LandingHow({ cutoff, points }: { cutoff: string; points: PublicP
             <p className="mt-2 text-[17px]">
               Dowozimy do kilku instytucji w&nbsp;Mikołowie.{" "}
               <span className="text-[var(--adj-ink-soft)]">
-                Kod dostaniesz w&nbsp;sekretariacie i&nbsp;wpiszesz go w&nbsp;koszyku.
+                Kod dostaniesz w&nbsp;sekretariacie i&nbsp;wpiszesz go w&nbsp;koszyku. Nie masz kodu? Wpisz
+                ADJANO i&nbsp;odbierz w&nbsp;piekarni przy ul.&nbsp;Katowickiej&nbsp;120.
               </span>
             </p>
           </div>

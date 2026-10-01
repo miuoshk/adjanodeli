@@ -12,6 +12,8 @@ export function emailKindLabel(kind: string): string {
       return "Zwrot ręczny";
     case "paid_after_expiry_owner":
       return "Zapłacone po wygaśnięciu";
+    case "pickup_point_changed":
+      return "Zmiana punktu odbioru";
     case "test":
       return "Test";
     default:

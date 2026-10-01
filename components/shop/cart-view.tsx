@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Price } from "@/components/brand/price";
@@ -29,7 +30,7 @@ import { cartOptionLine, hasUnknownOption, missingRequiredGroupName, optionDelta
 import { loadShopOptionGroups } from "@/lib/orders/load-option-groups";
 import { placeOrder } from "@/lib/orders/place-order";
 import { ProductOptionSheet } from "@/components/shop/product-option-sheet";
-import type { UnlockedPickupPoint } from "@/lib/pickup/unlock-point";
+import { unlockPickupPoint } from "@/lib/pickup/unlock-point";
 import { lineKeyOf, selectSubtotal, useCart, type CartItem } from "@/lib/store/cart";
 import { UnlockPointForm } from "@/components/shop/unlock-point-form";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,8 @@ type CartViewProps = {
   isLoggedIn: boolean;
   vouchers: LoyaltyVoucher[];
   invoiceDefaults: InvoiceDefaults | null;
+  requirePointCode: boolean;
+  pendingCode?: string | null;
 };
 
 const fieldClass =
@@ -112,7 +115,10 @@ export function CartView({
   isLoggedIn,
   vouchers,
   invoiceDefaults,
+  requirePointCode,
+  pendingCode = null,
 }: CartViewProps) {
+  const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
   const [availability, setAvailability] = useState<Map<string, ProductAvailability>>(
     new Map(),
@@ -132,6 +138,8 @@ export function CartView({
   const [codeMessage, setCodeMessage] = useState<string | null>(null);
   const [appliedCode, setAppliedCode] = useState<{ code: string; discountGrosze: number } | null>(null);
   const [unlockedPoints, setUnlockedPoints] = useState<CartPickupPoint[]>([]);
+  const [showOtherCode, setShowOtherCode] = useState(false);
+  const [pendingHandled, setPendingHandled] = useState(false);
   const [groupsByProduct, setGroupsByProduct] = useState<Record<string, ShopOptionGroup[]>>({});
   const [groupsReady, setGroupsReady] = useState(false);
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -253,8 +261,54 @@ export function CartView({
   }, [pickupPoints, unlockedPoints]);
 
   const selectedPoint = visiblePoints.find((point) => point.id === pickupPointId) ?? null;
+  const needsCode = requirePointCode && visiblePoints.length === 0;
   const pointServesDay =
     selectedPoint && weekday !== null ? selectedPoint.weekdays.includes(weekday) : false;
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+    if (visiblePoints.length === 1 && pickupPointId !== visiblePoints[0]?.id) {
+      setPickupPoint(visiblePoints[0].id);
+      return;
+    }
+    if (pickupPointId && !visiblePoints.some((point) => point.id === pickupPointId)) {
+      setPickupPoint(null);
+    }
+  }, [hydrated, visiblePoints, pickupPointId, setPickupPoint]);
+
+  useEffect(() => {
+    if (!hydrated || !isLoggedIn || !pendingCode || pendingHandled) {
+      return;
+    }
+    setPendingHandled(true);
+    void unlockPickupPoint(pendingCode).then((result) => {
+      if (!result.ok) {
+        toast(result.message);
+        return;
+      }
+      setUnlockedPoints((current) =>
+        current.some((item) => item.id === result.id)
+          ? current
+          : [
+              ...current,
+              {
+                id: result.id,
+                name: result.name,
+                address: result.address,
+                description: result.description,
+                pickup_from: result.pickup_from,
+                pickup_to: result.pickup_to,
+                weekdays: result.weekdays,
+              },
+            ],
+      );
+      setPickupPoint(result.id);
+      setShowOtherCode(false);
+      router.replace("/koszyk");
+    });
+  }, [hydrated, isLoggedIn, pendingCode, pendingHandled, router, setPickupPoint]);
 
   const selectedVoucher = vouchers.find((voucher) => voucher.id === voucherId) ?? null;
   const usingCode = Boolean(appliedCode) && !useVoucher;
@@ -540,6 +594,174 @@ export function CartView({
         </div>
       ) : null}
 
+      <section className="mt-10">
+        <SectionHeading as="h2" title="Punkt odbioru" />
+        {needsCode ? (
+          <div className="mt-6">
+            <UnlockPointForm
+              prominent
+              isLoggedIn={isLoggedIn}
+              next="/koszyk"
+              initialCode={pendingCode ?? ""}
+              onUnlocked={(point) => {
+                setUnlockedPoints((current) =>
+                  current.some((item) => item.id === point.id)
+                    ? current
+                    : [
+                        ...current,
+                        {
+                          id: point.id,
+                          name: point.name,
+                          address: point.address,
+                          description: point.description,
+                          pickup_from: point.pickup_from,
+                          pickup_to: point.pickup_to,
+                          weekdays: point.weekdays,
+                        },
+                      ],
+                );
+                setPickupPoint(point.id);
+              }}
+            />
+          </div>
+        ) : (
+          <>
+            <div
+              className="mt-6 space-y-3"
+              role={visiblePoints.length > 1 ? "radiogroup" : undefined}
+              aria-label="Punkt odbioru"
+            >
+              {visiblePoints.map((point) => {
+                const closed = weekday !== null && !point.weekdays.includes(weekday);
+                const selected = point.id === pickupPointId;
+                const place = [point.address, point.description].filter(Boolean).join(", ");
+                const interactive = !requirePointCode || visiblePoints.length > 1;
+                const body = (
+                  <>
+                    {interactive ? (
+                      <span
+                        className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full border border-[var(--adj-ink)]/40"
+                        aria-hidden
+                      >
+                        {selected ? <span className="size-2.5 rounded-full bg-[var(--adj-khaki)]" /> : null}
+                      </span>
+                    ) : null}
+                    <span>
+                      <span className="block font-heading text-[19px] font-medium">
+                        {nbsp(point.name)}
+                        {closed ? " (nie w ten dzień)" : ""}
+                      </span>
+                      {place ? (
+                        <span className="mt-1 block text-[15px] text-[var(--adj-ink-soft)]">{place}</span>
+                      ) : null}
+                      <span className="adj-ui mt-1 block text-[14px]">
+                        {formatTimeRange(point.pickup_from, point.pickup_to)}
+                      </span>
+                    </span>
+                  </>
+                );
+                if (!interactive) {
+                  return (
+                    <article
+                      key={point.id}
+                      className="rounded-[4px] border border-[var(--adj-khaki)] bg-[var(--adj-paper-light)] px-5 py-4 ring-1 ring-[var(--adj-khaki)]"
+                    >
+                      {body}
+                    </article>
+                  );
+                }
+                return (
+                  <label
+                    key={point.id}
+                    className={`flex cursor-pointer gap-4 rounded-[4px] border bg-[var(--adj-paper-light)] px-5 py-4 ${
+                      selected
+                        ? "border-[var(--adj-khaki)] ring-1 ring-[var(--adj-khaki)]"
+                        : "border-[rgba(43,42,31,0.22)]"
+                    } ${closed ? "cursor-not-allowed opacity-50" : ""}`}
+                  >
+                    <input
+                      type="radio"
+                      name="pickup-point"
+                      className="sr-only"
+                      checked={selected}
+                      disabled={closed}
+                      onChange={() => setPickupPoint(point.id)}
+                    />
+                    {body}
+                  </label>
+                );
+              })}
+            </div>
+            {requirePointCode ? (
+              <div className="mt-4">
+                {showOtherCode ? (
+                  <UnlockPointForm
+                    prominent
+                    isLoggedIn={isLoggedIn}
+                    next="/koszyk"
+                    onUnlocked={(point) => {
+                      setUnlockedPoints((current) =>
+                        current.some((item) => item.id === point.id)
+                          ? current
+                          : [
+                              ...current,
+                              {
+                                id: point.id,
+                                name: point.name,
+                                address: point.address,
+                                description: point.description,
+                                pickup_from: point.pickup_from,
+                                pickup_to: point.pickup_to,
+                                weekdays: point.weekdays,
+                              },
+                            ],
+                      );
+                      setPickupPoint(point.id);
+                      setShowOtherCode(false);
+                    }}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="min-h-12 text-left underline underline-offset-4"
+                    onClick={() => setShowOtherCode(true)}
+                  >
+                    Mam inny kod
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="mt-8 space-y-2">
+                <Label htmlFor="employer-code">Odbierasz w pracy? Wpisz kod od pracodawcy</Label>
+                <UnlockPointForm
+                  isLoggedIn={isLoggedIn}
+                  next="/koszyk"
+                  onUnlocked={(point) => {
+                    setUnlockedPoints((current) =>
+                      current.some((item) => item.id === point.id)
+                        ? current
+                        : [
+                            ...current,
+                            {
+                              id: point.id,
+                              name: point.name,
+                              address: point.address,
+                              description: point.description,
+                              pickup_from: point.pickup_from,
+                              pickup_to: point.pickup_to,
+                              weekdays: point.weekdays,
+                            },
+                          ],
+                    );
+                    setPickupPoint(point.id);
+                  }}
+                />
+              </div>
+            )}
+          </>
+        )}
+      </section>
+
       <div className="mt-10 grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-14">
         <div>
 
@@ -600,74 +822,9 @@ export function CartView({
       </ul>
 
       <section className="mt-12">
-        <SectionHeading as="h2" title="Odbiór" />
-
+        <SectionHeading as="h2" title="Dzień odbioru" />
         <div className="mt-6 space-y-2">
-          <p className="adj-label text-[var(--adj-ink-soft)]">Dzień</p>
-          <DayChips dates={dayOptions} selected={day} onSelect={handleDayChange} />
-        </div>
-
-        <div className="mt-8" role="radiogroup" aria-label="Punkt odbioru">
-          <div className="space-y-3">
-            {visiblePoints.map((point) => {
-              const disabled = weekday !== null && !point.weekdays.includes(weekday);
-              const selected = point.id === pickupPointId;
-              const place = [point.address, point.description].filter(Boolean).join(", ");
-              return (
-                <label
-                  key={point.id}
-                  className={`flex cursor-pointer gap-4 rounded-[4px] border bg-[var(--adj-paper-light)] px-5 py-4 ${
-                    selected
-                      ? "border-[var(--adj-khaki)] ring-1 ring-[var(--adj-khaki)]"
-                      : "border-[rgba(43,42,31,0.22)]"
-                  } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
-                >
-                  <input
-                    type="radio"
-                    name="pickup-point"
-                    className="sr-only"
-                    checked={selected}
-                    disabled={disabled}
-                    onChange={() => setPickupPoint(point.id)}
-                  />
-                  <span
-                    className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full border border-[var(--adj-ink)]/40"
-                    aria-hidden
-                  >
-                    {selected ? <span className="size-2.5 rounded-full bg-[var(--adj-khaki)]" /> : null}
-                  </span>
-                  <span>
-                    <span className="block font-heading text-[19px] font-medium">
-                      {nbsp(point.name)}
-                      {disabled ? " (nie w ten dzień)" : ""}
-                    </span>
-                    {place ? (
-                      <span className="mt-1 block text-[15px] text-[var(--adj-ink-soft)]">{place}</span>
-                    ) : null}
-                    <span className="adj-ui mt-1 block text-[14px]">
-                      {formatTimeRange(point.pickup_from, point.pickup_to)}
-                    </span>
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="mt-8 space-y-2">
-          <Label htmlFor="employer-code">Odbierasz w pracy? Wpisz kod od pracodawcy</Label>
-          <UnlockPointForm
-            isLoggedIn={isLoggedIn}
-            next="/koszyk"
-            onUnlocked={(point: UnlockedPickupPoint) => {
-              setUnlockedPoints((current) =>
-                current.some((item) => item.id === point.id)
-                  ? current
-                  : [...current, { ...point, address: null }],
-              );
-              setPickupPoint(point.id);
-            }}
-          />
+          <DayChips dates={dayOptions} selected={day} onSelect={handleDayChange} disabled={needsCode} />
         </div>
       </section>
 
@@ -870,7 +1027,11 @@ export function CartView({
           </span>
         </label>
 
-        {overstock.size > 0 || dayExpired || belowMinimum || optionsBlocked ? (
+        {needsCode ? (
+          <Button type="button" size="lg" className="mt-5 w-full" disabled>
+            Wpisz kod punktu odbioru
+          </Button>
+        ) : overstock.size > 0 || dayExpired || belowMinimum || optionsBlocked ? (
           <Button type="button" size="lg" className="mt-5 w-full" disabled>
             Przejdź do płatności · {formatPrice(payableGrosze)}
           </Button>

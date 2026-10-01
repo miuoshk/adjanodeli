@@ -15,10 +15,12 @@ export function DayChips({
   dates,
   selected,
   onSelect,
+  disabled = false,
 }: {
   dates: string[];
   selected: string | null;
   onSelect: (date: string) => void;
+  disabled?: boolean;
 }) {
   const tomorrow = warsawDateIso(1);
 
@@ -31,11 +33,17 @@ export function DayChips({
           <button
             key={date}
             type="button"
-            onClick={() => onSelect(date)}
+            disabled={disabled}
+            onClick={() => {
+              if (!disabled) {
+                onSelect(date);
+              }
+            }}
             aria-pressed={isSelected}
             aria-label={formatDayChip(date)}
             className={cn(
               "min-w-[76px] shrink-0 snap-start rounded-[6px] border px-3 py-2.5 text-center",
+              disabled && "cursor-not-allowed opacity-50",
               isSelected
                 ? "border-[var(--adj-khaki)] bg-[var(--adj-khaki)] text-[var(--adj-cream)]"
                 : "border-[rgba(43,42,31,0.22)] bg-[var(--adj-paper-light)] hover:border-[var(--adj-ink)]",

@@ -11,6 +11,7 @@ import {
 } from "@/lib/admin/queries";
 import { noticesFromLogs, stepsToArrived, type DeliveryLogRow } from "@/lib/admin/delivery-notices";
 import { sendOrderDelivered } from "@/lib/email/send-order-delivered";
+import { sendPickupPointChanged } from "@/lib/email/send-pickup-point-changed";
 import { isOrderStatus } from "@/lib/orders/status-labels";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -290,6 +291,53 @@ export async function forceIssueOrder(orderId: string, status: string) {
 
   revalidatePath("/admin", "layout");
   return { ok: true as const };
+}
+
+export async function changeOrderPickupPoint(input: {
+  orderId: string;
+  pointId: string;
+  notify: boolean;
+}) {
+  await requireStaffPermission("orders", `/admin/zamowienia/${input.orderId}`, "manage");
+
+  if (!/^[0-9a-f-]{36}$/i.test(input.orderId) || !/^[0-9a-f-]{36}$/i.test(input.pointId)) {
+    return { ok: false as const, message: "Zły punkt." };
+  }
+
+  const supabase = await createServerClient();
+  const { error } = await supabase.rpc("change_order_pickup_point", {
+    p_order_id: input.orderId,
+    p_point_id: input.pointId,
+    p_note: null,
+  });
+  if (error) {
+    console.error("change_order_pickup_point", error.message);
+    if (error.message.includes("POINT_NOT_AVAILABLE")) {
+      return { ok: false as const, message: "Ten punkt nie działa w dniu zamówienia." };
+    }
+    if (error.message.includes("STATUS_NOT_ALLOWED")) {
+      return { ok: false as const, message: "Punkt można zmienić tylko przy opłaconym albo w produkcji." };
+    }
+    if (error.message.includes("NOT_AUTHORIZED")) {
+      return { ok: false as const, message: "Nie masz pełnego dostępu do zamówień." };
+    }
+    return { ok: false as const, message: "Nie udało się zmienić punktu." };
+  }
+
+  revalidatePath(`/admin/zamowienia/${input.orderId}`);
+  revalidatePath("/admin/paczki");
+  revalidatePath("/admin/produkcja");
+  revalidatePath("/admin/wydawanie");
+
+  if (!input.notify) {
+    return { ok: true as const, message: "Punkt odbioru zmieniony." };
+  }
+
+  const mail = await sendPickupPointChanged(input.orderId);
+  if (!mail.ok) {
+    return { ok: true as const, message: "Punkt zmieniony. Mail do klienta nie wyszedł." };
+  }
+  return { ok: true as const, message: "Punkt odbioru zmieniony. Mail wysłany." };
 }
 
 const SPECIAL_STATUSES = ["new", "contacted", "closed"] as const;

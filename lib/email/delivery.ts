@@ -5,6 +5,7 @@ export const EMAIL_KINDS = [
   "special_request_owner",
   "manual_refund_owner",
   "paid_after_expiry_owner",
+  "pickup_point_changed",
   "test",
 ] as const;
 

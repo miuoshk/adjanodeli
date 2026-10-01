@@ -3,13 +3,14 @@ import Link from "next/link";
 import { PageHeader } from "@/components/admin/page-header";
 import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth";
-import { getOwnerPoints } from "@/lib/admin/owner-queries";
+import { getOwnerPoints, getOwnerSettings } from "@/lib/admin/owner-queries";
 import { formatTimeRange } from "@/lib/format";
 import { WEEKDAYS } from "@/lib/admin/catalog";
 
 export default async function PickupPointsPage() {
   await requireRole("owner", "/admin/punkty-odbioru");
-  const points = await getOwnerPoints();
+  const [points, settings] = await Promise.all([getOwnerPoints(), getOwnerSettings()]);
+  const requirePointCode = settings?.require_point_code ?? true;
 
   return (
     <div>
@@ -30,6 +31,9 @@ export default async function PickupPointsPage() {
               className="space-y-3 rounded-xl border border-[var(--adj-cream-dark)] bg-card p-4"
             >
               <p className="font-medium">{point.name}</p>
+              {requirePointCode && !point.access_code ? (
+                <p className="text-sm text-[var(--adj-red)]">Bez kodu nikt nie wybierze tego punktu.</p>
+              ) : null}
               <p className="text-sm leading-relaxed text-muted-foreground">
                 {point.address}
                 <br />
@@ -63,7 +67,14 @@ export default async function PickupPointsPage() {
             <tbody>
               {points.map((point) => (
                 <tr key={point.id} className="border-b border-[var(--adj-cream-dark)] last:border-0">
-                  <td className="px-4 py-3 font-medium">{point.name}</td>
+                  <td className="px-4 py-3 font-medium">
+                    {point.name}
+                    {requirePointCode && !point.access_code ? (
+                      <p className="mt-1 font-normal text-[var(--adj-red)]">
+                        Bez kodu nikt nie wybierze tego punktu.
+                      </p>
+                    ) : null}
+                  </td>
                   <td className="px-4 py-3">{point.address}</td>
                   <td className="px-4 py-3">{formatTimeRange(point.pickup_from, point.pickup_to)}</td>
                   <td className="px-4 py-3">

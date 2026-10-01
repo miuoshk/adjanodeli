@@ -650,6 +650,7 @@ export type SettingsPayload = {
   ownerEmail: string;
   ownerPhone: string;
   customerCancellationEnabled: boolean;
+  requirePointCode: boolean;
   labelCustomerInfo: "masked" | "masked_email" | "full";
 };
 
@@ -702,6 +703,7 @@ export async function saveSettings(payload: SettingsPayload) {
       owner_email: payload.ownerEmail.trim(),
       owner_phone: payload.ownerPhone.trim() || null,
       customer_cancellation_enabled: payload.customerCancellationEnabled,
+      require_point_code: payload.requirePointCode,
       label_customer_info: payload.labelCustomerInfo,
     })
     .eq("id", 1);

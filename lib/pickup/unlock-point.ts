@@ -9,6 +9,7 @@ import { createServerClient } from "@/lib/supabase/server";
 export type UnlockedPickupPoint = {
   id: string;
   name: string;
+  address: string | null;
   description: string | null;
   pickup_from: string;
   pickup_to: string;
@@ -50,6 +51,7 @@ export async function unlockPickupPoint(code: string): Promise<UnlockPickupPoint
     ok: true,
     id: point.id,
     name: point.name,
+    address: point.address ?? null,
     description: point.description,
     pickup_from: point.pickup_from,
     pickup_to: point.pickup_to,
