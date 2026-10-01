@@ -264,7 +264,7 @@ export default async function HelpPage() {
             Wejdź w <strong>Zespół</strong> (obok Ustawień). To widzisz tylko Ty.
           </li>
           <li>
-            <strong>Dodaj pracownika</strong>: imię i nazwisko, e-mail (to login) i uprawnienia. Zestaw „Produkcja i pakowanie” daje Dziś, Produkcję i Paczki. „Kierowca” daje Paczki i Wydawanie.
+            <strong>Dodaj pracownika</strong>: imię i nazwisko, e-mail (to login) i uprawnienia. Podgląd pozwala oglądać i drukować, pełny pozwala też zmieniać. „Podgląd i wydawanie” daje oglądanie Dziś, zamówień, planu i etykiet oraz wydawanie paczek. „Produkcja i pakowanie” daje oglądanie Dziś oraz pełną produkcję i paczki. „Kierowca” daje pełne paczki i wydawanie. „Pełny dostęp pracownika” daje pełny dostęp do wszystkich sześciu sekcji.
           </li>
           <li>
             <strong>Wygeneruj</strong> hasło, <strong>Kopiuj</strong> i przekaż je osobiście albo telefonicznie. Na ekranie widać je tylko raz.

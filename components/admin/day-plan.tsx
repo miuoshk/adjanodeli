@@ -11,6 +11,7 @@ type DayPlanProps = {
   points: DashboardPointRow[];
   access: {
     production: boolean;
+    productionManage: boolean;
     packages: boolean;
     handover: boolean;
   };
@@ -68,7 +69,7 @@ export function DayPlan({ day, paidReadyCount, points, access }: DayPlanProps) {
     <ol className="mt-6 grid grid-cols-1 gap-3">
       <Step index={1} title="Produkcja" done={productionDone}>
         {paidReadyCount > 0 ? (
-          access.production ? (
+          access.productionManage ? (
             <StartProductionButton day={day} paidCount={paidReadyCount} label="Rozpocznij produkcję" />
           ) : (
             <p>Opłacone: {ordersPhrase(paidReadyCount)}</p>

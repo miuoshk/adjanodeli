@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import {
   canAccessSection,
   firstAllowedSection,
+  type AccessLevel,
   type StaffPermission,
 } from "@/lib/admin/staff-access";
 import { safeNextPath } from "@/lib/safe-next";
@@ -114,9 +115,13 @@ export async function requireRole(role: AppRole, next = "/") {
   return profile;
 }
 
-export async function requireStaffPermission(permission: StaffPermission, next = "/admin") {
+export async function requireStaffPermission(
+  permission: StaffPermission,
+  next = "/admin",
+  level: AccessLevel = "view",
+) {
   const profile = await requireRole("staff", next);
-  if (!canAccessSection(profile, permission)) {
+  if (!canAccessSection(profile, permission, level)) {
     redirect("/admin/brak-dostepu");
   }
   return profile;
@@ -125,9 +130,10 @@ export async function requireStaffPermission(permission: StaffPermission, next =
 export async function requireAnyStaffPermission(
   permissions: readonly StaffPermission[],
   next = "/admin",
+  level: AccessLevel = "view",
 ) {
   const profile = await requireRole("staff", next);
-  if (!permissions.some((permission) => canAccessSection(profile, permission))) {
+  if (!permissions.some((permission) => canAccessSection(profile, permission, level))) {
     redirect("/admin/brak-dostepu");
   }
   return profile;

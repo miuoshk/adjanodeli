@@ -3,11 +3,13 @@ import Link from "next/link";
 import { AdminDayPicker } from "@/components/admin/admin-day-picker";
 import { OrderActions } from "@/components/admin/order-actions";
 import { UnpaidDayNote } from "@/components/admin/unpaid-day-note";
+import { ViewOnlyNote } from "@/components/admin/view-only-note";
 import { OrdersFilters } from "@/components/admin/orders-filters";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { getAdminFilterOptions, getAdminOrderList, getNearestOrderDay, getUnpaidOrderCount } from "@/lib/admin/queries";
 import { requireStaffPermission } from "@/lib/auth";
+import { isViewOnly } from "@/lib/admin/staff-access";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl, formatPrice } from "@/lib/format";
 import { isOrderStatus } from "@/lib/orders/status-labels";
@@ -85,6 +87,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
   const profile = await requireStaffPermission("orders", "/admin/zamowienia");
   const params = await searchParams;
   const isOwner = profile.role === "owner";
+  const canManage = !isViewOnly(profile, "orders");
 
   const { dates, points } = await getAdminFilterOptions();
   const day =
@@ -121,6 +124,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
         ) : null}
       </PageHeader>
       <AdminDayPicker selected={day === "wszystkie" ? "" : day} basePath="/admin/zamowienia" />
+      <ViewOnlyNote show={isViewOnly(profile, "orders")} />
       <UnpaidDayNote count={unpaidCount} />
       <OrdersFilters
         dates={dates}
@@ -151,7 +155,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
                   <TableHead>Suma</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Kod</TableHead>
-                  <TableHead className="text-right">Akcje</TableHead>
+                  {canManage ? <TableHead className="text-right">Akcje</TableHead> : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -181,14 +185,16 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
                     <TableCell className="font-heading tracking-widest">
                       {order.pickupCode ?? "—"}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <OrderActions
-                        orderId={order.id}
-                        status={order.status}
-                        isOwner={isOwner}
-                        variant="menu"
-                      />
-                    </TableCell>
+                    {canManage ? (
+                      <TableCell className="text-right">
+                        <OrderActions
+                          orderId={order.id}
+                          status={order.status}
+                          isOwner={isOwner}
+                          variant="menu"
+                        />
+                      </TableCell>
+                    ) : null}
                   </TableRow>
                 ))}
               </TableBody>

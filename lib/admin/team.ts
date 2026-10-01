@@ -1,4 +1,4 @@
-import { normalizePermissions, type StaffPermission } from "@/lib/admin/staff-access";
+import { grantsFromPermissions, type SectionGrant } from "@/lib/admin/staff-access";
 import { createClient } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -7,7 +7,7 @@ export type TeamMember = {
   fullName: string;
   email: string;
   role: "staff" | "owner";
-  permissions: StaffPermission[];
+  grants: SectionGrant[];
   isActive: boolean;
   lastSignInLabel: string;
 };
@@ -44,7 +44,7 @@ function toMember(
     fullName: row.full_name?.trim() || "Bez imienia",
     email: row.email,
     role: row.role,
-    permissions: normalizePermissions(row.staff_permissions),
+    grants: grantsFromPermissions(row.staff_permissions),
     isActive: row.is_active,
     lastSignInLabel: formatSignIn(lastSignInAt),
   };

@@ -11,7 +11,11 @@ import {
   STAFF_PERMISSION_LABELS,
   STAFF_PERMISSIONS,
   STAFF_PRESETS,
+  choicesFromGrants,
   generateTempPassword,
+  permissionChip,
+  permissionsFromChoices,
+  type SectionChoice,
   type StaffPermission,
 } from "@/lib/admin/staff-access";
 import {
@@ -22,19 +26,49 @@ import {
 } from "@/lib/admin/team-actions";
 import type { TeamMember } from "@/lib/admin/team";
 
-function togglePermission(current: StaffPermission[], permission: StaffPermission): StaffPermission[] {
-  return current.includes(permission)
-    ? current.filter((item) => item !== permission)
-    : STAFF_PERMISSIONS.filter((item) => item === permission || current.includes(item));
+const CHOICES: { id: SectionChoice; label: string }[] = [
+  { id: "none", label: "Brak" },
+  { id: "view", label: "Podgląd" },
+  { id: "manage", label: "Pełny" },
+];
+
+function ChoiceButton({
+  selected,
+  label,
+  onClick,
+}: {
+  selected: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        selected
+          ? "min-h-12 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground"
+          : "min-h-12 rounded-md bg-card px-3 text-sm ring-1 ring-[var(--adj-cream-dark)]"
+      }
+    >
+      {label}
+    </button>
+  );
 }
 
 function PermissionPicker({
-  selected,
+  choices,
   onChange,
+  namePrefix,
 }: {
-  selected: StaffPermission[];
-  onChange: (value: StaffPermission[]) => void;
+  choices: Record<StaffPermission, SectionChoice>;
+  onChange: (value: Record<StaffPermission, SectionChoice>) => void;
+  namePrefix: string;
 }) {
+  function setChoice(section: StaffPermission, choice: SectionChoice) {
+    onChange({ ...choices, [section]: choice });
+  }
+
   return (
     <fieldset className="space-y-3">
       <legend className="text-sm font-medium">Uprawnienia</legend>
@@ -45,23 +79,58 @@ function PermissionPicker({
             type="button"
             variant="outline"
             className="min-h-12 justify-start"
-            onClick={() => onChange([...preset.permissions])}
+            onClick={() => onChange(choicesFromGrants(preset.grants))}
           >
             {preset.label}
           </Button>
         ))}
       </div>
-      <div className="space-y-1">
-        {STAFF_PERMISSIONS.map((permission) => (
-          <label key={permission} className="flex min-h-12 items-center gap-3">
-            <input
-              type="checkbox"
-              className="size-5"
-              checked={selected.includes(permission)}
-              onChange={() => onChange(togglePermission(selected, permission))}
-            />
-            {STAFF_PERMISSION_LABELS[permission]}
-          </label>
+      <div className="hidden overflow-hidden rounded-xl border border-[var(--adj-cream-dark)] md:block">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-[var(--adj-cream-dark)]">
+              <th className="px-3 py-2 font-medium">Sekcja</th>
+              <th className="px-3 py-2 font-medium">Brak</th>
+              <th className="px-3 py-2 font-medium">Podgląd</th>
+              <th className="px-3 py-2 font-medium">Pełny</th>
+            </tr>
+          </thead>
+          <tbody>
+            {STAFF_PERMISSIONS.map((section) => (
+              <tr key={section} className="border-b border-[var(--adj-cream-dark)] last:border-0">
+                <th className="px-3 py-2 text-left font-medium">{STAFF_PERMISSION_LABELS[section]}</th>
+                {CHOICES.map((choice) => (
+                  <td key={choice.id} className="px-3 py-2">
+                    <input
+                      type="radio"
+                      name={`${namePrefix}-${section}`}
+                      className="size-5"
+                      checked={choices[section] === choice.id}
+                      onChange={() => setChoice(section, choice.id)}
+                      aria-label={`${STAFF_PERMISSION_LABELS[section]}: ${choice.label}`}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="space-y-3 md:hidden">
+        {STAFF_PERMISSIONS.map((section) => (
+          <div key={section} className="space-y-2">
+            <p className="text-sm font-medium">{STAFF_PERMISSION_LABELS[section]}</p>
+            <div className="grid grid-cols-3 gap-2">
+              {CHOICES.map((choice) => (
+                <ChoiceButton
+                  key={choice.id}
+                  label={choice.label}
+                  selected={choices[section] === choice.id}
+                  onClick={() => setChoice(section, choice.id)}
+                />
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </fieldset>
@@ -113,7 +182,7 @@ function OwnerFields({
 function AddEmployee({ onCreated }: { onCreated: (password: string) => void }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [permissions, setPermissions] = useState<StaffPermission[]>([...STAFF_PRESETS[0].permissions]);
+  const [choices, setChoices] = useState(() => choicesFromGrants(STAFF_PRESETS[0].grants));
   const [password, setPassword] = useState(() => generateTempPassword());
   const [ownerAccess, setOwnerAccess] = useState(false);
   const [confirmOwner, setConfirmOwner] = useState(false);
@@ -128,7 +197,7 @@ function AddEmployee({ onCreated }: { onCreated: (password: string) => void }) {
       const result = await addTeamMember({
         fullName,
         email,
-        permissions,
+        permissions: permissionsFromChoices(choices),
         password,
         ownerAccess,
         confirmOwner,
@@ -148,6 +217,7 @@ function AddEmployee({ onCreated }: { onCreated: (password: string) => void }) {
       setOwnerAccess(false);
       setConfirmOwner(false);
       setConfirmShopAccount(false);
+      setChoices(choicesFromGrants(STAFF_PRESETS[0].grants));
       setPassword(generateTempPassword());
     });
   }
@@ -179,7 +249,7 @@ function AddEmployee({ onCreated }: { onCreated: (password: string) => void }) {
           className="min-h-12"
         />
       </div>
-      <PermissionPicker selected={permissions} onChange={setPermissions} />
+      <PermissionPicker choices={choices} onChange={setChoices} namePrefix="nowy" />
       <TempPasswordField id="team-password" value={password} onChange={setPassword} />
       <OwnerFields
         ownerAccess={ownerAccess}
@@ -203,7 +273,7 @@ function AddEmployee({ onCreated }: { onCreated: (password: string) => void }) {
 
 function MemberCard({ member, isSelf }: { member: TeamMember; isSelf: boolean }) {
   const [fullName, setFullName] = useState(member.fullName);
-  const [permissions, setPermissions] = useState<StaffPermission[]>(member.permissions);
+  const [choices, setChoices] = useState(() => choicesFromGrants(member.grants));
   const [ownerAccess, setOwnerAccess] = useState(member.role === "owner");
   const [confirmOwner, setConfirmOwner] = useState(false);
   const [password, setPassword] = useState("");
@@ -223,9 +293,9 @@ function MemberCard({ member, isSelf }: { member: TeamMember; isSelf: boolean })
           {member.role === "owner" ? (
             <span className="rounded-full bg-secondary px-3 py-1 text-sm text-secondary-foreground">Właścicielka</span>
           ) : (
-            member.permissions.map((permission) => (
-              <span key={permission} className="rounded-full bg-secondary px-3 py-1 text-sm text-secondary-foreground">
-                {STAFF_PERMISSION_LABELS[permission]}
+            member.grants.map((grant) => (
+              <span key={grant.section} className="rounded-full bg-secondary px-3 py-1 text-sm text-secondary-foreground">
+                {permissionChip(grant.section, grant.level)}
               </span>
             ))
           )}
@@ -236,7 +306,7 @@ function MemberCard({ member, isSelf }: { member: TeamMember; isSelf: boolean })
         <Label htmlFor={`name-${member.id}`}>Imię i nazwisko</Label>
         <Input id={`name-${member.id}`} value={fullName} onChange={(event) => setFullName(event.target.value)} className="min-h-12" />
       </div>
-      <PermissionPicker selected={permissions} onChange={setPermissions} />
+      <PermissionPicker choices={choices} onChange={setChoices} namePrefix={member.id} />
       {isSelf ? (
         <p className="text-sm leading-relaxed">To Twoje konto. Roli właścicielki nie odbierzesz sobie tutaj.</p>
       ) : (
@@ -258,7 +328,7 @@ function MemberCard({ member, isSelf }: { member: TeamMember; isSelf: boolean })
             const result = await updateTeamMember({
               id: member.id,
               fullName,
-              permissions,
+              permissions: permissionsFromChoices(choices),
               ownerAccess: isSelf ? true : ownerAccess,
               confirmOwner: isSelf ? true : confirmOwner,
             });

@@ -7,22 +7,22 @@ Nazwa marki: AdjanoDeli. Brand nadrzędny: Adjano.
 
 ## 2. Role
 - customer — zalogowany klient (e-mail OTP). Widzi menu, składa zamówienia, widzi swoje zamówienia.
-- staff — pracownik. Widzi tylko te sekcje panelu, które ma w `profiles.staff_permissions`. Nie edytuje produktów, ustawień, statystyk ani zespołu. Anulowanie i zwrot zostają przy owner.
+- staff — pracownik. Widzi tylko te sekcje panelu, które ma w `profiles.staff_permissions`, na poziomie `view` (podgląd) albo `manage` (pełny). Pełny obejmuje podgląd. Nie edytuje produktów, ustawień, statystyk ani zespołu. Anulowanie i zwrot zostają przy owner.
 - owner — właścicielka. Wszystko, także gdy lista uprawnień jest pusta. Produkty, limity, punkty, ustawienia, anulowanie, zwroty, eksporty i ekran Zespół.
 Role zostają trzy. Owner nadaje staff i drugiego ownera na `/admin/zespol` (imię, e-mail jako login, uprawnienia, hasło tymczasowe). Wyłączone konto (`is_active = false`) nie wchodzi do panelu: następne żądanie kończy sesję, a logowanie dostaje ten sam komunikat co przy złym haśle. `must_change_password` po nadaniu hasła kieruje na `/admin/konto` i nie puszcza dalej, dopóki pracownik nie ustawi własnego hasła (min. 10 znaków, dwa razy, bez obecnego hasła).
 
-Uprawnienia sekcji (zapis pojedynczych kluczy; zestawy to tylko skrót w formularzu):
+Uprawnienia sekcji, zapis `sekcja:poziom` (`view` albo `manage`), najwyżej jeden wpis na sekcję. Zestawy to skrót w formularzu i nadpisują tabelę.
 
-| Klucz | Sekcja | Zestaw |
-|---|---|---|
-| `dashboard` | Dziś | Produkcja i pakowanie, Pełny dostęp pracownika |
-| `orders` | Zamówienia | Pełny dostęp pracownika |
-| `production` | Produkcja | Produkcja i pakowanie, Pełny dostęp pracownika |
-| `packages` | Paczki i etykiety | Produkcja i pakowanie, Kierowca, Pełny dostęp pracownika |
-| `handover` | Wydawanie | Kierowca, Pełny dostęp pracownika |
-| `special_requests` | Zamówienia specjalne | Pełny dostęp pracownika |
+| Klucz | Sekcja | Podgląd | Pełny dodatkowo |
+|---|---|---|---|
+| `dashboard` | Dziś | plan dnia, liczby | przyciski kroków według poziomów ich sekcji |
+| `orders` | Zamówienia | lista, szczegóły, historia, maile | zmiana statusu, „Wyślij ponownie” |
+| `production` | Produkcja | plan, wydruk planu | „Start produkcji dnia” |
+| `packages` | Paczki i etykiety | lista paczek, wydruk etykiet | „Jestem na miejscu — powiadom klientów”, „Wyślij ponownie” |
+| `handover` | Wydawanie | szukanie po kodzie i nazwisku, podgląd paczki | „Wydaj” |
+| `special_requests` | Zamówienia specjalne | lista i szczegóły | zmiana statusu, odpowiedź |
 
-Zestawy: Produkcja i pakowanie (Dziś, Produkcja, Paczki), Kierowca (Paczki, Wydawanie), Pełny dostęp pracownika (wszystkie sześć). Pomoc widzi każdy, kto jest w panelu. Wejście na `/admin` bez `dashboard` idzie do pierwszej sekcji z tej kolejności.
+Drukowanie jest podglądem. Zestawy: Podgląd i wydawanie (Dziś, Zamówienia, Produkcja i Paczki na podglądzie, Wydawanie pełne), Produkcja i pakowanie (Dziś podgląd, Produkcja pełny, Paczki pełny), Kierowca (Paczki pełny, Wydawanie pełny), Pełny dostęp pracownika (wszystkie sześć pełne). Pomoc widzi każdy, kto jest w panelu. Wejście na `/admin` bez `dashboard` idzie do pierwszej sekcji z tej kolejności. Przy podglądzie na górze sekcji jest „Tylko podgląd”, a przyciski zmian są ukryte.
 
 Panel /admin ma osobne logowanie loginem i hasłem (/admin/logowanie). Sklep zostaje na OTP. Login to e-mail konta staff/owner w Supabase albo część przed @. Hasło jest hasłem tego użytkownika w Auth. Po zalogowaniu sesja Supabase z profiles.role = staff albo owner i `is_active`.
 
@@ -36,7 +36,7 @@ Wszystkie tabele: id uuid primary key default gen_random_uuid(), created_at time
 - phone text
 - role text not null default 'customer' check (role in ('customer','staff','owner'))
 - marketing_consent boolean default false
-- staff_permissions text[] not null default '{}' — klucze sekcji panelu; check, że każdy element jest z listy dashboard, orders, production, packages, handover, special_requests
+- staff_permissions text[] not null default '{}' — wpisy `sekcja:poziom` (`view` albo `manage`); check, że sekcja jest z listy dashboard, orders, production, packages, handover, special_requests, poziom to view albo manage, i jest najwyżej jeden wpis na sekcję. Wpis bez poziomu sprzed tej zmiany jest `manage`.
 - is_active boolean not null default true — false blokuje logowanie do panelu
 - must_change_password boolean not null default false — po haśle tymczasowym panel wymaga zmiany
 Tworzony triggerem handle_new_user po insercie do auth.users. Trigger `protect_profile_privileges` nie pozwala staff zmienić sobie roli, uprawnień, `is_active` ani `must_change_password`. Te kolumny zapisuje klient serwisowy (ekran Zespół i zmiana własnego hasła).
@@ -256,7 +256,7 @@ Klient może anulować opłacone zamówienie (status paid) do cutoff dnia poprze
 - Logowanie sklepu: Supabase Auth, e-mail OTP (6–8 cyfr, tyle ile wysyła Auth), shouldCreateUser: true. Po pierwszym logowaniu, jeśli profiles.full_name jest null → przekierowanie na /konto/uzupelnij (imię, telefon).
 - Logowanie panelu /admin: /admin/logowanie, login + hasło z konta staff/owner w Supabase Auth (funkcja admin_login_email). Nie używa OTP ani zmiennych ADMIN_*. Niezalogowany na /admin/* → /admin/logowanie.
 - Helper is_staff() returns boolean — true dla role in ('staff','owner'); is_owner() — role = 'owner'. Polityki RLS na danych zostają na is_staff().
-- has_staff_permission(p text) returns boolean — owner z aktywnym kontem zawsze true; staff z aktywnym kontem, gdy p jest w staff_permissions. Strony sekcji i akcje serwera sprawdzają to uprawnienie w aplikacji (`requireStaffPermission`). Samo ukrycie linku w menu nie wystarcza. Brak uprawnienia → /admin/brak-dostepu. Nieaktywne konto → wylogowanie i /admin/logowanie.
+- has_staff_permission(p_section text, p_level text default 'view') returns boolean — owner z aktywnym kontem zawsze true; staff z aktywnym kontem, gdy ma `p_section:p_level` albo (przy `view`) `p_section:manage`. Nieaktywne konto: false. Strony sekcji sprawdzają podgląd, akcje które coś zmieniają sprawdzają `manage` (`requireStaffPermission`). Samo ukrycie linku w menu nie wystarcza. Brak uprawnienia → /admin/brak-dostepu. Nieaktywne konto → wylogowanie i /admin/logowanie.
 - RLS:
   - profiles: select/update własny wiersz; staff select wszystkie.
   - settings, categories (is_active), products (is_active), allergens, product_tags: select dla wszystkich (anon też — menu jest publiczne). Update/insert/delete: owner.
@@ -291,7 +291,7 @@ Admin:
 - /admin/produkcja — zestawienie produkcyjne na dzień + wersja do druku (/admin/produkcja/drukuj?day=). Błąd `production_summary` nie jest pokazywany jako brak zamówień. Ta sama linia „Niezapłacone: N”.
 - /admin/paczki — lista paczek per punkt na dzień, „Jestem na miejscu — powiadom klientów” (paid idzie najpierw na in_production, potem delivered; mail raz), druk etykiet w dwóch formatach (`?format=etykieta` 75×60 mm, jedna na stronę, albo `?format=a4`, 8 na stronie). Dane klienta na etykiecie bierze `settings.label_customer_info` (domyślnie skrócone imię i nazwisko oraz skrócony e-mail). Na dole jest numer zamówienia. Ta sama linia „Niezapłacone: N”.
 - /admin/pomoc — instrukcja dla właścicielki (dzień, etykiety, dojazd, wydawanie, maile, anulowanie, zespół). /admin/pomoc/trasa — ściąga A4 dla kierowcy, telefon z settings.owner_phone. Link „Pomoc” w menu panelu, dla każdego zalogowanego w panelu.
-- /admin/zespol — owner: lista pracowników, dodanie, uprawnienia, hasło tymczasowe, wyłączenie. Link obok Ustawień.
+- /admin/zespol — owner: lista pracowników, dodanie, poziomy Brak / Podgląd / Pełny, hasło tymczasowe, wyłączenie. Na liście etykiety „Produkcja: podgląd”. Link obok Ustawień.
 - /admin/konto — zmiana hasła dla każdego w panelu. Przy must_change_password panel nie puszcza gdzie indziej.
 - /admin/brak-dostepu — brak uprawnienia do sekcji.
 - /admin/wydawanie — mobilny ekran: wpisz/zeskanuj kod → szczegóły → "Wydano"

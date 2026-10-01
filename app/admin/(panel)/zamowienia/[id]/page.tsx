@@ -8,10 +8,12 @@ import { EmailLogList } from "@/components/admin/email-log-list";
 import { OrderActions } from "@/components/admin/order-actions";
 import { OrderMailButtons } from "@/components/admin/order-mail-buttons";
 import { PageHeader } from "@/components/admin/page-header";
+import { ViewOnlyNote } from "@/components/admin/view-only-note";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { getAdminOrderDetail, getOrderEmailLog } from "@/lib/admin/queries";
 import { stripePaymentUrl } from "@/lib/admin/stripe-url";
 import { requireStaffPermission } from "@/lib/auth";
+import { isViewOnly } from "@/lib/admin/staff-access";
 import { parseDateOnly } from "@/lib/dates";
 import { EXPIRED_PAID_NOTE } from "@/lib/email/send-paid-after-expiry";
 import { formatDatePl, formatPrice, formatTimeRange } from "@/lib/format";
@@ -26,6 +28,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
   const { id } = await params;
   const profile = await requireStaffPermission("orders", `/admin/zamowienia/${id}`);
   const isOwner = profile.role === "owner";
+  const canManage = !isViewOnly(profile, "orders");
   const detail = await getAdminOrderDetail(id);
   const mails = await getOrderEmailLog(id);
 
@@ -45,6 +48,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
       <PageHeader title={`Zamówienie #${order.order_number}`}>
         <StatusBadge status={order.status} />
       </PageHeader>
+      <ViewOnlyNote show={!canManage} />
 
       {paidAfterExpiry ? (
         <p className="border border-[var(--adj-red)] bg-[var(--adj-paper-light)] px-4 py-3 text-sm leading-relaxed">
@@ -110,13 +114,15 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
       <section className="space-y-3">
         <h2 className="text-2xl font-semibold">Maile</h2>
         <EmailLogList rows={mails} />
-        <OrderMailButtons orderId={order.id} status={order.status} />
+        {canManage ? <OrderMailButtons orderId={order.id} status={order.status} /> : null}
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-2xl font-semibold">Akcje</h2>
-        <OrderActions orderId={order.id} status={order.status} isOwner={isOwner} variant="panel" />
-      </section>
+      {canManage ? (
+        <section className="space-y-3">
+          <h2 className="text-2xl font-semibold">Akcje</h2>
+          <OrderActions orderId={order.id} status={order.status} isOwner={isOwner} variant="panel" />
+        </section>
+      ) : null}
 
       <section className="space-y-3">
         <h2 className="text-2xl font-semibold">Historia</h2>

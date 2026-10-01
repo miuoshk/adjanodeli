@@ -1,5 +1,7 @@
 import { PageHeader } from "@/components/admin/page-header";
 import { SpecialRequestStatus } from "@/components/admin/special-request-status";
+import { ViewOnlyNote } from "@/components/admin/view-only-note";
+import { isViewOnly } from "@/lib/admin/staff-access";
 import { requireStaffPermission } from "@/lib/auth";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl } from "@/lib/format";
@@ -12,19 +14,27 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default async function SpecialRequestsAdminPage() {
-  await requireStaffPermission("special_requests", "/admin/zamowienia-specjalne");
+  const profile = await requireStaffPermission("special_requests", "/admin/zamowienia-specjalne");
+  const canManage = !isViewOnly(profile, "special_requests");
   const supabase = await createServerClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("special_requests")
     .select("*")
     .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("special_requests", error.message);
+  }
 
   const rows = data ?? [];
 
   return (
     <div>
       <PageHeader title="Zamówienia specjalne" />
-      {rows.length === 0 ? (
+      <ViewOnlyNote show={!canManage} />
+      {error ? (
+        <p className="text-sm">Nie udało się wczytać zapytań. Odśwież stronę.</p>
+      ) : rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nie ma jeszcze zapytań.</p>
       ) : (
         <ul className="space-y-4">
@@ -45,7 +55,7 @@ export default async function SpecialRequestsAdminPage() {
                       : ""}
                   </p>
                 </div>
-                <SpecialRequestStatus id={row.id} status={row.status ?? "new"} />
+                {canManage ? <SpecialRequestStatus id={row.id} status={row.status ?? "new"} /> : null}
               </div>
               <p className="whitespace-pre-wrap">{row.description}</p>
               <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm">

@@ -4,8 +4,10 @@ import { AdminDayPicker } from "@/components/admin/admin-day-picker";
 import { PageHeader } from "@/components/admin/page-header";
 import { ProductionTable } from "@/components/admin/production-table";
 import { UnpaidDayNote } from "@/components/admin/unpaid-day-note";
+import { ViewOnlyNote } from "@/components/admin/view-only-note";
 import { getNearestOrderDay, getProductionData } from "@/lib/admin/queries";
 import { requireStaffPermission } from "@/lib/auth";
+import { isViewOnly } from "@/lib/admin/staff-access";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -27,7 +29,7 @@ function orderCountLabel(count: number): string {
 }
 
 export default async function ProductionPage({ searchParams }: ProductionPageProps) {
-  await requireStaffPermission("production", "/admin/produkcja");
+  const profile = await requireStaffPermission("production", "/admin/produkcja");
   const params = await searchParams;
   const day =
     params.dzien && /^\d{4}-\d{2}-\d{2}$/.test(params.dzien)
@@ -45,7 +47,8 @@ export default async function ProductionPage({ searchParams }: ProductionPagePro
       </PageHeader>
 
       <AdminDayPicker selected={day} basePath="/admin/produkcja" />
-      <div className="mt-3">
+      <div className="mt-3 space-y-1">
+        <ViewOnlyNote show={isViewOnly(profile, "production")} />
         <UnpaidDayNote count={data.unpaidCount} />
       </div>
 

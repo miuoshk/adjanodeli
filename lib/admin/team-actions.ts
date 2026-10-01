@@ -5,8 +5,7 @@ import { z } from "zod";
 
 import { requireRole } from "@/lib/auth";
 import {
-  STAFF_PERMISSIONS,
-  normalizePermissions,
+  encodeStaffPermissions,
   tempPasswordCharsetOk,
 } from "@/lib/admin/staff-access";
 import { createClient } from "@/lib/supabase/admin";
@@ -22,10 +21,14 @@ const CONFIRM_OWNER = "Potwierdź pełny dostęp właściciela.";
 const SHOP_ACCOUNT = "Ten adres ma już konto w sklepie. Nadać mu dostęp do panelu?";
 const ALREADY_TEAM = "Ten adres jest już w zespole.";
 
+const grantToken = z
+  .string()
+  .regex(/^(dashboard|orders|production|packages|handover|special_requests):(view|manage)$/);
+
 const addSchema = z.object({
   fullName: z.string().trim().min(1, "Podaj imię i nazwisko.").max(120),
   email: z.string().trim().email("Podaj prawidłowy e-mail."),
-  permissions: z.array(z.enum(STAFF_PERMISSIONS)),
+  permissions: z.array(grantToken),
   password: z.string().refine(tempPasswordCharsetOk, "Wygeneruj hasło."),
   ownerAccess: z.boolean(),
   confirmOwner: z.boolean(),
@@ -35,7 +38,7 @@ const addSchema = z.object({
 const editSchema = z.object({
   id: z.string().uuid(),
   fullName: z.string().trim().min(1, "Podaj imię i nazwisko.").max(120),
-  permissions: z.array(z.enum(STAFF_PERMISSIONS)),
+  permissions: z.array(grantToken),
   ownerAccess: z.boolean(),
   confirmOwner: z.boolean(),
 });
@@ -94,7 +97,7 @@ export async function addTeamMember(input: z.infer<typeof addSchema>): Promise<T
   const patch: ProfileUpdate = {
     role,
     full_name: data.fullName,
-    staff_permissions: normalizePermissions(data.permissions),
+    staff_permissions: encodeStaffPermissions(data.permissions),
     is_active: true,
     must_change_password: true,
   };
@@ -174,7 +177,7 @@ export async function updateTeamMember(input: z.infer<typeof editSchema>): Promi
   const saved = await saveProfile(admin, target.id, {
     full_name: data.fullName,
     role: data.ownerAccess ? "owner" : "staff",
-    staff_permissions: normalizePermissions(data.permissions),
+    staff_permissions: encodeStaffPermissions(data.permissions),
   });
   if (!saved) {
     return { ok: false, error: SAVE_ERROR };

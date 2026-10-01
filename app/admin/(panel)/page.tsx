@@ -3,11 +3,12 @@ import Link from "next/link";
 import { DayPlan } from "@/components/admin/day-plan";
 import { DashboardDayPicker } from "@/components/admin/dashboard-day-picker";
 import { UnpaidDayNote } from "@/components/admin/unpaid-day-note";
+import { ViewOnlyNote } from "@/components/admin/view-only-note";
 import { PageHeader } from "@/components/admin/page-header";
 import { RefreshButton } from "@/components/admin/refresh-button";
 import { StartProductionButton } from "@/components/admin/start-production-button";
 import { getDashboardData } from "@/lib/admin/queries";
-import { canAccessSection } from "@/lib/admin/staff-access";
+import { canAccessSection, isViewOnly } from "@/lib/admin/staff-access";
 import { requireDashboard } from "@/lib/auth";
 import { parseDateOnly, warsawDateIso } from "@/lib/dates";
 import { formatDatePl, formatPrice } from "@/lib/format";
@@ -51,6 +52,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const data = await getDashboardData(day);
   const access = {
     production: canAccessSection(profile, "production"),
+    productionManage: canAccessSection(profile, "production", "manage"),
     packages: canAccessSection(profile, "packages"),
     handover: canAccessSection(profile, "handover"),
   };
@@ -62,7 +64,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       </PageHeader>
 
       <DashboardDayPicker selected={day} />
-      <div className="mt-3">
+      <div className="mt-3 space-y-1">
+        <ViewOnlyNote show={isViewOnly(profile, "dashboard")} />
         <UnpaidDayNote count={data.unpaidCount} />
       </div>
 
@@ -111,12 +114,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         <h2 className="text-2xl font-semibold">Szybkie akcje</h2>
         <div className="flex flex-wrap gap-2">
           {access.production ? (
-            <>
-              <Button asChild variant="outline" className="min-h-12">
-                <Link href={`/admin/produkcja?dzien=${day}`}>Zestawienie produkcyjne</Link>
-              </Button>
-              <StartProductionButton day={day} paidCount={data.paidReadyCount} />
-            </>
+            <Button asChild variant="outline" className="min-h-12">
+              <Link href={`/admin/produkcja?dzien=${day}`}>Zestawienie produkcyjne</Link>
+            </Button>
+          ) : null}
+          {access.productionManage ? (
+            <StartProductionButton day={day} paidCount={data.paidReadyCount} />
           ) : null}
           {access.packages ? (
             <Button asChild variant="outline" className="min-h-12">

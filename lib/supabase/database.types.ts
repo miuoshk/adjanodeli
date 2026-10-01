@@ -1177,7 +1177,10 @@ export type Database = {
     }
     Functions: {
       admin_login_email: { Args: { p_login: string }; Returns: string }
-      has_staff_permission: { Args: { p: string }; Returns: boolean }
+      has_staff_permission: {
+        Args: { p_level?: string; p_section: string }
+        Returns: boolean
+      }
       available_pickup_dates:
         | { Args: never; Returns: string[] }
         | { Args: { p_lead_days: number }; Returns: string[] }

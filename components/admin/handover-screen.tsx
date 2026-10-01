@@ -21,6 +21,7 @@ const POINT_STORAGE_KEY = "adjanodeli-pickup-point";
 type HandoverScreenProps = {
   day: string;
   points: HandoverPoint[];
+  canManage: boolean;
 };
 
 function firstNameOf(fullName: string): string {
@@ -39,7 +40,7 @@ function formatPickedUpAt(iso: string): string {
   }).format(new Date(iso));
 }
 
-export function HandoverScreen({ day, points }: HandoverScreenProps) {
+export function HandoverScreen({ day, points, canManage }: HandoverScreenProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const lastCodeRef = useRef("");
   const [pointId, setPointId] = useState("");
@@ -247,6 +248,7 @@ export function HandoverScreen({ day, points }: HandoverScreenProps) {
           order={order}
           selectedPointId={pointId}
           busy={isIssuing}
+          canManage={canManage}
           onIssue={() => issueDelivered(order)}
           onForceIssue={() => issueAnyway(order)}
         />
@@ -316,23 +318,25 @@ export function HandoverScreen({ day, points }: HandoverScreenProps) {
                   <p className="font-mono text-2xl font-semibold tracking-wide">{item.pickupCode}</p>
                   <p className="truncate">{item.customerName}</p>
                 </div>
-                <Button
-                  type="button"
-                  className="min-h-12 bg-green-700 text-white hover:bg-green-800"
-                  disabled={isIssuing}
-                  onClick={() => {
-                    startIssue(async () => {
-                      const result = await markOrderPickedUp(item.id);
-                      if (!result.ok) {
-                        toast(result.message);
-                        return;
-                      }
-                      showSuccess(item.customerName);
-                    });
-                  }}
-                >
-                  Wydano
-                </Button>
+                {canManage ? (
+                  <Button
+                    type="button"
+                    className="min-h-12 bg-green-700 text-white hover:bg-green-800"
+                    disabled={isIssuing}
+                    onClick={() => {
+                      startIssue(async () => {
+                        const result = await markOrderPickedUp(item.id);
+                        if (!result.ok) {
+                          toast(result.message);
+                          return;
+                        }
+                        showSuccess(item.customerName);
+                      });
+                    }}
+                  >
+                    Wydano
+                  </Button>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -346,12 +350,14 @@ function OrderCard({
   order,
   selectedPointId,
   busy,
+  canManage,
   onIssue,
   onForceIssue,
 }: {
   order: HandoverOrder;
   selectedPointId: string;
   busy: boolean;
+  canManage: boolean;
   onIssue: () => void;
   onForceIssue: () => void;
 }) {
@@ -386,7 +392,7 @@ function OrderCard({
         </p>
       ) : null}
 
-      {order.status === "delivered" ? (
+      {canManage && order.status === "delivered" ? (
         <Button
           type="button"
           className="min-h-16 w-full bg-green-700 text-xl text-white hover:bg-green-800"
@@ -405,7 +411,7 @@ function OrderCard({
         </p>
       ) : null}
 
-      {canForce ? (
+      {canManage && canForce ? (
         <div className="space-y-3 rounded-md bg-amber-100 px-3 py-3 text-amber-950">
           <p>Paczka nie jest jeszcze oznaczona jako dowieziona</p>
           <Button

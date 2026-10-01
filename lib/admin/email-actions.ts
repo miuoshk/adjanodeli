@@ -18,7 +18,7 @@ async function orderStatus(orderId: string): Promise<string | null> {
 }
 
 export async function resendOrderPaidMail(orderId: string) {
-  await requireStaffPermission("orders", `/admin/zamowienia/${orderId}`);
+  await requireStaffPermission("orders", `/admin/zamowienia/${orderId}`, "manage");
   const status = await orderStatus(orderId);
   if (!status || !PAID_RESEND_STATUSES.includes(status)) {
     return { ok: false as const, message: "Potwierdzenie wyślemy dopiero po opłaceniu." };
@@ -34,7 +34,7 @@ export async function resendOrderPaidMail(orderId: string) {
 }
 
 export async function resendOrderDeliveredMail(orderId: string) {
-  await requireAnyStaffPermission(["orders", "packages"], `/admin/zamowienia/${orderId}`);
+  await requireAnyStaffPermission(["orders", "packages"], `/admin/zamowienia/${orderId}`, "manage");
   const status = await orderStatus(orderId);
   if (status !== "delivered") {
     return { ok: false as const, message: "Ten mail idzie, gdy paczka już czeka." };

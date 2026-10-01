@@ -9,6 +9,17 @@ export const STAFF_PERMISSIONS = [
 
 export type StaffPermission = (typeof STAFF_PERMISSIONS)[number];
 
+export const ACCESS_LEVELS = ["view", "manage"] as const;
+
+export type AccessLevel = (typeof ACCESS_LEVELS)[number];
+
+export type SectionChoice = "none" | AccessLevel;
+
+export type SectionGrant = {
+  section: StaffPermission;
+  level: AccessLevel;
+};
+
 export const STAFF_PERMISSION_LABELS: Record<StaffPermission, string> = {
   dashboard: "Dziś",
   orders: "Zamówienia",
@@ -16,6 +27,11 @@ export const STAFF_PERMISSION_LABELS: Record<StaffPermission, string> = {
   packages: "Paczki i etykiety",
   handover: "Wydawanie",
   special_requests: "Zamówienia specjalne",
+};
+
+const LEVEL_LABELS: Record<AccessLevel, string> = {
+  view: "podgląd",
+  manage: "pełny",
 };
 
 const SECTION_HREFS: Record<StaffPermission, string> = {
@@ -27,23 +43,51 @@ const SECTION_HREFS: Record<StaffPermission, string> = {
   special_requests: "/admin/zamowienia-specjalne",
 };
 
-export const STAFF_PRESETS = [
+function grantsFor(
+  pairs: readonly (readonly [StaffPermission, AccessLevel])[],
+): SectionGrant[] {
+  return pairs.map(([section, level]) => ({ section, level }));
+}
+
+export const STAFF_PRESETS: readonly {
+  id: string;
+  label: string;
+  grants: readonly SectionGrant[];
+}[] = [
+  {
+    id: "podglad",
+    label: "Podgląd i wydawanie",
+    grants: grantsFor([
+      ["dashboard", "view"],
+      ["orders", "view"],
+      ["production", "view"],
+      ["packages", "view"],
+      ["handover", "manage"],
+    ]),
+  },
   {
     id: "produkcja",
     label: "Produkcja i pakowanie",
-    permissions: ["dashboard", "production", "packages"] as const,
+    grants: grantsFor([
+      ["dashboard", "view"],
+      ["production", "manage"],
+      ["packages", "manage"],
+    ]),
   },
   {
     id: "kierowca",
     label: "Kierowca",
-    permissions: ["packages", "handover"] as const,
+    grants: grantsFor([
+      ["packages", "manage"],
+      ["handover", "manage"],
+    ]),
   },
   {
     id: "pelny",
     label: "Pełny dostęp pracownika",
-    permissions: STAFF_PERMISSIONS,
+    grants: grantsFor(STAFF_PERMISSIONS.map((section) => [section, "manage"] as const)),
   },
-] as const;
+];
 
 export const TEMP_PASSWORD_ALPHABET =
   "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
@@ -61,14 +105,109 @@ export function isStaffPermission(value: string): value is StaffPermission {
   return (STAFF_PERMISSIONS as readonly string[]).includes(value);
 }
 
-export function normalizePermissions(values: readonly string[]): StaffPermission[] {
-  const selected = new Set(values.filter(isStaffPermission));
-  return STAFF_PERMISSIONS.filter((item) => selected.has(item));
+export function isAccessLevel(value: string): value is AccessLevel {
+  return (ACCESS_LEVELS as readonly string[]).includes(value);
+}
+
+/** Bare keys from before levels count as full access. One entry per section; manage wins. */
+export function encodeStaffPermissions(values: readonly string[]): string[] {
+  const levels = new Map<StaffPermission, AccessLevel>();
+  for (const value of values) {
+    const [rawSection, rawLevel] = value.split(":");
+    if (!rawSection || !isStaffPermission(rawSection)) {
+      continue;
+    }
+    const level: AccessLevel = rawLevel === undefined ? "manage" : isAccessLevel(rawLevel) ? rawLevel : "view";
+    if (rawLevel !== undefined && !isAccessLevel(rawLevel)) {
+      continue;
+    }
+    const current = levels.get(rawSection);
+    if (!current || level === "manage") {
+      levels.set(rawSection, level);
+    }
+  }
+  return STAFF_PERMISSIONS.flatMap((section) => {
+    const level = levels.get(section);
+    return level ? [`${section}:${level}`] : [];
+  });
+}
+
+export function accessLevel(
+  values: readonly string[],
+  section: StaffPermission,
+): AccessLevel | null {
+  const encoded = encodeStaffPermissions(values);
+  if (encoded.includes(`${section}:manage`)) {
+    return "manage";
+  }
+  if (encoded.includes(`${section}:view`)) {
+    return "view";
+  }
+  return null;
+}
+
+export function grantsFromPermissions(values: readonly string[]): SectionGrant[] {
+  return STAFF_PERMISSIONS.flatMap((section) => {
+    const level = accessLevel(values, section);
+    return level ? [{ section, level }] : [];
+  });
+}
+
+export function sectionsFromPermissions(values: readonly string[]): StaffPermission[] {
+  return grantsFromPermissions(values).map((grant) => grant.section);
+}
+
+export function emptyChoices(): Record<StaffPermission, SectionChoice> {
+  return {
+    dashboard: "none",
+    orders: "none",
+    production: "none",
+    packages: "none",
+    handover: "none",
+    special_requests: "none",
+  };
+}
+
+export function choicesFromPermissions(
+  values: readonly string[],
+): Record<StaffPermission, SectionChoice> {
+  const choices = emptyChoices();
+  for (const grant of grantsFromPermissions(values)) {
+    choices[grant.section] = grant.level;
+  }
+  return choices;
+}
+
+export function choicesFromGrants(grants: readonly SectionGrant[]): Record<StaffPermission, SectionChoice> {
+  const choices = emptyChoices();
+  for (const grant of grants) {
+    choices[grant.section] = grant.level;
+  }
+  return choices;
+}
+
+export function permissionsFromChoices(choices: Record<StaffPermission, SectionChoice>): string[] {
+  return STAFF_PERMISSIONS.flatMap((section) => {
+    const choice = choices[section];
+    return choice === "none" ? [] : [`${section}:${choice}`];
+  });
+}
+
+export function permissionChip(section: StaffPermission, level: AccessLevel): string {
+  return `${STAFF_PERMISSION_LABELS[section]}: ${LEVEL_LABELS[level]}`;
+}
+
+function levelCovers(held: AccessLevel, required: AccessLevel): boolean {
+  if (held === "manage") {
+    return true;
+  }
+  return required === "view";
 }
 
 export function canAccessSection(
   profile: SectionAccess | null | undefined,
   permission: StaffPermission,
+  level: AccessLevel = "view",
 ): boolean {
   if (!profile?.is_active) {
     return false;
@@ -76,7 +215,18 @@ export function canAccessSection(
   if (profile.role === "owner") {
     return true;
   }
-  return profile.role === "staff" && profile.staff_permissions.includes(permission);
+  if (profile.role !== "staff") {
+    return false;
+  }
+  const held = accessLevel(profile.staff_permissions, permission);
+  return held !== null && levelCovers(held, level);
+}
+
+export function isViewOnly(
+  profile: SectionAccess | null | undefined,
+  permission: StaffPermission,
+): boolean {
+  return canAccessSection(profile, permission, "view") && !canAccessSection(profile, permission, "manage");
 }
 
 export function permissionsForNav(profile: SectionAccess | null | undefined): StaffPermission[] {
@@ -86,7 +236,7 @@ export function permissionsForNav(profile: SectionAccess | null | undefined): St
   if (profile.role === "owner") {
     return [...STAFF_PERMISSIONS];
   }
-  return normalizePermissions(profile.staff_permissions);
+  return sectionsFromPermissions(profile.staff_permissions);
 }
 
 export function firstAllowedSection(profile: SectionAccess | null | undefined): string {

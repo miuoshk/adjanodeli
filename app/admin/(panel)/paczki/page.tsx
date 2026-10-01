@@ -3,10 +3,12 @@ import Link from "next/link";
 import { AdminDayPicker } from "@/components/admin/admin-day-picker";
 import { MarkPointDeliveredButton } from "@/components/admin/mark-point-delivered-button";
 import { UnpaidDayNote } from "@/components/admin/unpaid-day-note";
+import { ViewOnlyNote } from "@/components/admin/view-only-note";
 import { PageHeader } from "@/components/admin/page-header";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { getNearestOrderDay, getPackagesData } from "@/lib/admin/queries";
 import { requireStaffPermission } from "@/lib/auth";
+import { isViewOnly } from "@/lib/admin/staff-access";
 import { formatCutoff, parseDateOnly } from "@/lib/dates";
 import { formatDatePl, formatTimeRange } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -28,7 +30,8 @@ function packCountLabel(count: number): string {
 }
 
 export default async function PackagesPage({ searchParams }: PackagesPageProps) {
-  await requireStaffPermission("packages", "/admin/paczki");
+  const profile = await requireStaffPermission("packages", "/admin/paczki");
+  const canManage = !isViewOnly(profile, "packages");
   const params = await searchParams;
   const day =
     params.dzien && /^\d{4}-\d{2}-\d{2}$/.test(params.dzien)
@@ -40,7 +43,8 @@ export default async function PackagesPage({ searchParams }: PackagesPageProps) 
     <div>
       <PageHeader title={`Paczki na ${formatDatePl(parseDateOnly(day))}`} />
       <AdminDayPicker selected={day} basePath="/admin/paczki" />
-      <div className="mt-3">
+      <div className="mt-3 space-y-1">
+        <ViewOnlyNote show={!canManage} />
         <UnpaidDayNote count={data.unpaidCount} />
       </div>
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
@@ -65,18 +69,20 @@ export default async function PackagesPage({ searchParams }: PackagesPageProps) 
                 </p>
                 <p className="pt-1 text-sm">{packCountLabel(section.packages.length)}</p>
               </div>
-              <MarkPointDeliveredButton
-                day={day}
-                pointId={section.point.id}
-                pointName={section.point.name}
-                readyCount={section.paidCount + section.inProductionCount}
-                unstartedCount={section.paidCount}
-                until={formatCutoff(section.point.pickup_to)}
-                notifiedCount={section.notifiedCount}
-                totalCount={section.packages.length}
-                notifiedAt={section.notifiedAt}
-                failedMails={section.failedMails}
-              />
+              {canManage ? (
+                <MarkPointDeliveredButton
+                  day={day}
+                  pointId={section.point.id}
+                  pointName={section.point.name}
+                  readyCount={section.paidCount + section.inProductionCount}
+                  unstartedCount={section.paidCount}
+                  until={formatCutoff(section.point.pickup_to)}
+                  notifiedCount={section.notifiedCount}
+                  totalCount={section.packages.length}
+                  notifiedAt={section.notifiedAt}
+                  failedMails={section.failedMails}
+                />
+              ) : null}
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button asChild variant="outline" className="min-h-12 w-full sm:w-auto">
                   <Link href={`/admin/paczki/drukuj?dzien=${day}&punkt=${section.point.id}&format=etykieta`}>
