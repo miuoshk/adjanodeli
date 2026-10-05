@@ -5,10 +5,20 @@ import { SettingsForm } from "@/components/admin/settings-form";
 import { requireRole } from "@/lib/auth";
 import { getOwnerSettings } from "@/lib/admin/owner-queries";
 import { getRecentEmailLog } from "@/lib/admin/queries";
+import { createServerClient } from "@/lib/supabase/server";
 
 export default async function SettingsPage() {
   await requireRole("owner", "/admin/ustawienia");
-  const [settings, recentMails] = await Promise.all([getOwnerSettings(), getRecentEmailLog(10)]);
+  const supabase = await createServerClient();
+  const [settings, recentMails, reminderCountResult] = await Promise.all([
+    getOwnerSettings(),
+    getRecentEmailLog(10),
+    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("daily_reminder", true),
+  ]);
+  if (reminderCountResult.error) {
+    console.error("daily reminder count", reminderCountResult.error.message);
+  }
+  const reminderOptInCount = reminderCountResult.count ?? 0;
 
   if (!settings) {
     return <p>Brak ustawień w bazie.</p>;
@@ -31,7 +41,7 @@ export default async function SettingsPage() {
         <SendTestMailButton />
         <EmailLogList rows={recentMails} />
       </section>
-      <SettingsForm settings={settings} />
+      <SettingsForm settings={settings} reminderOptInCount={reminderOptInCount} />
     </div>
   );
 }

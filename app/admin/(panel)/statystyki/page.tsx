@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/admin/page-header";
 import { StatsCharts } from "@/components/admin/stats-charts";
 import { StatsRangeForm } from "@/components/admin/stats-range-form";
 import { requireRole } from "@/lib/auth";
+import { createServerClient } from "@/lib/supabase/server";
 import { formatPrice } from "@/lib/format";
 import { getOwnerStats, resolveStatsRange, selloutSuggestion } from "@/lib/admin/stats";
 
@@ -32,6 +33,17 @@ export default async function AdminStatsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const range = resolveStatsRange(params.od, params.do);
   const stats = await getOwnerStats(range);
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const supabase = await createServerClient();
+  const reminderOrders = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("entry_source", "przypomnienie")
+    .gte("created_at", since)
+    .in("status", ["paid", "in_production", "delivered", "picked_up"]);
+  if (reminderOrders.error) {
+    console.error("reminder orders", reminderOrders.error.message);
+  }
 
   return (
     <div className="space-y-8">
@@ -41,6 +53,7 @@ export default async function AdminStatsPage({ searchParams }: PageProps) {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <Tile label="Przychód" value={formatPrice(stats.summary.revenueGrosze)} />
         <Tile label="Zamówienia" value={String(stats.summary.orderCount)} />
+        <Tile label="Z przypomnienia, 30 dni" value={String(reminderOrders.count ?? 0)} />
         <Tile label="Średnia wartość" value={formatPrice(stats.summary.avgOrderGrosze)} />
         <Tile label="Klienci" value={String(stats.summary.uniqueCustomers)} />
         <Tile label="Powracający" value={String(stats.summary.returningCustomers)} />

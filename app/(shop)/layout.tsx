@@ -1,3 +1,4 @@
+import { DailyReminderBanner } from "@/components/shop/daily-reminder-banner";
 import { SiteFooter } from "@/components/shop/site-footer";
 import { ShopMain } from "@/components/shop/shop-main";
 import { SiteHeader } from "@/components/shop/site-header";
@@ -14,6 +15,7 @@ export default function ShopLayout({
   return (
     <div className="adj-landing isolate flex min-h-screen flex-col">
       <SiteHeader />
+      <DailyReminderBanner />
       <ShopMain>{children}</ShopMain>
       <SiteFooter />
     </div>

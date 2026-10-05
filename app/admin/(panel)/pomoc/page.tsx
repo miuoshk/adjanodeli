@@ -19,6 +19,7 @@ const TOC = [
   { href: "#zespol", label: "Zespół" },
   { href: "#kod-punktu", label: "Kod punktu" },
   { href: "#rabat-ilosc", label: "Rabat za ilość" },
+  { href: "#przypomnienie", label: "Przypomnienie o 18:00" },
   { href: "#telefon", label: "Panel na telefonie" },
   { href: "#zgloszenie", label: "Gdy coś nie działa" },
 ] as const;
@@ -314,6 +315,22 @@ export default async function HelpPage() {
           Liczą się wszystkie sztuki w zamówieniu. Rabat nie łączy się z voucherem ani z kodem. Zostaje ten, który
           daje klientowi więcej. Drugi zostaje na później. Wyłączenie w Ustawieniach zdejmuje rabat z nowych
           zamówień.
+        </p>
+      </section>
+
+      <section id="przypomnienie" className="help-section space-y-3">
+        <h2 className="font-heading text-2xl font-semibold">Przypomnienie o 18:00</h2>
+        <p>
+          W <strong>Ustawieniach</strong> włączasz „Przypomnienia o 18:00”. Mail wychodzi dzień przed
+          odbiorem, między 18:00 a 18:59, tylko do osób, które same kliknęły „Tak, przypominaj”.
+        </p>
+        <p>
+          Nie można wysłać go wszystkim: od 2024 roku taka wiadomość wymaga wcześniejszej zgody, także
+          od stałych klientów.
+        </p>
+        <p>
+          Klient włącza je na pasku u góry sklepu, na koncie albo na karcie po płatności. W punkcie możesz
+          powiedzieć: „Po zamówieniu kliknij Tak, przypominaj — napiszemy dzień wcześniej o 18:00”.
         </p>
       </section>
 

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { SectionHeading } from "@/components/brand/section-heading";
 import { ShelfTile, SpecialOrderTile } from "@/components/brand/shelf-tile";
 import { DayPicker } from "@/components/shop/day-picker";
+import { RememberReminderSource } from "@/components/shop/remember-reminder-source";
 import { MobileCartBar } from "@/components/shop/mobile-cart-bar";
 import { UnlockPointToast } from "@/components/shop/unlock-point-toast";
 import { formatCutoff, warsawDateIso } from "@/lib/dates";
@@ -13,7 +14,7 @@ import { parseVolumeTiers, volumeShopLine } from "@/lib/orders/volume-discount";
 import { createServerClient } from "@/lib/supabase/server";
 
 type ShopPageProps = {
-  searchParams: Promise<{ dzien?: string; odblokowano?: string }>;
+  searchParams: Promise<{ dzien?: string; odblokowano?: string; src?: string }>;
 };
 
 export const metadata: Metadata = {
@@ -93,6 +94,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
     return (
       <div className="pb-24 md:pb-0">
         <UnlockPointToast name={params.odblokowano?.trim() || null} />
+        <RememberReminderSource src={params.src ?? null} />
         <SectionHeading
           as="h1"
           eyebrow="Sklep"

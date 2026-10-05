@@ -18,7 +18,11 @@ export default function PrivacyPage() {
         <ul className="list-disc space-y-1.5 pl-5">
           <li>zrealizować zamówienie i odbiór w punkcie,</li>
           <li>skontaktować się w sprawie zamówienia albo zapytania specjalnego,</li>
-          <li>wysyłać informacje marketingowe — tylko jeśli wyrazisz zgodę.</li>
+          <li>wysyłać informacje marketingowe — tylko jeśli wyrazisz zgodę,</li>
+          <li>
+            wysyłać przypomnienie o 18:00 dzień przed odbiorem — tylko jeśli osobno włączysz
+            przypomnienie. Zgoda na nowości w menu tego nie obejmuje.
+          </li>
         </ul>
       </section>
 
@@ -26,7 +30,8 @@ export default function PrivacyPage() {
         <h2 className="mt-12 font-heading text-[26px] font-medium">Podstawa prawna</h2>
         <p>
           Podstawą jest wykonanie umowy (zamówienie), obowiązek prawny (np. reklamacje) oraz —
-          przy marketingu — Twoja zgoda. Możesz ją wycofać w każdej chwili.
+          przy marketingu i przy przypomnieniu o zamówieniu — Twoja zgoda. Możesz ją wycofać w
+          każdej chwili: nowości w menu na koncie, przypomnienie o 18:00 w mailu albo na koncie.
         </p>
       </section>
 

@@ -10,6 +10,7 @@ type SendEmailInput = {
   react: ReactElement;
   kind: EmailKind;
   orderId?: string | null;
+  headers?: Record<string, string>;
 };
 
 export type SendEmailResult = { ok: true } | { ok: false; message: string };
@@ -50,6 +51,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
       to: input.to,
       subject: input.subject,
       react: input.react,
+      headers: input.headers,
     });
 
     if (error) {

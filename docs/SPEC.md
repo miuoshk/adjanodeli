@@ -35,7 +35,11 @@ Wszystkie tabele: id uuid primary key default gen_random_uuid(), created_at time
 - full_name text
 - phone text
 - role text not null default 'customer' check (role in ('customer','staff','owner'))
-- marketing_consent boolean default false
+- marketing_consent boolean default false — zgoda na mail, gdy w menu pojawi się coś nowego. Nie obejmuje przypomnienia o 18:00.
+- daily_reminder boolean not null default false — przypomnienie dzień przed odbiorem. Włącza je tylko kliknięcie klienta, pole nigdy nie jest zaznaczone z góry.
+- daily_reminder_consent_at timestamptz null, daily_reminder_consent_text text null — data i dokładne brzmienie zgody w chwili włączenia.
+- daily_reminder_prompted_at timestamptz null — kiedy ostatnio pytaliśmy. Pasek i karta po płatności milczą przez 30 dni.
+- unsubscribe_token uuid not null unique — link wypisania bez logowania.
 - staff_permissions text[] not null default '{}' — wpisy `sekcja:poziom` (`view` albo `manage`); check, że sekcja jest z listy dashboard, orders, production, packages, handover, special_requests, poziom to view albo manage, i jest najwyżej jeden wpis na sekcję. Wpis bez poziomu sprzed tej zmiany jest `manage`.
 - is_active boolean not null default true — false blokuje logowanie do panelu
 - must_change_password boolean not null default false — po haśle tymczasowym panel wymaga zmiany
@@ -55,6 +59,7 @@ Tworzony triggerem handle_new_user po insercie do auth.users. Trigger `protect_p
 - currency text not null default 'PLN'
 - label_customer_info text not null default 'masked_email' check (label_customer_info in ('masked','masked_email','full')) — dane klienta na etykiecie: skrócone imię i nazwisko, to samo plus skrócony e-mail, albo pełne imię, nazwisko i e-mail.
 - require_point_code boolean not null default true — gdy true, create_order wymaga wpisu w pickup_point_access także dla punktu public. Gdy false, punkt public jest dostępny bez kodu, a restricted jak dotychczas.
+- daily_reminder_enabled boolean not null default false — właścicielka włącza wysyłkę przypomnień o 18:00. Przy false cron nic nie wysyła.
 - volume_discount_enabled boolean not null default false — rabat za ilość. Wyłączony: koszyk i create_order liczą jak bez progów.
 - volume_discount_tiers jsonb not null default '[{"min_qty":20,"pct":10},{"min_qty":40,"pct":20}]' — najwyżej 3 progi, min_qty ściśle rosnąco, pct 1–50. Próg jest włącznie (20 sztuk daje −10%).
 
@@ -174,6 +179,7 @@ Słownik tagów (keto, wege, bez laktozy, ostre, nowość). UI produktu wybiera 
 - invoice_address text
 - discount_code_id uuid null references discount_codes
 - discount_source text null check (discount_source in ('voucher','code','volume')) — skąd wzięła się kwota rabatu. Null, gdy rabatu nie ma.
+- entry_source text null check (entry_source is null or entry_source = 'przypomnienie') — zamówienie zaczęło się od linku w mailu z przypomnieniem (`/sklep?src=przypomnienie`). Statystyki liczą takie opłacone zamówienia z ostatnich 30 dni.
 - discount_pct int null — procent, gdy rabat jest procentowy (voucher 10 albo 50, kod procentowy, próg ilości). Przy „najtańszy za 1 gr” i kwocie z kodu zostaje null.
 - unique (pickup_date, pickup_code)
 
@@ -367,3 +373,5 @@ Tabela standing_orders: user_id, name (np. "Moje śniadanie"), pickup_point_id, 
 Codziennie o 17:00 (Europe/Warsaw) cron wysyła e-mail "Zamówić jak zwykle na jutro?" do użytkowników, którzy mają aktywne standing_order obejmujące dzień tygodnia pierwszej dostępnej daty i NIE mają jeszcze opłaconego zamówienia na tę datę. Mail zawiera listę pozycji, sumę i przycisk "Zamawiam" → /zamow-jak-zwykle?s={id}&d={date} (wymaga logowania) → strona wypełnia koszyk (sprawdzając dostępność, pomijając niedostępne z informacją) i przekierowuje do /koszyk. Nie ma automatycznego obciążenia.
 Cron: Vercel Cron (vercel.json) → GET /api/cron/standing-reminders, Authorization Bearer CRON_SECRET. Harmonogram w UTC: 15:00 (czas letni) — dodaj komentarz o zmianie na 16:00 zimą albo zaplanuj dwa wpisy i w kodzie sprawdzaj, czy w Warszawie jest ~17:00 (tolerancja 30 min), żeby nie wysłać dwa razy.
 UI: /konto/stale-zamowienia — lista, tworzenie z aktualnego koszyka ("Zapisz jako stałe zamówienie" w koszyku po opłaceniu — na stronie zamówienia paid), edycja dni i punktu, włącz/wyłącz.
+
+Przypomnienie o 18:00 jest osobne od stałego zamówienia i od `marketing_consent`. Wychodzi tylko gdy `settings.daily_reminder_enabled` i `profiles.daily_reminder`. Zgodę zapisuje kliknięcie „Tak, przypominaj” (`daily_reminder_consent_at` i dokładny tekst). Cron `GET /api/cron/daily-reminders` (Bearer CRON_SECRET), dwa wpisy Vercel `0 16 * * *` i `0 17 * * *` UTC. Kod wysyła tylko gdy w Warszawie jest 17:45–18:59, pierwszy dzień z `available_pickup_dates()` to jutro, klient nie ma opłaconego zamówienia na jutro, nie dostał dziś `standing_reminder` ani `daily_reminder`. Mail ma link wypisania `/przypomnienia/wypisz?t={unsubscribe_token}` (GET pyta, POST wyłącza, także one-click) i nagłówki List-Unsubscribe. Wyłączenie ustawienia zatrzymuje wysyłkę. `marketing_consent` nie obejmuje tych maili.

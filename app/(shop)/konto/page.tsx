@@ -9,6 +9,7 @@ import {
   type CustomerOrder,
 } from "@/components/shop/customer-order-list";
 import { LoyaltySection } from "@/components/shop/loyalty-section";
+import { DailyReminderSwitch } from "@/components/shop/daily-reminder-switch";
 import { ProfileForm } from "@/components/shop/profile-form";
 import { SignedInLine } from "@/components/shop/signed-in-line";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,7 @@ export default async function AccountPage() {
         </span>
         <span className="adj-link shrink-0">Zarządzaj</span>
       </Link>
+      <DailyReminderSwitch enabled={profile?.daily_reminder ?? false} />
       <section className="mt-12">
         <SectionHeading as="h2" title="Twoje dane" />
         <div className={cardClass}>

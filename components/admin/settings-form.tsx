@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { DailyReminderSampleButton } from "@/components/admin/daily-reminder-sample-button";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -42,11 +43,18 @@ const schema = z.object({
   customerCancellationEnabled: z.boolean(),
   requirePointCode: z.boolean(),
   labelCustomerInfo: z.enum(["masked", "masked_email", "full"]),
+  dailyReminderEnabled: z.boolean(),
 });
 
 type FormValues = z.infer<typeof schema>;
 
-export function SettingsForm({ settings }: { settings: OwnerSettings }) {
+export function SettingsForm({
+  settings,
+  reminderOptInCount,
+}: {
+  settings: OwnerSettings;
+  reminderOptInCount: number;
+}) {
   const [closedDates, setClosedDates] = useState(
     [...settings.closed_dates].map((day) => day.slice(0, 10)).sort(),
   );
@@ -78,6 +86,7 @@ export function SettingsForm({ settings }: { settings: OwnerSettings }) {
         settings.label_customer_info === "masked" || settings.label_customer_info === "full"
           ? settings.label_customer_info
           : "masked_email",
+      dailyReminderEnabled: settings.daily_reminder_enabled,
     },
   });
 
@@ -95,6 +104,7 @@ export function SettingsForm({ settings }: { settings: OwnerSettings }) {
         closedDates,
         volumeDiscountEnabled: volumeEnabled,
         volumeDiscountTiers: volumeTiers,
+        dailyReminderEnabled: values.dailyReminderEnabled,
       });
       if (!result.ok) {
         toast(result.message);
@@ -448,6 +458,34 @@ export function SettingsForm({ settings }: { settings: OwnerSettings }) {
             {volumeEnabled ? "" : " Zdanie pojawi się, gdy rabat jest włączony."}
           </p>
         </section>
+
+        <FormField
+          control={form.control}
+          name="dailyReminderEnabled"
+          render={({ field }) => (
+            <FormItem>
+              <section className="space-y-3 rounded-xl border border-[var(--adj-cream-dark)] bg-card p-4">
+                <h2 className="text-2xl font-semibold">Przypomnienia o 18:00</h2>
+                <label className="flex min-h-12 items-start gap-3 text-base">
+                  <input
+                    type="checkbox"
+                    checked={field.value}
+                    onChange={(event) => field.onChange(event.target.checked)}
+                    className="mt-1 size-5 shrink-0"
+                  />
+                  <span>
+                    Wysyłaj przypomnienia o 18:00
+                    <span className="mt-1 block text-sm text-muted-foreground">
+                      Tylko osobom, które same to włączyły. Teraz: {reminderOptInCount}.
+                    </span>
+                  </span>
+                </label>
+                <DailyReminderSampleButton />
+              </section>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <Button type="submit" className="min-h-12" disabled={saving}>
           Zapisz ustawienia

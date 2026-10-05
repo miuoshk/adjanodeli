@@ -13,7 +13,7 @@ import { QrCode } from "@/components/shop/qr-code";
 import { ReorderButton } from "@/components/shop/reorder-button";
 import { CancelOrderButton } from "@/components/shop/cancel-order-button";
 import { SaveStandingOrderButton } from "@/components/shop/save-standing-order-button";
-import { requireUser } from "@/lib/auth";
+import { getProfile, requireUser } from "@/lib/auth";
 import { formatCutoff, parseDateOnly } from "@/lib/dates";
 import { formatDatePl, formatPrice, formatTimeRange } from "@/lib/format";
 import { nbsp } from "@/lib/typography";
@@ -24,6 +24,8 @@ import {
 import { EXPIRED_PAID_NOTE } from "@/lib/email/send-paid-after-expiry";
 import { formatItemLine, parseItemOptions } from "@/lib/orders/item-options";
 import { discountKindLabel } from "@/lib/orders/volume-discount";
+import { DailyReminderAsk } from "@/components/shop/daily-reminder-ask";
+import { reminderPromptVisible } from "@/lib/reminders/consent";
 import { createServerClient } from "@/lib/supabase/server";
 import type { CartItem } from "@/lib/store/cart";
 import type { Tables } from "@/lib/supabase/database.types";
@@ -165,6 +167,11 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
   const { id } = await params;
   const query = await searchParams;
   await requireUser(`/zamowienie/${id}`);
+  const profile = await getProfile();
+  const showReminderAsk = reminderPromptVisible({
+    dailyReminder: profile?.daily_reminder ?? false,
+    promptedAt: profile?.daily_reminder_prompted_at ?? null,
+  });
 
   const supabase = await createServerClient();
   const [orderResult, datesResult, settingsResult, standingCountResult, latePaymentResult] =
@@ -228,6 +235,7 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
           cancelEnabled={cancelEnabled}
           cutoffTime={cutoffTime}
           paidAfterExpiry={paidAfterExpiry}
+          showReminderAsk={showReminderAsk}
         />
       )}
     </div>
@@ -245,6 +253,7 @@ function OrderStatusView({
   cancelEnabled,
   cutoffTime,
   paidAfterExpiry,
+  showReminderAsk,
 }: {
   order: OrderRow;
   point: PickupPointRow | null;
@@ -256,6 +265,7 @@ function OrderStatusView({
   cancelEnabled: boolean;
   cutoffTime: string;
   paidAfterExpiry: boolean;
+  showReminderAsk: boolean;
 }) {
   if (order.status === "pending_payment") {
     return (
@@ -277,7 +287,9 @@ function OrderStatusView({
 
   if (order.status === "paid") {
     return (
-      <PaidLikeView
+      <div className="space-y-8">
+        {showReminderAsk ? <DailyReminderAsk variant="card" /> : null}
+        <PaidLikeView
         order={order}
         point={point}
         items={items}
@@ -286,7 +298,8 @@ function OrderStatusView({
         cancelEnabled={cancelEnabled}
         cutoffTime={cutoffTime}
         bakeryPhone={bakeryPhone}
-      />
+        />
+      </div>
     );
   }
 

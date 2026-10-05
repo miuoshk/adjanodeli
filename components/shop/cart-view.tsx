@@ -158,6 +158,7 @@ export function CartView({
   const day = useCart((state) => state.day);
   const pickupPointId = useCart((state) => state.pickupPointId);
   const note = useCart((state) => state.note);
+  const entrySource = useCart((state) => state.entrySource);
   const subtotal = useCart(selectSubtotal);
   const setQty = useCart((state) => state.setQty);
   const remove = useCart((state) => state.remove);
@@ -506,6 +507,7 @@ export function CartView({
         note,
         voucherId: useVoucher && !usingCode ? voucherId : null,
         discountCode: usingCode ? appliedCode?.code ?? null : null,
+        entrySource,
         invoice: {
           requested: wantInvoice,
           nip: invoiceNip,

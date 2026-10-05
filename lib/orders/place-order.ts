@@ -25,6 +25,7 @@ const placeOrderSchema = z.object({
   note: z.string().max(200).default(""),
   voucherId: z.string().uuid().nullable().optional(),
   discountCode: z.string().min(1).max(40).nullable().optional(),
+  entrySource: z.enum(["przypomnienie"]).nullable().optional(),
   invoice: z
     .object({
       requested: z.boolean(),
@@ -180,6 +181,16 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
 
   if (!data) {
     return { ok: false, code: "UNKNOWN", message: errorMessages.UNKNOWN };
+  }
+
+  if (parsed.data.entrySource === "przypomnienie") {
+    const sourceResult = await supabase.rpc("note_order_entry_source", {
+      p_order_id: data,
+      p_source: "przypomnienie",
+    });
+    if (sourceResult.error) {
+      console.error("note_order_entry_source", sourceResult.error.message);
+    }
   }
 
   if (pInvoice) {

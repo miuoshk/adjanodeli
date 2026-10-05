@@ -22,12 +22,14 @@ type CartState = {
   pickupPointId: string | null;
   items: CartItem[];
   note: string;
+  entrySource: "przypomnienie" | null;
   add: (item: CartItem, day: string) => void;
   remove: (lineKey: string) => void;
   setQty: (lineKey: string, qty: number) => void;
   setDay: (day: string | null) => void;
   setPickupPoint: (pickupPointId: string | null) => void;
   setNote: (note: string) => void;
+  setEntrySource: (entrySource: "przypomnienie" | null) => void;
   clear: () => void;
 };
 
@@ -36,6 +38,7 @@ const emptyCart = {
   pickupPointId: null as string | null,
   items: [] as CartItem[],
   note: "",
+  entrySource: null as "przypomnienie" | null,
 };
 
 function normalizeItem(item: Partial<CartItem> & Pick<CartItem, "productId" | "name" | "unitPriceGrosze" | "qty">): CartItem {
@@ -89,6 +92,7 @@ export const useCart = create<CartState>()(
       setDay: (day) => set({ day }),
       setPickupPoint: (pickupPointId) => set({ pickupPointId }),
       setNote: (note) => set({ note }),
+      setEntrySource: (entrySource) => set({ entrySource }),
       clear: () => set(emptyCart),
     }),
     {
@@ -99,6 +103,7 @@ export const useCart = create<CartState>()(
           ...current,
           ...saved,
           items: (saved.items ?? []).map((item) => normalizeItem(item)),
+          entrySource: saved.entrySource === "przypomnienie" ? "przypomnienie" : null,
         };
       },
     },

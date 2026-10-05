@@ -655,6 +655,7 @@ export type SettingsPayload = {
   labelCustomerInfo: "masked" | "masked_email" | "full";
   volumeDiscountEnabled: boolean;
   volumeDiscountTiers: VolumeTier[];
+  dailyReminderEnabled: boolean;
 };
 
 export async function saveSettings(payload: SettingsPayload) {
@@ -719,6 +720,7 @@ export async function saveSettings(payload: SettingsPayload) {
         min_qty: tier.minQty,
         pct: tier.pct,
       })),
+      daily_reminder_enabled: payload.dailyReminderEnabled,
     })
     .eq("id", 1);
 

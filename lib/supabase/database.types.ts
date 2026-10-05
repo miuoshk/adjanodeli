@@ -490,6 +490,7 @@ export type Database = {
           discount_grosze: number
           discount_pct: number | null
           discount_source: string | null
+          entry_source: string | null
           expires_at: string | null
           id: string
           invoice_address: string | null
@@ -523,6 +524,7 @@ export type Database = {
           discount_grosze?: number
           discount_pct?: number | null
           discount_source?: string | null
+          entry_source?: string | null
           expires_at?: string | null
           id?: string
           invoice_address?: string | null
@@ -556,6 +558,7 @@ export type Database = {
           discount_grosze?: number
           discount_pct?: number | null
           discount_source?: string | null
+          entry_source?: string | null
           expires_at?: string | null
           id?: string
           invoice_address?: string | null
@@ -963,6 +966,10 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          daily_reminder: boolean
+          daily_reminder_consent_at: string | null
+          daily_reminder_consent_text: string | null
+          daily_reminder_prompted_at: string | null
           email: string
           full_name: string | null
           id: string
@@ -973,10 +980,15 @@ export type Database = {
           phone: string | null
           role: string
           staff_permissions: string[]
+          unsubscribe_token: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          daily_reminder?: boolean
+          daily_reminder_consent_at?: string | null
+          daily_reminder_consent_text?: string | null
+          daily_reminder_prompted_at?: string | null
           email: string
           full_name?: string | null
           id: string
@@ -987,10 +999,15 @@ export type Database = {
           phone?: string | null
           role?: string
           staff_permissions?: string[]
+          unsubscribe_token?: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          daily_reminder?: boolean
+          daily_reminder_consent_at?: string | null
+          daily_reminder_consent_text?: string | null
+          daily_reminder_prompted_at?: string | null
           email?: string
           full_name?: string | null
           id?: string
@@ -1001,6 +1018,7 @@ export type Database = {
           phone?: string | null
           role?: string
           staff_permissions?: string[]
+          unsubscribe_token?: string
           updated_at?: string
         }
         Relationships: []
@@ -1013,6 +1031,7 @@ export type Database = {
           currency: string
           customer_cancellation_enabled: boolean
           cutoff_time: string
+          daily_reminder_enabled: boolean
           id: number
           label_customer_info: string
           max_days_ahead: number
@@ -1033,6 +1052,7 @@ export type Database = {
           currency?: string
           customer_cancellation_enabled?: boolean
           cutoff_time?: string
+          daily_reminder_enabled?: boolean
           id: number
           label_customer_info?: string
           max_days_ahead?: number
@@ -1053,6 +1073,7 @@ export type Database = {
           currency?: string
           customer_cancellation_enabled?: boolean
           cutoff_time?: string
+          daily_reminder_enabled?: boolean
           id?: number
           label_customer_info?: string
           max_days_ahead?: number
@@ -1189,6 +1210,18 @@ export type Database = {
         Args: { p_order_id: string }
         Returns: undefined
       }
+      daily_reminder_recipients: {
+        Args: { p_pickup_day: string; p_today: string }
+        Returns: {
+          email: string
+          pickup_from: string
+          pickup_to: string
+          point_name: string
+          unsubscribe_token: string
+          user_id: string
+        }[]
+      }
+      disable_daily_reminder: { Args: { p_token: string }; Returns: undefined }
       discount_code_amount: {
         Args: {
           p_max_discount_grosze: number
@@ -1222,6 +1255,10 @@ export type Database = {
         Returns: undefined
       }
       mark_order_refunded: { Args: { p_order_id: string }; Returns: undefined }
+      note_order_entry_source: {
+        Args: { p_order_id: string; p_source: string }
+        Returns: undefined
+      }
       pickup_point_visible: { Args: { p_id: string }; Returns: boolean }
       product_availability: {
         Args: { p_day: string }
