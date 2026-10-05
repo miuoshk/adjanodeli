@@ -4,7 +4,7 @@ Każdy prompt to jedno zadanie dla Cursora (Agent). Jeden prompt = jeden nowy cz
 
 ## Stan
 
-Prompty 01–06, 08–09, runda 1 (10–14) i runda 2 (15–17) są wykonane. Teraz runda 3 z uwag Justyny z 1.10: najpierw 5 minut ręcznie, potem 18 → 19 → 20. Opis niżej.
+Prompty 01–06, 08–09 i rundy 1–3 (10–20) są wykonane. Teraz runda 4 z 5.10: 21 od razu, 22 i 23 po odpowiedziach Justyny. Opis niżej.
 
 ## Kolejność
 
@@ -113,6 +113,18 @@ Po prompcie 16 ten pracownik pojawi się na ekranie „Zespół” z pełnym zes
 
 Justyna w **Punkty odbioru** zakłada (albo poprawia) punkt „Piekarnia Adjano” z adresem ul. Katowicka 120, godzinami odbioru i dniami, z kodem `ADJANO`. Bez tego klienci bez kodu nie będą mieli gdzie odebrać.
 
+## Runda 4 — uwagi i prośby Justyny z 5.10
+
+| # | Plik | Co mówi Justyna | Co robi |
+|---|------|-----------------|---------|
+| **21** | `21-panel-na-telefonie.md` | „na telefonie nie widzimy zakładki Panel” | Panel w menu na telefonie, karta panelu na koncie, link logowania dla pracowników, osobna ikona panelu na ekranie telefonu. Przy okazji uzupełnia historię migracji o 0026 i 0027 |
+| **22** | `22-rabat-za-ilosc.md` | „od 20 sztuk −10%, od 40 −20%” | Progi w Ustawieniach, liczenie w `create_order`, podpowiedź w koszyku, wybór korzystniejszego rabatu zamiast łączenia |
+| **23** | `23-przypomnienie-o-18.md` | „przypomnienie o 18:00 każdemu zarejestrowanemu” | Przypomnienie tylko za zgodą (wymóg prawa), zgoda po płatności, na koncie i w pasku, wysyłka o 18:00, wypisanie jednym kliknięciem |
+
+Przed 22 wpisz odpowiedzi Justyny w sekcję „Ustalenia” na górze pliku: progi, wykluczone kategorie, łączenie z voucherem.
+
+21 to szybka poprawka i może iść od razu. 22 i 23 dopiero po odpowiedziach Justyny.
+
 ## Historia migracji (stan z 1.10)
 
 Od `0020` migracje wgrywa Cursor przez MCP Supabase, więc na bazie mają numery z datą. Schemat jest zgodny z plikami, rozjechała się tylko historia. `npx supabase db push` **nie uruchamiać**, dopóki historia nie zostanie wyrównana.
@@ -126,16 +138,18 @@ Od `0020` migracje wgrywa Cursor przez MCP Supabase, więc na bazie mają numery
 | `0023_staff_permissions` | `20260930211619` |
 | `0024_product_options` | `20260930213645`, `20260930213736`, `20260930213747` |
 | `0025_production_summary_jsonb` | `20261001214844` |
+| `0026_staff_access_levels` | `20261001220215` |
+| `0027_require_point_code` | `20261001221315`, `20261001221347`, `20261001221422` |
 
 Wyrównanie (tylko zapis w historii, tabele i funkcje zostają bez zmian), po zalogowaniu CLI na konto z projektem (`npx supabase logout`, `npx supabase login`):
 
 ```
-npx supabase migration repair --status reverted 20260928000912 20260928211558 20260930205821 20260930211619 20260930213645 20260930213736 20260930213747 20261001214844
-npx supabase migration repair --status applied 0020 0021 0022 0023 0024 0025
+npx supabase migration repair --status reverted 20260928000912 20260928211558 20260930205821 20260930211619 20260930213645 20260930213736 20260930213747 20261001214844 20261001220215 20261001221315 20261001221347 20261001221422
+npx supabase migration repair --status applied 0020 0021 0022 0023 0024 0025 0026 0027
 npx supabase migration list
 ```
 
-Nowe migracje (od `0026`) dopisuj do tej tabeli, dopóki historia nie jest wyrównana.
+Nowe migracje (od `0028`) dopisuj do tej tabeli, dopóki historia nie jest wyrównana.
 
 ## Po wdrożeniu 08–09 (ręcznie, poza kodem)
 

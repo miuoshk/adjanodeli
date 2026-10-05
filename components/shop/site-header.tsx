@@ -35,7 +35,7 @@ export async function SiteHeader() {
     <SiteHeaderShell announcement={<LandingStrip copy={copy} cutoff={pickup.cutoff} />}>
       <HeaderLogo />
       <div className="flex min-w-0 items-center gap-2">
-        {profile ? <MobileShopMenu hasDelivery={hasDelivery} /> : null}
+        {profile ? <MobileShopMenu hasDelivery={hasDelivery} showPanel={isStaff} /> : null}
         <Link
           href="/sklep"
           className={`${profile ? "hidden sm:flex" : "flex"} min-h-12 items-center rounded-md px-2 text-sm font-medium hover:bg-black/10`}

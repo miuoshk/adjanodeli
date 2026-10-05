@@ -50,9 +50,18 @@ export default async function AccountPage() {
   const orders = (ordersResult.data ?? []) as CustomerOrder[];
   const groups = groupAccountOrders(orders);
   const email = profile?.email ?? session.user.email ?? "";
+  const showPanel = profile?.role === "staff" || profile?.role === "owner";
 
   return (
     <div>
+      {showPanel ? (
+        <section className="mb-8 rounded-[4px] border border-[rgba(43,42,31,0.18)] bg-[var(--adj-paper-light)] px-5 py-5 lg:px-6">
+          <h2 className="font-heading text-[22px] font-medium">Panel piekarni</h2>
+          <Button asChild size="lg" className="mt-4">
+            <Link href="/admin">Przejdź do panelu</Link>
+          </Button>
+        </section>
+      ) : null}
       <SectionHeading as="h1" eyebrow="Konto" title="Twoje konto" />
       {email ? <SignedInLine email={email} /> : null}
       <AccountOrders groups={groups} hasOrders={orders.length > 0} />

@@ -10,7 +10,11 @@ alwaysApply: true
 - Rezerwacja limitów dziennych odbywa się wyłącznie przez funkcję SQL create_order (atomowo). Nigdy nie sprawdzaj limitów w JS.
 - Server Actions do mutacji i odczytów z klienta. Route handlers tylko dla webhooków, cron i eksportów plików (CSV). Klient Supabase z service_role używany wyłącznie w lib/supabase/admin.ts i tylko w kodzie serwerowym (webhook, cron, e-mail).
 - Każda nowa tabela dostaje RLS enabled i polityki. Brak polityki = brak dostępu. To jest zamierzone.
-- Nie używaj any. Typy bazy z lib/supabase/database.types.ts (generowane), nie ręczne.
+- Nie używaj any. Typy bazy z lib/supabase/database.types.ts (generowane), nie ręczne. Gdy `npm run db:types` nie działa (CLI bez logowania), generuj przez MCP Supabase (`generate_typescript_types`).
+- Migracje: nowy plik `supabase/migrations/NNNN_nazwa.sql` (kolejny wolny numer), wgrywany przez MCP Supabase (`apply_migration`). Nie uruchamiaj `npx supabase db push`: historia migracji na bazie ma inne numery niż pliki (tabela w docs/design/prompts/00-KOLEJNOSC.md, „Historia migracji”). Wgranej migracji nie zmieniasz bez nowej migracji, która robi tę samą zmianę na bazie. Po wgraniu odczytaj jej wersję z `supabase_migrations.schema_migrations` i dopisz wiersz do tabeli „Historia migracji” oraz do komend `migration repair`.
+- Po każdej zmianie funkcji SQL przetestuj ją na danych w tym samym zadaniu (test w `supabase/tests` albo wywołanie na bazie testowej). Samo utworzenie funkcji to nie test: błędy typu `max(jsonb)` wychodzą dopiero przy wywołaniu.
+- Każde zapytanie do Supabase sprawdza `error`. Błąd ma być widoczny (komunikat w panelu i `console.error`), nigdy nie zamieniaj go po cichu na pustą listę.
+- `package.json` i `package-lock.json` zmieniasz tylko na wyraźne polecenie. Bez podbijania wersji przy okazji.
 - Komponenty serwerowe domyślnie. "use client" tylko tam, gdzie jest interakcja.
 - Nie zmieniaj niczego poza zakresem bieżącego zadania. Nie refaktoruj "przy okazji". Nie zmieniaj nazw z SPEC.
 - Po zakończeniu zadania wypisz zmienione pliki i jedno zdanie, jak przetestować.

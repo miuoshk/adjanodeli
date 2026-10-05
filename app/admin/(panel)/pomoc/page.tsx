@@ -18,6 +18,7 @@ const TOC = [
   { href: "#specjalne", label: "Zamówienia specjalne" },
   { href: "#zespol", label: "Zespół" },
   { href: "#kod-punktu", label: "Kod punktu" },
+  { href: "#telefon", label: "Panel na telefonie" },
   { href: "#zgloszenie", label: "Gdy coś nie działa" },
 ] as const;
 
@@ -296,6 +297,15 @@ export default async function HelpPage() {
           W zamówieniu opłaconym albo w produkcji jest „Zmień punkt odbioru”. Wybierasz punkt, który działa
           w dniu zamówienia. Domyślnie klient dostaje mail z nowym punktem, godzinami i kodem odbioru.
         </p>
+      </section>
+
+      <section id="telefon" className="help-section space-y-3">
+        <h2 className="font-heading text-2xl font-semibold">Panel na telefonie</h2>
+        <p>
+          Na telefonie otwórz panel w przeglądarce i wybierz Udostępnij → Do ekranu początkowego (iPhone)
+          albo Menu → Dodaj do ekranu głównego (Android).
+        </p>
+        <p>Na ekranie pojawi się ikona „Panel”, która otwiera panel od razu.</p>
       </section>
 
       <section id="zgloszenie" className="help-section space-y-3">

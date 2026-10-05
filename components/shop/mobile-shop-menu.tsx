@@ -4,7 +4,13 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
-export function MobileShopMenu({ hasDelivery }: { hasDelivery: boolean }) {
+export function MobileShopMenu({
+  hasDelivery,
+  showPanel,
+}: {
+  hasDelivery: boolean;
+  showPanel: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -24,6 +30,17 @@ export function MobileShopMenu({ hasDelivery }: { hasDelivery: boolean }) {
       </button>
       {open ? (
         <div className="absolute right-0 top-full z-50 mt-2 w-56 border border-[rgba(43,42,31,0.18)] bg-[var(--adj-cream)] p-2 shadow-sm">
+          {showPanel ? (
+            <>
+              <Link
+                href="/admin"
+                className="flex min-h-12 items-center rounded-md px-2 text-sm font-medium text-[var(--adj-red)] hover:bg-black/10"
+              >
+                Panel piekarni
+              </Link>
+              <div className="my-2 h-px bg-[rgba(43,42,31,0.18)]" role="separator" />
+            </>
+          ) : null}
           <Link
             href="/sklep"
             className="flex min-h-12 items-center rounded-md px-2 text-sm font-medium hover:bg-black/10"
