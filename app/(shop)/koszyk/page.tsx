@@ -3,6 +3,7 @@ import { getProfile } from "@/lib/auth";
 import { formatCutoff } from "@/lib/dates";
 import { getLoyaltyStatus } from "@/lib/loyalty/status";
 import { parseInvoiceDefaults } from "@/lib/orders/invoice";
+import { parseVolumeTiers } from "@/lib/orders/volume-discount";
 import { createServerClient } from "@/lib/supabase/server";
 
 export default async function CartPage({
@@ -22,7 +23,7 @@ export default async function CartPage({
       .order("sort_order"),
     supabase
       .from("settings")
-      .select("max_qty_per_item, cutoff_time, require_point_code")
+      .select("max_qty_per_item, cutoff_time, require_point_code, volume_discount_enabled, volume_discount_tiers")
       .eq("id", 1)
       .single(),
     getProfile(),
@@ -76,6 +77,10 @@ export default async function CartPage({
       invoiceDefaults={parseInvoiceDefaults(profile?.invoice_defaults)}
       requirePointCode={requirePointCode}
       pendingCode={params.kod ?? null}
+      volumeDiscount={{
+        enabled: settingsResult.data?.volume_discount_enabled ?? false,
+        tiers: parseVolumeTiers(settingsResult.data?.volume_discount_tiers),
+      }}
     />
   );
 }

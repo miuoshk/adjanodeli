@@ -23,6 +23,7 @@ import {
 } from "@/lib/orders/cancel-deadline";
 import { EXPIRED_PAID_NOTE } from "@/lib/email/send-paid-after-expiry";
 import { formatItemLine, parseItemOptions } from "@/lib/orders/item-options";
+import { discountKindLabel } from "@/lib/orders/volume-discount";
 import { createServerClient } from "@/lib/supabase/server";
 import type { CartItem } from "@/lib/store/cart";
 import type { Tables } from "@/lib/supabase/database.types";
@@ -55,7 +56,19 @@ function toCartItems(items: OrderItemRow[]): CartItem[] {
     });
 }
 
-function OrderLines({ items, totalGrosze }: { items: OrderItemRow[]; totalGrosze: number }) {
+function OrderLines({
+  items,
+  totalGrosze,
+  discountGrosze = 0,
+  discountSource = null,
+  discountPct = null,
+}: {
+  items: OrderItemRow[];
+  totalGrosze: number;
+  discountGrosze?: number;
+  discountSource?: string | null;
+  discountPct?: number | null;
+}) {
   return (
     <div>
       <ul className="border-t border-[var(--adj-ink)]">
@@ -71,6 +84,11 @@ function OrderLines({ items, totalGrosze }: { items: OrderItemRow[]; totalGrosze
           </li>
         ))}
       </ul>
+      {discountGrosze > 0 ? (
+        <p className="mt-4 text-[16px]">
+          {discountKindLabel(discountSource, discountPct)}: −{formatPrice(discountGrosze)}
+        </p>
+      ) : null}
       <p className="mt-4 flex items-baseline justify-between gap-4 border-t border-[rgba(43,42,31,0.18)] pt-4">
         <span className="font-heading text-xl">Suma</span>
         <span className="font-heading text-[28px] font-medium tabular-nums">
@@ -245,7 +263,13 @@ function OrderStatusView({
         <SectionHeading as="h1" eyebrow={`Zamówienie #${order.order_number}`} title="Czeka na płatność" />
         {order.expires_at ? <OrderCountdown expiresAt={order.expires_at} /> : null}
         <PayOrderButton orderId={order.id} totalGrosze={order.total_grosze} />
-        <OrderLines items={items} totalGrosze={order.total_grosze} />
+        <OrderLines
+          items={items}
+          totalGrosze={order.total_grosze}
+          discountGrosze={order.discount_grosze}
+          discountSource={order.discount_source}
+          discountPct={order.discount_pct}
+        />
         {point ? <PointFacts point={point} pickupDate={order.pickup_date} /> : null}
       </div>
     );
@@ -295,7 +319,13 @@ function OrderStatusView({
             awaiting
           />
         ) : null}
-        <OrderLines items={items} totalGrosze={order.total_grosze} />
+        <OrderLines
+          items={items}
+          totalGrosze={order.total_grosze}
+          discountGrosze={order.discount_grosze}
+          discountSource={order.discount_source}
+          discountPct={order.discount_pct}
+        />
       </div>
     );
   }
@@ -311,7 +341,13 @@ function OrderStatusView({
           eyebrow={`Zamówienie #${order.order_number}`}
           title={`Odebrane${when ? ` ${when}` : ""}. Smacznego!`}
         />
-        <OrderLines items={items} totalGrosze={order.total_grosze} />
+        <OrderLines
+          items={items}
+          totalGrosze={order.total_grosze}
+          discountGrosze={order.discount_grosze}
+          discountSource={order.discount_source}
+          discountPct={order.discount_pct}
+        />
         <ReorderButton firstDay={firstDay} items={reorderItems} />
       </div>
     );
@@ -368,7 +404,13 @@ function OrderStatusView({
   return (
     <div className="space-y-8">
       <SectionHeading as="h1" eyebrow={`Zamówienie #${order.order_number}`} title="Zamówienie" />
-      <OrderLines items={items} totalGrosze={order.total_grosze} />
+      <OrderLines
+          items={items}
+          totalGrosze={order.total_grosze}
+          discountGrosze={order.discount_grosze}
+          discountSource={order.discount_source}
+          discountPct={order.discount_pct}
+        />
     </div>
   );
 }
@@ -412,7 +454,13 @@ function PaidLikeView({
       {order.pickup_code ? (
         <PickupTicket code={order.pickup_code} point={point} pickupDate={order.pickup_date} />
       ) : null}
-      <OrderLines items={items} totalGrosze={order.total_grosze} />
+      <OrderLines
+          items={items}
+          totalGrosze={order.total_grosze}
+          discountGrosze={order.discount_grosze}
+          discountSource={order.discount_source}
+          discountPct={order.discount_pct}
+        />
       {standingCount !== undefined ? (
         <SaveStandingOrderButton orderId={order.id} standingCount={standingCount} />
       ) : null}

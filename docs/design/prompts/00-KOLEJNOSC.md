@@ -140,16 +140,17 @@ Od `0020` migracje wgrywa Cursor przez MCP Supabase, więc na bazie mają numery
 | `0025_production_summary_jsonb` | `20261001214844` |
 | `0026_staff_access_levels` | `20261001220215` |
 | `0027_require_point_code` | `20261001221315`, `20261001221347`, `20261001221422` |
+| `0028_volume_discount` | `20261005204154`, `20261005204410` |
 
 Wyrównanie (tylko zapis w historii, tabele i funkcje zostają bez zmian), po zalogowaniu CLI na konto z projektem (`npx supabase logout`, `npx supabase login`):
 
 ```
-npx supabase migration repair --status reverted 20260928000912 20260928211558 20260930205821 20260930211619 20260930213645 20260930213736 20260930213747 20261001214844 20261001220215 20261001221315 20261001221347 20261001221422
-npx supabase migration repair --status applied 0020 0021 0022 0023 0024 0025 0026 0027
+npx supabase migration repair --status reverted 20260928000912 20260928211558 20260930205821 20260930211619 20260930213645 20260930213736 20260930213747 20261001214844 20261001220215 20261001221315 20261001221347 20261001221422 20261005204154 20261005204410
+npx supabase migration repair --status applied 0020 0021 0022 0023 0024 0025 0026 0027 0028
 npx supabase migration list
 ```
 
-Nowe migracje (od `0028`) dopisuj do tej tabeli, dopóki historia nie jest wyrównana.
+Nowe migracje (od `0029`) dopisuj do tej tabeli, dopóki historia nie jest wyrównana.
 
 ## Po wdrożeniu 08–09 (ręcznie, poza kodem)
 

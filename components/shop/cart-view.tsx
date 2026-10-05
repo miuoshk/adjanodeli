@@ -29,6 +29,14 @@ import { blockingLeadItem, cartEarliestDate } from "@/lib/orders/lead-time";
 import { cartOptionLine, hasUnknownOption, missingRequiredGroupName, optionDeltaGrosze, type ShopOptionGroup } from "@/lib/orders/item-options";
 import { loadShopOptionGroups } from "@/lib/orders/load-option-groups";
 import { placeOrder } from "@/lib/orders/place-order";
+import {
+  chooseOrderDiscount,
+  volumeComparisonLine,
+  volumeDiscountGrosze,
+  volumePercent,
+  volumeProgressLine,
+  type VolumeTier,
+} from "@/lib/orders/volume-discount";
 import { ProductOptionSheet } from "@/components/shop/product-option-sheet";
 import { unlockPickupPoint } from "@/lib/pickup/unlock-point";
 import { lineKeyOf, selectSubtotal, useCart, type CartItem } from "@/lib/store/cart";
@@ -64,6 +72,7 @@ type CartViewProps = {
   invoiceDefaults: InvoiceDefaults | null;
   requirePointCode: boolean;
   pendingCode?: string | null;
+  volumeDiscount: { enabled: boolean; tiers: VolumeTier[] };
 };
 
 const fieldClass =
@@ -117,6 +126,7 @@ export function CartView({
   invoiceDefaults,
   requirePointCode,
   pendingCode = null,
+  volumeDiscount,
 }: CartViewProps) {
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
@@ -319,8 +329,32 @@ export function CartView({
           items.map((item) => ({ unitPriceGrosze: item.unitPriceGrosze, qty: item.qty })),
         )
       : 0;
-  const discountGrosze = usingCode ? (appliedCode?.discountGrosze ?? 0) : voucherDiscount;
+  const offerGrosze = usingCode ? (appliedCode?.discountGrosze ?? 0) : voucherDiscount;
+  const offerKind = usingCode ? "code" : useVoucher && selectedVoucher ? "voucher" : null;
+  const totalQty = items.reduce((sum, item) => sum + item.qty, 0);
+  const volumePct = volumePercent(totalQty, volumeDiscount.tiers, volumeDiscount.enabled);
+  const volumeGrosze = volumePct == null ? 0 : volumeDiscountGrosze(subtotal, volumePct);
+  const chosenDiscount = chooseOrderDiscount({
+    offerGrosze,
+    offerSource: offerKind,
+    offerPct:
+      offerKind === "voucher" && selectedVoucher?.type === "PCT10"
+        ? 10
+        : offerKind === "voucher" && selectedVoucher?.type === "PCT50"
+          ? 50
+          : null,
+    volumeGrosze,
+    volumePct,
+  });
+  const discountGrosze = chosenDiscount.grosze;
   const payableGrosze = subtotal - discountGrosze;
+  const progressLine = volumeProgressLine(totalQty, volumeDiscount.tiers, volumeDiscount.enabled);
+  const comparisonLine = volumeComparisonLine({
+    enabled: volumeDiscount.enabled,
+    volumeGrosze,
+    offerGrosze,
+    offerKind,
+  });
   const belowMinimum = payableGrosze < ORDER_MIN_GROSZE;
 
   const overstock = useMemo(() => {
@@ -979,12 +1013,18 @@ export function CartView({
           </p>
           {discountGrosze > 0 ? (
             <p className="flex items-baseline justify-between gap-4">
-              <span>Rabat</span>
+              <span>
+                {chosenDiscount.source === "volume" && chosenDiscount.pct
+                  ? `Rabat za ilość: −${chosenDiscount.pct}%`
+                  : "Rabat"}
+              </span>
               <span>
                 −<Price grosze={discountGrosze} />
               </span>
             </p>
           ) : null}
+          {progressLine ? <p className="text-[var(--adj-ink-soft)]">{progressLine}</p> : null}
+          {comparisonLine ? <p>{comparisonLine}</p> : null}
         </div>
         <p className="mt-4 flex items-baseline justify-between gap-4 border-t border-[rgba(43,42,31,0.18)] pt-4">
           <span className="font-heading text-xl">Do zapłaty</span>

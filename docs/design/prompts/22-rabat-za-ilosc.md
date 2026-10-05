@@ -6,9 +6,11 @@
 
 ## Ustalenia
 
-- Progi: od **[20]** sztuk −**[10]**%, od **[40]** sztuk −**[20]**%. („Powyżej 20” = od 21? Wpisz, co mówi Justyna).
-- Sztuki liczone ze **[wszystkich produktów w zamówieniu]**. (Czy jakieś kategorie, np. torty, mają być wyłączone?)
-- Rabat za ilość **[nie łączy się]** z voucherem lojalnościowym ani kodem rabatowym. System bierze **[korzystniejszy dla klienta]**.
+Justyna nie dopisała nic poza prośbą z 5.10. Zostają wartości z nawiasów.
+
+- Progi: od **20** sztuk −**10**%, od **40** sztuk −**20**%. Próg jest włącznie: 20 sztuk daje −10%, 19 nie. „Powyżej 20” czytamy jako „od 20”.
+- Sztuki liczone ze **wszystkich produktów w zamówieniu**. Żadna kategoria nie jest wyłączona.
+- Rabat za ilość **nie łączy się** z voucherem lojalnościowym ani kodem rabatowym. System bierze **korzystniejszy dla klienta**. Przy takiej samej kwocie zostaje voucher albo kod, który klient wybrał.
 
 ## 0. Zanim zaczniesz
 

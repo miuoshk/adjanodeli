@@ -308,7 +308,6 @@ export async function changeOrderPickupPoint(input: {
   const { error } = await supabase.rpc("change_order_pickup_point", {
     p_order_id: input.orderId,
     p_point_id: input.pointId,
-    p_note: null,
   });
   if (error) {
     console.error("change_order_pickup_point", error.message);

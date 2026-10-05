@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       allergens: {
@@ -452,95 +427,13 @@ export type Database = {
           },
         ]
       }
-      product_option_groups: {
-        Row: {
-          created_at: string
-          id: string
-          is_required: boolean
-          max_choices: number
-          name: string
-          product_id: string
-          sort_order: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_required?: boolean
-          max_choices?: number
-          name: string
-          product_id: string
-          sort_order?: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_required?: boolean
-          max_choices?: number
-          name?: string
-          product_id?: string
-          sort_order?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "product_option_groups_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      product_options: {
-        Row: {
-          created_at: string
-          group_id: string
-          id: string
-          is_active: boolean
-          name: string
-          price_delta_grosze: number
-          sort_order: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          group_id: string
-          id?: string
-          is_active?: boolean
-          name: string
-          price_delta_grosze?: number
-          sort_order?: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          group_id?: string
-          id?: string
-          is_active?: boolean
-          name?: string
-          price_delta_grosze?: number
-          sort_order?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "product_options_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "product_option_groups"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       order_items: {
         Row: {
           created_at: string
           id: string
+          options: Json
           order_id: string
           product_id: string | null
-          options: Json
           product_name: string
           qty: number
           unit_price_grosze: number
@@ -549,9 +442,9 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          options?: Json
           order_id: string
           product_id?: string | null
-          options?: Json
           product_name: string
           qty: number
           unit_price_grosze: number
@@ -560,9 +453,9 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          options?: Json
           order_id?: string
           product_id?: string | null
-          options?: Json
           product_name?: string
           qty?: number
           unit_price_grosze?: number
@@ -595,6 +488,8 @@ export type Database = {
           delivered_at: string | null
           discount_code_id: string | null
           discount_grosze: number
+          discount_pct: number | null
+          discount_source: string | null
           expires_at: string | null
           id: string
           invoice_address: string | null
@@ -626,6 +521,8 @@ export type Database = {
           delivered_at?: string | null
           discount_code_id?: string | null
           discount_grosze?: number
+          discount_pct?: number | null
+          discount_source?: string | null
           expires_at?: string | null
           id?: string
           invoice_address?: string | null
@@ -657,6 +554,8 @@ export type Database = {
           delivered_at?: string | null
           discount_code_id?: string | null
           discount_grosze?: number
+          discount_pct?: number | null
+          discount_source?: string | null
           expires_at?: string | null
           id?: string
           invoice_address?: string | null
@@ -866,6 +765,88 @@ export type Database = {
           },
         ]
       }
+      product_option_groups: {
+        Row: {
+          created_at: string
+          id: string
+          is_required: boolean
+          max_choices: number
+          name: string
+          product_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          max_choices?: number
+          name: string
+          product_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          max_choices?: number
+          name?: string
+          product_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_option_groups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_options: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          is_active: boolean
+          name: string
+          price_delta_grosze: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          is_active?: boolean
+          name: string
+          price_delta_grosze?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_delta_grosze?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_options_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "product_option_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_tags: {
         Row: {
           color: string
@@ -1033,6 +1014,7 @@ export type Database = {
           customer_cancellation_enabled: boolean
           cutoff_time: string
           id: number
+          label_customer_info: string
           max_days_ahead: number
           max_qty_per_item: number
           order_weekdays: number[]
@@ -1040,8 +1022,9 @@ export type Database = {
           owner_phone: string | null
           pending_order_ttl_minutes: number
           require_point_code: boolean
-          label_customer_info: string
           updated_at: string
+          volume_discount_enabled: boolean
+          volume_discount_tiers: Json
         }
         Insert: {
           bakery_name?: string | null
@@ -1051,6 +1034,7 @@ export type Database = {
           customer_cancellation_enabled?: boolean
           cutoff_time?: string
           id: number
+          label_customer_info?: string
           max_days_ahead?: number
           max_qty_per_item?: number
           order_weekdays?: number[]
@@ -1058,8 +1042,9 @@ export type Database = {
           owner_phone?: string | null
           pending_order_ttl_minutes?: number
           require_point_code?: boolean
-          label_customer_info?: string
           updated_at?: string
+          volume_discount_enabled?: boolean
+          volume_discount_tiers?: Json
         }
         Update: {
           bakery_name?: string | null
@@ -1069,6 +1054,7 @@ export type Database = {
           customer_cancellation_enabled?: boolean
           cutoff_time?: string
           id?: number
+          label_customer_info?: string
           max_days_ahead?: number
           max_qty_per_item?: number
           order_weekdays?: number[]
@@ -1076,8 +1062,9 @@ export type Database = {
           owner_phone?: string | null
           pending_order_ttl_minutes?: number
           require_point_code?: boolean
-          label_customer_info?: string
           updated_at?: string
+          volume_discount_enabled?: boolean
+          volume_discount_tiers?: Json
         }
         Relationships: []
       }
@@ -1180,15 +1167,11 @@ export type Database = {
     }
     Functions: {
       admin_login_email: { Args: { p_login: string }; Returns: string }
-      has_staff_permission: {
-        Args: { p_level?: string; p_section: string }
-        Returns: boolean
-      }
       available_pickup_dates:
         | { Args: never; Returns: string[] }
         | { Args: { p_lead_days: number }; Returns: string[] }
       change_order_pickup_point: {
-        Args: { p_note?: string | null; p_order_id: string; p_point_id: string }
+        Args: { p_note?: string; p_order_id: string; p_point_id: string }
         Returns: undefined
       }
       create_order: {
@@ -1226,6 +1209,10 @@ export type Database = {
         Returns: undefined
       }
       has_pickup_point_access: { Args: { p_id: string }; Returns: boolean }
+      has_staff_permission: {
+        Args: { p_level?: string; p_section: string }
+        Returns: boolean
+      }
       is_owner: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
       is_valid_nip: { Args: { p_nip: string }; Returns: boolean }
@@ -1266,6 +1253,10 @@ export type Database = {
         Returns: undefined
       }
       rename_tag: { Args: { p_new: string; p_old: string }; Returns: undefined }
+      resolve_order_item_options: {
+        Args: { p_option_ids: Json; p_product_id: string }
+        Returns: Json
+      }
       restore_discount_for_order: {
         Args: { p_order_id: string }
         Returns: undefined
@@ -1286,6 +1277,7 @@ export type Database = {
         Args: { p_note: string; p_order_id: string; p_status: string }
         Returns: undefined
       }
+      staff_permissions_valid: { Args: { items: string[] }; Returns: boolean }
       stats_by_pickup_point: {
         Args: { p_from: string; p_to: string }
         Returns: {
@@ -1379,6 +1371,7 @@ export type Database = {
         Args: { p_code: string; p_pickup_point_id: string; p_subtotal: number }
         Returns: Json
       }
+      volume_tiers_valid: { Args: { p_tiers: Json }; Returns: boolean }
       warsaw_now: { Args: never; Returns: string }
     }
     Enums: {
@@ -1508,9 +1501,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

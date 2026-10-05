@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { formatPrice } from "@/lib/format";
 import { itemNameWithOptions, parseItemOptions } from "@/lib/orders/item-options";
 import { ORDER_MIN_GROSZE } from "@/lib/loyalty/discount";
+import { stripeCouponName } from "@/lib/orders/volume-discount";
 import { getStripe } from "@/lib/stripe/client";
 import { createClient } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
@@ -31,8 +32,11 @@ type PayableOrder = Pick<
   | "customer_email"
   | "stripe_checkout_session_id"
   | "discount_grosze"
+  | "discount_source"
+  | "discount_pct"
 > & {
   order_items: OrderItemRow[];
+  discount_codes: { code: string } | { code: string }[] | null;
 };
 
 const CHECKOUT_TTL_SECONDS = 30 * 60;
@@ -73,13 +77,18 @@ export async function payOrder(orderId: string): Promise<PayOrderResult> {
   await requireUser(`/zamowienie/${parsedId.data}`);
 
   const supabase = await createServerClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("orders")
     .select(
-      "id, status, expires_at, customer_email, stripe_checkout_session_id, discount_grosze, order_items(id, product_name, unit_price_grosze, qty, options)",
+      "id, status, expires_at, customer_email, stripe_checkout_session_id, discount_grosze, discount_source, discount_pct, order_items(id, product_name, unit_price_grosze, qty, options), discount_codes(code)",
     )
     .eq("id", parsedId.data)
     .maybeSingle();
+
+  if (error) {
+    console.error("pay order", error.message);
+    return { ok: false, code: "UNKNOWN", message: "Nie udało się otworzyć płatności." };
+  }
 
   const order = data as PayableOrder | null;
   if (!order || !isPayable(order) || order.order_items.length === 0) {
@@ -108,11 +117,12 @@ export async function payOrder(orderId: string): Promise<PayOrderResult> {
     const base = appUrl();
     const discounts: { coupon: string }[] = [];
     if (order.discount_grosze > 0) {
+      const codeRow = Array.isArray(order.discount_codes) ? order.discount_codes[0] : order.discount_codes;
       const coupon = await getStripe().coupons.create({
         amount_off: order.discount_grosze,
         currency: "pln",
         duration: "once",
-        name: "Rabat Adjano Deli",
+        name: stripeCouponName(order.discount_source, order.discount_pct, codeRow?.code ?? null),
       });
       discounts.push({ coupon: coupon.id });
     }

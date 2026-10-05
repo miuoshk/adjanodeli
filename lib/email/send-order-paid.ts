@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/email/resend";
 import { OrderPaidEmail } from "@/lib/email/templates/order-paid";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl, formatPrice, formatTimeRange } from "@/lib/format";
+import { discountKindLabel } from "@/lib/orders/volume-discount";
 import { itemNameWithOptions, parseItemOptions } from "@/lib/orders/item-options";
 import { voucherLabel, type VoucherType } from "@/lib/loyalty/discount";
 import { parseLoyaltyStatus } from "@/lib/loyalty/status";
@@ -120,6 +121,10 @@ export async function sendOrderPaid(
           lineTotal: formatPrice(item.unit_price_grosze * item.qty),
         })),
         total: formatPrice(order.total_grosze),
+        discountLine:
+          order.discount_grosze > 0
+            ? `${discountKindLabel(order.discount_source, order.discount_pct)}: −${formatPrice(order.discount_grosze)}`
+            : null,
         ownerPhone: settingsResult.data?.owner_phone ?? null,
         stampsLine,
         newVoucherLine,

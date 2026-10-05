@@ -23,6 +23,12 @@ import type { OwnerSettings } from "@/lib/admin/owner-queries";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl } from "@/lib/format";
 import { labelCustomerLines, type LabelCustomerInfo } from "@/lib/labels/customer-info";
+import {
+  parseVolumeTiers,
+  volumeShopLine,
+  volumeTiersError,
+  type VolumeTier,
+} from "@/lib/orders/volume-discount";
 
 const schema = z.object({
   bakeryName: z.string().min(1, "Podaj nazwę."),
@@ -46,6 +52,14 @@ export function SettingsForm({ settings }: { settings: OwnerSettings }) {
   );
   const [newClosed, setNewClosed] = useState("");
   const [saving, setSaving] = useState(false);
+  const [volumeEnabled, setVolumeEnabled] = useState(settings.volume_discount_enabled);
+  const [volumeTiers, setVolumeTiers] = useState<VolumeTier[]>(() => {
+    const parsed = parseVolumeTiers(settings.volume_discount_tiers);
+    return parsed.length > 0 ? parsed : [
+      { minQty: 20, pct: 10 },
+      { minQty: 40, pct: 20 },
+    ];
+  });
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -68,12 +82,19 @@ export function SettingsForm({ settings }: { settings: OwnerSettings }) {
   });
 
   async function onSubmit(values: FormValues) {
+    const tierError = volumeTiersError(volumeTiers);
+    if (tierError) {
+      toast(tierError);
+      return;
+    }
     setSaving(true);
     try {
       const result = await saveSettings({
         ...values,
         orderWeekdays: [...values.orderWeekdays].sort((a, b) => a - b),
         closedDates,
+        volumeDiscountEnabled: volumeEnabled,
+        volumeDiscountTiers: volumeTiers,
       });
       if (!result.ok) {
         toast(result.message);
@@ -350,6 +371,83 @@ export function SettingsForm({ settings }: { settings: OwnerSettings }) {
             </FormItem>
           )}
         />
+
+        <section className="space-y-3 rounded-xl border border-[var(--adj-cream-dark)] bg-card p-4">
+          <h2 className="text-2xl font-semibold">Rabat za ilość</h2>
+          <label className="flex min-h-12 items-center gap-3 text-base">
+            <input
+              type="checkbox"
+              checked={volumeEnabled}
+              onChange={(event) => setVolumeEnabled(event.target.checked)}
+              className="size-5 shrink-0"
+            />
+            Włączony
+          </label>
+          <ul className="space-y-2">
+            {volumeTiers.map((tier, index) => (
+              <li key={index} className="flex flex-wrap items-end gap-2">
+                <label className="text-sm">
+                  Od sztuk
+                  <Input
+                    type="number"
+                    min={1}
+                    value={tier.minQty}
+                    onChange={(event) => {
+                      const minQty = Number(event.target.value);
+                      setVolumeTiers((current) =>
+                        current.map((row, rowIndex) => (rowIndex === index ? { ...row, minQty } : row)),
+                      );
+                    }}
+                    className="mt-1 min-h-12 w-28 text-base"
+                  />
+                </label>
+                <label className="text-sm">
+                  Procent
+                  <Input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={tier.pct}
+                    onChange={(event) => {
+                      const pct = Number(event.target.value);
+                      setVolumeTiers((current) =>
+                        current.map((row, rowIndex) => (rowIndex === index ? { ...row, pct } : row)),
+                      );
+                    }}
+                    className="mt-1 min-h-12 w-28 text-base"
+                  />
+                </label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="min-h-12"
+                  onClick={() => setVolumeTiers((current) => current.filter((_, rowIndex) => rowIndex !== index))}
+                >
+                  Usuń
+                </Button>
+              </li>
+            ))}
+          </ul>
+          {volumeTiers.length < 3 ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-12"
+              onClick={() =>
+                setVolumeTiers((current) => [
+                  ...current,
+                  { minQty: (current[current.length - 1]?.minQty ?? 0) + 10, pct: 10 },
+                ])
+              }
+            >
+              Dodaj próg
+            </Button>
+          ) : null}
+          <p className="text-sm leading-relaxed">
+            Na sklepie: {volumeTiers.length > 0 ? volumeShopLine(volumeTiers) : "brak progów."}
+            {volumeEnabled ? "" : " Zdanie pojawi się, gdy rabat jest włączony."}
+          </p>
+        </section>
 
         <Button type="submit" className="min-h-12" disabled={saving}>
           Zapisz ustawienia

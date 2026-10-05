@@ -18,6 +18,7 @@ const TOC = [
   { href: "#specjalne", label: "Zamówienia specjalne" },
   { href: "#zespol", label: "Zespół" },
   { href: "#kod-punktu", label: "Kod punktu" },
+  { href: "#rabat-ilosc", label: "Rabat za ilość" },
   { href: "#telefon", label: "Panel na telefonie" },
   { href: "#zgloszenie", label: "Gdy coś nie działa" },
 ] as const;
@@ -296,6 +297,23 @@ export default async function HelpPage() {
         <p>
           W zamówieniu opłaconym albo w produkcji jest „Zmień punkt odbioru”. Wybierasz punkt, który działa
           w dniu zamówienia. Domyślnie klient dostaje mail z nowym punktem, godzinami i kodem odbioru.
+        </p>
+      </section>
+
+      <section id="rabat-ilosc" className="help-section space-y-3">
+        <h2 className="font-heading text-2xl font-semibold">Rabat za ilość</h2>
+        <p>
+          W <strong>Ustawieniach</strong> jest karta „Rabat za ilość”. Włączasz go i podajesz progi: od ilu sztuk
+          i ile procent. Najwyżej trzy. Procent od 1 do 50. Potem „Zapisz ustawienia”.
+        </p>
+        <p>
+          Na górze sklepu klient widzi zdanie, na przykład „Od 20 sztuk −10%, od 40 sztuk −20%”. W koszyku widzi,
+          ile sztuk brakuje do progu, a po progu kwotę rabatu.
+        </p>
+        <p>
+          Liczą się wszystkie sztuki w zamówieniu. Rabat nie łączy się z voucherem ani z kodem. Zostaje ten, który
+          daje klientowi więcej. Drugi zostaje na później. Wyłączenie w Ustawieniach zdejmuje rabat z nowych
+          zamówień.
         </p>
       </section>
 

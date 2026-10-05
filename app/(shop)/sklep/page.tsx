@@ -9,6 +9,7 @@ import { formatCutoff, warsawDateIso } from "@/lib/dates";
 import { buildCategoryTiles } from "@/lib/shop/category-tiles";
 import { buildPickupCopy } from "@/lib/shop/pickup-copy";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
+import { parseVolumeTiers, volumeShopLine } from "@/lib/orders/volume-discount";
 import { createServerClient } from "@/lib/supabase/server";
 
 type ShopPageProps = {
@@ -51,7 +52,11 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
         .from("products")
         .select("id, category_id, weekdays")
         .eq("is_active", true),
-      supabase.from("settings").select("cutoff_time").eq("id", 1).maybeSingle(),
+      supabase
+        .from("settings")
+        .select("cutoff_time, volume_discount_enabled, volume_discount_tiers")
+        .eq("id", 1)
+        .maybeSingle(),
     ]);
 
     const pickupDates = (datesResult.data ?? [])
@@ -67,6 +72,11 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
     const cutoff = settingsResult.data?.cutoff_time
       ? formatCutoff(String(settingsResult.data.cutoff_time))
       : "20:00";
+    const volumeTiers = parseVolumeTiers(settingsResult.data?.volume_discount_tiers);
+    const volumeLine =
+      settingsResult.data?.volume_discount_enabled && volumeTiers.length > 0
+        ? volumeShopLine(volumeTiers)
+        : null;
     const copy = buildPickupCopy(selectedDay, cutoff, warsawDateIso());
 
     const { data: availability } = await supabase.rpc("product_availability", {
@@ -89,6 +99,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
           title={copy.menuHeading}
           description={copy.deadline}
         />
+        {volumeLine ? <p className="mt-4 text-[16px]">{volumeLine}</p> : null}
         <div className="mt-8">
           <DayPicker dates={pickupDates} selected={selectedDay} />
         </div>

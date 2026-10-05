@@ -27,6 +27,7 @@ type OrderPaidEmailProps = {
   ownerPhone: string | null;
   stampsLine: string;
   newVoucherLine: string | null;
+  discountLine: string | null;
 };
 
 const buttonStyle = {
@@ -53,6 +54,7 @@ export function OrderPaidEmail({
   ownerPhone,
   stampsLine,
   newVoucherLine,
+  discountLine,
 }: OrderPaidEmailProps) {
   const facts = [
     ["Punkt", pointName],
@@ -172,6 +174,7 @@ export function OrderPaidEmail({
           </tr>
         ))}
       </table>
+      {discountLine ? <p style={{ margin: "12px 0 0" }}>{discountLine}</p> : null}
       <p style={{ margin: "12px 0 0", fontWeight: 700, fontSize: "18px" }}>Suma: {total}</p>
       <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} style={{ marginTop: "16px" }}>
         <tr>

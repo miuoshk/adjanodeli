@@ -9,6 +9,7 @@ import {
 } from "@/lib/admin/product-option-drafts";
 import { parseItemOptions } from "@/lib/orders/item-options";
 import { requireRole } from "@/lib/auth";
+import { volumeTiersError, type VolumeTier } from "@/lib/orders/volume-discount";
 import { isValidAccessCode, normalizeAccessCode } from "@/lib/pickup/access-code";
 import { createServerClient } from "@/lib/supabase/server";
 import { parseEmailDomains } from "@/lib/validation/email-domain";
@@ -652,6 +653,8 @@ export type SettingsPayload = {
   customerCancellationEnabled: boolean;
   requirePointCode: boolean;
   labelCustomerInfo: "masked" | "masked_email" | "full";
+  volumeDiscountEnabled: boolean;
+  volumeDiscountTiers: VolumeTier[];
 };
 
 export async function saveSettings(payload: SettingsPayload) {
@@ -688,6 +691,12 @@ export async function saveSettings(payload: SettingsPayload) {
   ) {
     return { ok: false as const, message: "Wybierz, co ma być na etykiecie." };
   }
+  const tierError = volumeTiersError(
+    payload.volumeDiscountTiers.map((tier) => ({ minQty: tier.minQty, pct: tier.pct })),
+  );
+  if (tierError) {
+    return { ok: false as const, message: tierError };
+  }
 
   const supabase = await createServerClient();
   const { error } = await supabase
@@ -705,6 +714,11 @@ export async function saveSettings(payload: SettingsPayload) {
       customer_cancellation_enabled: payload.customerCancellationEnabled,
       require_point_code: payload.requirePointCode,
       label_customer_info: payload.labelCustomerInfo,
+      volume_discount_enabled: payload.volumeDiscountEnabled,
+      volume_discount_tiers: payload.volumeDiscountTiers.map((tier) => ({
+        min_qty: tier.minQty,
+        pct: tier.pct,
+      })),
     })
     .eq("id", 1);
 
@@ -714,6 +728,7 @@ export async function saveSettings(payload: SettingsPayload) {
 
   revalidatePath("/");
   revalidatePath("/sklep");
+  revalidatePath("/koszyk");
   revalidatePath("/admin/paczki/drukuj");
   return { ok: true as const };
 }

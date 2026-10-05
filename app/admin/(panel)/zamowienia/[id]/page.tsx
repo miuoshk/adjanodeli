@@ -20,6 +20,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { EXPIRED_PAID_NOTE } from "@/lib/email/send-paid-after-expiry";
 import { formatDatePl, formatPrice, formatTimeRange } from "@/lib/format";
 import { formatItemLine, parseItemOptions } from "@/lib/orders/item-options";
+import { discountKindLabel } from "@/lib/orders/volume-discount";
 import { orderStatusMeta } from "@/lib/orders/status-labels";
 
 type PageProps = {
@@ -139,6 +140,12 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
             </li>
           ))}
         </ul>
+        {order.discount_grosze > 0 ? (
+          <p>
+            {discountKindLabel(order.discount_source, order.discount_pct)}: −
+            {formatPrice(order.discount_grosze)}
+          </p>
+        ) : null}
         <p className="text-lg font-medium">Suma: {formatPrice(order.total_grosze)}</p>
       </section>
 

@@ -2,6 +2,7 @@ import { getProfile } from "@/lib/auth";
 import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl, formatPrice } from "@/lib/format";
 import { optionPhrase, parseItemOptions } from "@/lib/orders/item-options";
+import { discountKindLabel } from "@/lib/orders/volume-discount";
 import { createServerClient } from "@/lib/supabase/server";
 import { orderStatusMeta } from "@/lib/orders/status-labels";
 import type { Tables } from "@/lib/supabase/database.types";
@@ -16,6 +17,8 @@ type ExportOrder = Pick<
   | "status"
   | "total_grosze"
   | "discount_grosze"
+  | "discount_source"
+  | "discount_pct"
   | "discount_code_id"
   | "invoice_requested"
   | "invoice_nip"
@@ -60,7 +63,7 @@ export async function buildOrdersCsv(filters: {
   let query = supabase
     .from("orders")
     .select(
-      "order_number, customer_name, customer_email, customer_phone, pickup_date, status, total_grosze, discount_grosze, discount_code_id, invoice_requested, invoice_nip, invoice_company, invoice_address, pickup_points(name), order_items(product_name, options)",
+      "order_number, customer_name, customer_email, customer_phone, pickup_date, status, total_grosze, discount_grosze, discount_source, discount_pct, discount_code_id, invoice_requested, invoice_nip, invoice_company, invoice_address, pickup_points(name), order_items(product_name, options)",
     )
     .order("pickup_date", { ascending: true })
     .order("order_number", { ascending: true });
@@ -91,7 +94,11 @@ export async function buildOrdersCsv(filters: {
     query = query.or(clauses.join(","));
   }
 
-  const { data } = await query;
+  const { data, error } = await query;
+  if (error) {
+    console.error("orders export", error.message);
+    return { ok: false };
+  }
   const rows = (data ?? []) as ExportOrder[];
 
   const header = [
@@ -105,6 +112,7 @@ export async function buildOrdersCsv(filters: {
     "suma",
     "rabat",
     "zrodlo_rabatu",
+    "procent_rabatu",
     "faktura",
     "nip",
     "firma",
@@ -135,7 +143,8 @@ export async function buildOrdersCsv(filters: {
         orderStatusMeta(order.status).label,
         formatPrice(order.total_grosze),
         order.discount_grosze > 0 ? formatPrice(order.discount_grosze) : "",
-        order.discount_grosze > 0 ? (order.discount_code_id ? "kod" : "voucher") : "",
+        order.discount_grosze > 0 ? discountKindLabel(order.discount_source, null) : "",
+        order.discount_pct != null ? String(order.discount_pct) : "",
         order.invoice_requested ? "tak" : "nie",
         order.invoice_nip ?? "",
         order.invoice_company ?? "",
