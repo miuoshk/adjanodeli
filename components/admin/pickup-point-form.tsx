@@ -18,7 +18,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { WEEKDAYS, slugifyName, timeInputValue } from "@/lib/admin/catalog";
+import { PRICE_RE, WEEKDAYS, groszeToPriceInput, priceToGrosze, slugifyName, timeInputValue } from "@/lib/admin/catalog";
+import { ORDER_MIN_GROSZE } from "@/lib/loyalty/discount";
 import { createPickupPoint, deletePickupPoint, updatePickupPoint } from "@/lib/admin/owner-actions";
 import type { OwnerPickupPoint } from "@/lib/admin/owner-queries";
 import { generateAccessCode, inviteLinkForCode } from "@/lib/pickup/access-code";
@@ -39,6 +40,15 @@ const schema = z.object({
   restricted: z.boolean(),
   accessCode: z.string(),
   allowedEmailDomains: z.string(),
+  minOrder: z.string().regex(PRICE_RE, "Kwota jak 50,00."),
+}).superRefine((values, ctx) => {
+  if (PRICE_RE.test(values.minOrder) && priceToGrosze(values.minOrder) < ORDER_MIN_GROSZE) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["minOrder"],
+      message: "Minimum to co najmniej 10,00 zł.",
+    });
+  }
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -63,6 +73,10 @@ export function PickupPointForm({ point }: { point?: OwnerPickupPoint }) {
       restricted: point?.visibility === "restricted",
       accessCode: point?.access_code ?? "",
       allowedEmailDomains: (point?.allowed_email_domains ?? []).join("\n"),
+      minOrder:
+        point && Number.isInteger(point.min_order_grosze)
+          ? groszeToPriceInput(point.min_order_grosze)
+          : "10,00",
     },
   });
 
@@ -88,6 +102,7 @@ export function PickupPointForm({ point }: { point?: OwnerPickupPoint }) {
           .split(/[\n,]+/)
           .map((item) => item.trim())
           .filter(Boolean),
+        minOrder: values.minOrder,
       };
       if (!point) {
         const result = await createPickupPoint(payload);
@@ -181,6 +196,23 @@ export function PickupPointForm({ point }: { point?: OwnerPickupPoint }) {
               <FormControl>
                 <Input {...field} className="min-h-12 text-base" />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="minOrder"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Minimalna wartość dostawy</FormLabel>
+              <FormControl>
+                <Input {...field} inputMode="decimal" placeholder="50,00" className="min-h-12 text-base" />
+              </FormControl>
+              <p className="text-xs text-muted-foreground">
+                Jedno zamówienie, jeden paragon. Biuro zbiera się i klika raz. Nie mniej niż 10,00 zł.
+              </p>
               <FormMessage />
             </FormItem>
           )}

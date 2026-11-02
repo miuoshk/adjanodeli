@@ -101,8 +101,8 @@ export function LandingHow({ cutoff, points }: { cutoff: string; points: PublicP
             <div>
               <h3 className="text-[23px] leading-[1.2] font-medium lg:text-[26px]">Pieczątki</h3>
               <p className="mt-2 text-[var(--adj-ink-soft)]">
-                Za każdy opłacony produkt dostajesz pieczątkę. Przy 10 pieczątkach masz −10% na zamówienie,
-                przy 20 −50% (maks. 40&nbsp;zł), a&nbsp;przy 30 najtańszy produkt za 1&nbsp;grosz.
+                Za każde opłacone zamówienie dostajesz pieczątkę. Przy 10 pieczątkach masz −30% na
+                następne zamówienie, najwyżej 40&nbsp;zł.
               </p>
               <p className="mt-2 text-sm">Pieczątki są ważne 60 dni.</p>
             </div>

@@ -18,7 +18,9 @@ export default async function CartPage({
     supabase.rpc("available_pickup_dates"),
     supabase
       .from("pickup_points")
-      .select("id, name, address, description, pickup_from, pickup_to, weekdays, sort_order")
+      .select(
+        "id, name, address, description, pickup_from, pickup_to, weekdays, sort_order, min_order_grosze",
+      )
       .eq("is_active", true)
       .order("sort_order"),
     supabase
@@ -73,6 +75,7 @@ export default async function CartPage({
           : "20:00"
       }
       isLoggedIn={Boolean(profile)}
+      isBanned={profile?.is_banned ?? false}
       vouchers={loyalty?.vouchers ?? []}
       invoiceDefaults={parseInvoiceDefaults(profile?.invoice_defaults)}
       requirePointCode={requirePointCode}

@@ -13,6 +13,7 @@ type ProfileFormProps = {
   marketingConsent?: boolean | null;
   next: string;
   submitLabel: string;
+  strict?: boolean;
 };
 
 export function ProfileForm({
@@ -21,6 +22,7 @@ export function ProfileForm({
   marketingConsent,
   next,
   submitLabel,
+  strict = false,
 }: ProfileFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -56,12 +58,13 @@ export function ProfileForm({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="phone">Telefon (opcjonalnie)</Label>
+        <Label htmlFor="phone">{strict ? "Telefon" : "Telefon (opcjonalnie)"}</Label>
         <Input
           id="phone"
           name="phone"
           type="tel"
           inputMode="tel"
+          required={strict}
           defaultValue={phone ?? ""}
           placeholder="500123456 albo +48500123456"
           autoComplete="tel"

@@ -31,6 +31,7 @@ const catalogLinks = [
   { href: "/admin/kody-rabatowe", label: "Promocje i kody" },
   { href: "/admin/punkty-odbioru", label: "Punkty odbioru" },
   { href: "/admin/slowniki", label: "Słowniki" },
+  { href: "/admin/klienci", label: "Klienci" },
   { href: "/admin/statystyki", label: "Statystyki" },
   { href: "/admin/zespol", label: "Zespół" },
   { href: "/admin/ustawienia", label: "Ustawienia" },

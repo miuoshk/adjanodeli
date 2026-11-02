@@ -10,15 +10,11 @@ type LoyaltySectionProps = {
   status: LoyaltyStatus;
 };
 
-const REWARDS = [
-  "10 pieczątek: −10%",
-  "20 pieczątek: −50% (maks. 40 zł)",
-  "30 pieczątek: najtańszy produkt za 1 grosz",
-];
+const REWARD = "10 zamówień: −30% (maks. 40 zł)";
 
 export function LoyaltySection({ status }: LoyaltySectionProps) {
   const { active_stamps: stamps, next_threshold: next, vouchers } = status;
-  const filled = Math.min(stamps, 30);
+  const filled = Math.min(stamps, 10);
 
   return (
     <section>
@@ -29,53 +25,48 @@ export function LoyaltySection({ status }: LoyaltySectionProps) {
             {stamps} / {next}
           </p>
         </div>
-        <div className="mt-5" aria-label={`Pieczątki ${filled} z 30`}>
-          {REWARDS.map((reward, row) => (
-            <div key={reward} className={row === 0 ? undefined : "mt-4"}>
-              <div className="grid grid-cols-10 gap-2">
-                {Array.from({ length: 10 }, (_, column) => {
-                  const index = row * 10 + column;
-                  const earned = index < filled;
-                  return (
-                    <div
-                      key={index}
+        <div className="mt-5" aria-label={`Pieczątki ${filled} z 10`}>
+          <div className="grid grid-cols-10 gap-2">
+            {Array.from({ length: 10 }, (_, index) => {
+              const earned = index < filled;
+              return (
+                <div
+                  key={index}
+                  className={cn(
+                    "flex aspect-square items-center justify-center rounded-full border",
+                    earned
+                      ? "border-[var(--adj-red)] bg-[var(--adj-red)]/10"
+                      : "border-dashed border-[rgba(43,42,31,0.3)]",
+                  )}
+                >
+                  {earned ? (
+                    <Image
+                      src="/brand/logo/znak-A-sam-karmin.svg"
+                      alt=""
+                      width={185}
+                      height={161}
                       className={cn(
-                        "flex aspect-square items-center justify-center rounded-full border",
-                        earned
-                          ? "border-[var(--adj-red)] bg-[var(--adj-red)]/10"
-                          : "border-dashed border-[rgba(43,42,31,0.3)]",
+                        "h-auto w-[62%]",
+                        index % 2 === 0 ? "rotate-[-8deg]" : "rotate-[6deg]",
                       )}
-                    >
-                      {earned ? (
-                        <Image
-                          src="/brand/logo/znak-A-sam-karmin.svg"
-                          alt=""
-                          width={185}
-                          height={161}
-                          className={cn(
-                            "h-auto w-[62%]",
-                            index % 2 === 0 ? "rotate-[-8deg]" : "rotate-[6deg]",
-                          )}
-                          aria-hidden
-                          unoptimized
-                        />
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="adj-ui mt-2 text-[13px] text-[var(--adj-ink-soft)]">{reward}</p>
-            </div>
-          ))}
+                      aria-hidden
+                      unoptimized
+                    />
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+          <p className="adj-ui mt-2 text-[13px] text-[var(--adj-ink-soft)]">{REWARD}</p>
         </div>
         <p className="mt-4 text-[15px] text-[var(--adj-ink-soft)]">
-          Pieczątka za każdy opłacony produkt. Ważna 60 dni.
+          Pieczątka za każde opłacone zamówienie. Ważna 60 dni.
         </p>
       </div>
 
       {vouchers.length === 0 ? (
         <p className="mt-4 text-[15px] text-[var(--adj-ink-soft)]">
-          Voucher pojawi się przy 10 pieczątkach.
+          Voucher −30% pojawi się przy 10 zamówieniach.
         </p>
       ) : (
         <ul className="mt-4 space-y-3">

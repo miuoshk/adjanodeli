@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { requireUser } from "@/lib/auth";
 import { landingAfterLogin } from "@/lib/admin/staff-access";
+import { contactComplete, hasFullName, normalizePhone } from "@/lib/profile/contact";
 import { safeNextPath } from "@/lib/safe-next";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -26,21 +27,22 @@ async function appOrigin(): Promise<string> {
 
 const emailSchema = z.string().trim().email("Podaj prawidłowy e-mail.");
 
-const phoneSchema = z
-  .string()
-  .trim()
-  .optional()
-  .refine((value) => {
-    if (!value) {
-      return true;
-    }
-    const compact = value.replace(/\s+/g, "");
-    return /^\+48\d{9}$/.test(compact) || /^\d{9}$/.test(compact);
-  }, "Podaj 9 cyfr, możesz dodać +48.");
+const phoneMessage = "Podaj 9 cyfr, możesz dodać +48.";
 
-const profileSchema = z.object({
+const staffProfileSchema = z.object({
   full_name: z.string().trim().min(2, "Podaj imię i nazwisko."),
-  phone: phoneSchema,
+  phone: z
+    .string()
+    .trim()
+    .optional()
+    .refine((value) => !value || normalizePhone(value) !== null, phoneMessage),
+  marketing_consent: z.boolean(),
+  next: z.string().optional(),
+});
+
+const customerProfileSchema = z.object({
+  full_name: z.string().trim().refine(hasFullName, "Podaj imię i nazwisko."),
+  phone: z.string().trim().refine((value) => normalizePhone(value) !== null, phoneMessage),
   marketing_consent: z.boolean(),
   next: z.string().optional(),
 });
@@ -51,17 +53,6 @@ function safeAdminNext(next?: string): string {
     return path;
   }
   return "/admin";
-}
-
-function normalizePhone(phone: string | undefined): string | null {
-  if (!phone) {
-    return null;
-  }
-  const compact = phone.replace(/\s+/g, "");
-  if (/^\d{9}$/.test(compact)) {
-    return `+48${compact}`;
-  }
-  return compact;
 }
 
 export async function sendOtp(email: string) {
@@ -123,11 +114,11 @@ export async function verifyOtp(email: string, token: string, next?: string) {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name")
+      .select("full_name, phone, role")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (!profile?.full_name) {
+    if (profile && !contactComplete(profile)) {
       redirect(`/konto/uzupelnij?next=${encodeURIComponent(nextPath)}`);
     }
   }
@@ -141,13 +132,25 @@ export async function updateProfile(input: {
   marketing_consent: boolean;
   next?: string;
 }) {
-  const parsed = profileSchema.safeParse(input);
+  const session = await requireUser("/konto");
+  const supabase = await createServerClient();
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", session.user.id)
+    .maybeSingle();
+
+  if (profileError || !profile) {
+    console.error("[profil]", profileError?.message ?? "brak profilu");
+    return { error: "Nie udało się zapisać danych. Spróbuj jeszcze raz." };
+  }
+
+  const parsed = (profile.role === "customer" ? customerProfileSchema : staffProfileSchema).safeParse(
+    input,
+  );
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Sprawdź dane w formularzu." };
   }
-
-  const session = await requireUser("/konto");
-  const supabase = await createServerClient();
 
   const { error } = await supabase
     .from("profiles")

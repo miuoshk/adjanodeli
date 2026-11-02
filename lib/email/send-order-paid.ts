@@ -6,7 +6,7 @@ import { parseDateOnly } from "@/lib/dates";
 import { formatDatePl, formatPrice, formatTimeRange } from "@/lib/format";
 import { discountKindLabel } from "@/lib/orders/volume-discount";
 import { itemNameWithOptions, parseItemOptions } from "@/lib/orders/item-options";
-import { voucherLabel, type VoucherType } from "@/lib/loyalty/discount";
+import { isVoucherType, voucherLabel } from "@/lib/loyalty/discount";
 import { parseLoyaltyStatus } from "@/lib/loyalty/status";
 import { createClient } from "@/lib/supabase/admin";
 import type { Tables } from "@/lib/supabase/database.types";
@@ -94,9 +94,7 @@ export async function sendOrderPaid(
     const stampsLine = `Pieczątki: ${stamps?.active_stamps ?? 0}/10`;
     const issuedTypes = (issuedResult.data ?? [])
       .map((row) => row.type)
-      .filter((type): type is VoucherType =>
-        type === "PCT10" || type === "PCT50" || type === "ONE_GROSZ",
-      );
+      .filter(isVoucherType);
     const newVoucherLine =
       issuedTypes.length > 0
         ? `Nowy voucher: ${issuedTypes.map((type) => voucherLabel(type)).join(", ")}.`

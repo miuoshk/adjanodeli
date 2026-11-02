@@ -328,6 +328,7 @@ export type Database = {
           id: string
           issued_at: string
           restored_from_order_id: string | null
+          source_order_id: string | null
           type: string
           updated_at: string
           used_order_id: string | null
@@ -339,6 +340,7 @@ export type Database = {
           id?: string
           issued_at?: string
           restored_from_order_id?: string | null
+          source_order_id?: string | null
           type: string
           updated_at?: string
           used_order_id?: string | null
@@ -350,6 +352,7 @@ export type Database = {
           id?: string
           issued_at?: string
           restored_from_order_id?: string | null
+          source_order_id?: string | null
           type?: string
           updated_at?: string
           used_order_id?: string | null
@@ -685,6 +688,7 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean
+          min_order_grosze: number
           name: string
           pickup_from: string
           pickup_to: string
@@ -702,6 +706,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          min_order_grosze?: number
           name: string
           pickup_from: string
           pickup_to: string
@@ -719,6 +724,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          min_order_grosze?: number
           name?: string
           pickup_from?: string
           pickup_to?: string
@@ -975,6 +981,7 @@ export type Database = {
           id: string
           invoice_defaults: Json | null
           is_active: boolean
+          is_banned: boolean
           marketing_consent: boolean | null
           must_change_password: boolean
           phone: string | null
@@ -994,6 +1001,7 @@ export type Database = {
           id: string
           invoice_defaults?: Json | null
           is_active?: boolean
+          is_banned?: boolean
           marketing_consent?: boolean | null
           must_change_password?: boolean
           phone?: string | null
@@ -1013,6 +1021,7 @@ export type Database = {
           id?: string
           invoice_defaults?: Json | null
           is_active?: boolean
+          is_banned?: boolean
           marketing_consent?: boolean | null
           must_change_password?: boolean
           phone?: string | null
@@ -1210,6 +1219,19 @@ export type Database = {
         Args: { p_order_id: string }
         Returns: undefined
       }
+      customer_order_stats: {
+        Args: never
+        Returns: {
+          email: string
+          full_name: string | null
+          is_banned: boolean
+          last_order_at: string | null
+          order_count: number
+          phone: string | null
+          spent_grosze: number
+          user_id: string
+        }[]
+      }
       daily_reminder_recipients: {
         Args: { p_pickup_day: string; p_today: string }
         Returns: {
@@ -1388,6 +1410,7 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean
+          min_order_grosze: number
           name: string
           pickup_from: string
           pickup_to: string

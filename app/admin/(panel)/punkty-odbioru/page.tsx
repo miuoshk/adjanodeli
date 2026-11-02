@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/admin/page-header";
 import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth";
 import { getOwnerPoints, getOwnerSettings } from "@/lib/admin/owner-queries";
-import { formatTimeRange } from "@/lib/format";
+import { formatPrice, formatTimeRange } from "@/lib/format";
+import { ORDER_MIN_GROSZE } from "@/lib/loyalty/discount";
 import { WEEKDAYS } from "@/lib/admin/catalog";
 
 export default async function PickupPointsPage() {
@@ -44,6 +45,8 @@ export default async function PickupPointsPage() {
               </p>
               <p className="text-sm text-muted-foreground">
                 {point.is_active ? "aktywny" : "nieaktywny"} · odblokowania: {point.unlockCount}
+                <br />
+                Minimum dostawy: {formatPrice(point.min_order_grosze ?? ORDER_MIN_GROSZE)}
               </p>
               <Button asChild variant="outline" className="min-h-12 w-full">
                 <Link href={`/admin/punkty-odbioru/${point.id}`}>Edytuj</Link>
@@ -60,6 +63,7 @@ export default async function PickupPointsPage() {
                 <th className="px-4 py-3 font-medium">Okno</th>
                 <th className="px-4 py-3 font-medium">Dni</th>
                 <th className="px-4 py-3 font-medium">Aktywny</th>
+                <th className="px-4 py-3 font-medium">Minimum</th>
                 <th className="px-4 py-3 font-medium">Odblokowania</th>
                 <th className="px-4 py-3 font-medium" />
               </tr>
@@ -83,6 +87,7 @@ export default async function PickupPointsPage() {
                       .join(", ")}
                   </td>
                   <td className="px-4 py-3">{point.is_active ? "tak" : "nie"}</td>
+                  <td className="px-4 py-3">{formatPrice(point.min_order_grosze ?? ORDER_MIN_GROSZE)}</td>
                   <td className="px-4 py-3">{point.unlockCount}</td>
                   <td className="px-4 py-3 text-right">
                     <Button asChild variant="outline" className="min-h-10">

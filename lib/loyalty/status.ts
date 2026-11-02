@@ -5,7 +5,7 @@ import type { VoucherType } from "@/lib/loyalty/discount";
 
 const voucherSchema = z.object({
   id: z.string().uuid(),
-  type: z.enum(["PCT10", "PCT50", "ONE_GROSZ"]),
+  type: z.enum(["PCT10", "PCT30", "PCT50", "ONE_GROSZ"]),
   issued_at: z.string(),
   expires_at: z.string(),
 });

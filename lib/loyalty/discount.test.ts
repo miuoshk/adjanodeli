@@ -14,6 +14,11 @@ describe("computeDiscount", () => {
     ).toBe(205);
   });
 
+  it("PCT30 takes 30% of subtotal, capped at 40 zł", () => {
+    expect(computeDiscount("PCT30", [{ unitPriceGrosze: 2000, qty: 1 }])).toBe(600);
+    expect(computeDiscount("PCT30", [{ unitPriceGrosze: 20000, qty: 1 }])).toBe(4000);
+  });
+
   it("PCT50 takes 50% of subtotal, capped at 40 zł", () => {
     expect(computeDiscount("PCT50", [{ unitPriceGrosze: 2000, qty: 1 }])).toBe(1000);
     expect(computeDiscount("PCT50", [{ unitPriceGrosze: 10000, qty: 1 }])).toBe(4000);

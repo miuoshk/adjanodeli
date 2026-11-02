@@ -19,6 +19,7 @@ import {
   computeDiscount,
   ORDER_MIN_GROSZE,
   voucherLabel,
+  voucherPercent,
 } from "@/lib/loyalty/discount";
 import { isCompleteInvoice, type InvoiceDefaults } from "@/lib/orders/invoice";
 import type { LoyaltyVoucher } from "@/lib/loyalty/status";
@@ -28,6 +29,7 @@ import { getAvailability, type ProductAvailability } from "@/lib/orders/availabi
 import { blockingLeadItem, cartEarliestDate } from "@/lib/orders/lead-time";
 import { cartOptionLine, hasUnknownOption, missingRequiredGroupName, optionDeltaGrosze, type ShopOptionGroup } from "@/lib/orders/item-options";
 import { loadShopOptionGroups } from "@/lib/orders/load-option-groups";
+import { belowMinimumMessage, orderMinimumGrosze } from "@/lib/orders/order-minimum";
 import { placeOrder } from "@/lib/orders/place-order";
 import {
   chooseOrderDiscount,
@@ -60,7 +62,21 @@ export type CartPickupPoint = {
   pickup_from: string;
   pickup_to: string;
   weekdays: number[];
+  min_order_grosze: number;
 };
+
+function toCartPoint(point: CartPickupPoint): CartPickupPoint {
+  return {
+    id: point.id,
+    name: point.name,
+    address: point.address,
+    description: point.description,
+    pickup_from: point.pickup_from,
+    pickup_to: point.pickup_to,
+    weekdays: point.weekdays,
+    min_order_grosze: point.min_order_grosze,
+  };
+}
 
 type CartViewProps = {
   pickupDates: string[];
@@ -73,6 +89,7 @@ type CartViewProps = {
   requirePointCode: boolean;
   pendingCode?: string | null;
   volumeDiscount: { enabled: boolean; tiers: VolumeTier[] };
+  isBanned?: boolean;
 };
 
 const fieldClass =
@@ -94,9 +111,12 @@ function displayName(name: string): string {
 
 function voucherRank(voucher: LoyaltyVoucher): number {
   if (voucher.type === "ONE_GROSZ") {
-    return 3;
+    return 4;
   }
   if (voucher.type === "PCT50") {
+    return 3;
+  }
+  if (voucher.type === "PCT30") {
     return 2;
   }
   return 1;
@@ -127,6 +147,7 @@ export function CartView({
   requirePointCode,
   pendingCode = null,
   volumeDiscount,
+  isBanned = false,
 }: CartViewProps) {
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
@@ -302,18 +323,7 @@ export function CartView({
       setUnlockedPoints((current) =>
         current.some((item) => item.id === result.id)
           ? current
-          : [
-              ...current,
-              {
-                id: result.id,
-                name: result.name,
-                address: result.address,
-                description: result.description,
-                pickup_from: result.pickup_from,
-                pickup_to: result.pickup_to,
-                weekdays: result.weekdays,
-              },
-            ],
+          : [...current, toCartPoint(result)],
       );
       setPickupPoint(result.id);
       setShowOtherCode(false);
@@ -339,11 +349,7 @@ export function CartView({
     offerGrosze,
     offerSource: offerKind,
     offerPct:
-      offerKind === "voucher" && selectedVoucher?.type === "PCT10"
-        ? 10
-        : offerKind === "voucher" && selectedVoucher?.type === "PCT50"
-          ? 50
-          : null,
+      offerKind === "voucher" && selectedVoucher ? voucherPercent(selectedVoucher.type) : null,
     volumeGrosze,
     volumePct,
   });
@@ -356,7 +362,8 @@ export function CartView({
     offerGrosze,
     offerKind,
   });
-  const belowMinimum = payableGrosze < ORDER_MIN_GROSZE;
+  const minimumGrosze = orderMinimumGrosze(selectedPoint?.min_order_grosze);
+  const belowMinimum = payableGrosze < minimumGrosze;
 
   const overstock = useMemo(() => {
     const issues = new Map<string, number>();
@@ -464,7 +471,7 @@ export function CartView({
   }
 
   function handlePay() {
-    if (!day || !pickupPointId || !termsAccepted) {
+    if (!day || !pickupPointId || !termsAccepted || isBanned) {
       return;
     }
 
@@ -645,15 +652,7 @@ export function CartView({
                     ? current
                     : [
                         ...current,
-                        {
-                          id: point.id,
-                          name: point.name,
-                          address: point.address,
-                          description: point.description,
-                          pickup_from: point.pickup_from,
-                          pickup_to: point.pickup_to,
-                          weekdays: point.weekdays,
-                        },
+                        toCartPoint(point),
                       ],
                 );
                 setPickupPoint(point.id);
@@ -693,6 +692,11 @@ export function CartView({
                       <span className="adj-ui mt-1 block text-[14px]">
                         {formatTimeRange(point.pickup_from, point.pickup_to)}
                       </span>
+                      {point.min_order_grosze > ORDER_MIN_GROSZE ? (
+                        <span className="adj-ui mt-1 block text-[14px]">
+                          Minimum dostawy: {formatPrice(point.min_order_grosze)} na jedno zamówienie.
+                        </span>
+                      ) : null}
                     </span>
                   </>
                 );
@@ -739,18 +743,7 @@ export function CartView({
                       setUnlockedPoints((current) =>
                         current.some((item) => item.id === point.id)
                           ? current
-                          : [
-                              ...current,
-                              {
-                                id: point.id,
-                                name: point.name,
-                                address: point.address,
-                                description: point.description,
-                                pickup_from: point.pickup_from,
-                                pickup_to: point.pickup_to,
-                                weekdays: point.weekdays,
-                              },
-                            ],
+                          : [...current, toCartPoint(point)],
                       );
                       setPickupPoint(point.id);
                       setShowOtherCode(false);
@@ -776,18 +769,7 @@ export function CartView({
                     setUnlockedPoints((current) =>
                       current.some((item) => item.id === point.id)
                         ? current
-                        : [
-                            ...current,
-                            {
-                              id: point.id,
-                              name: point.name,
-                              address: point.address,
-                              description: point.description,
-                              pickup_from: point.pickup_from,
-                              pickup_to: point.pickup_to,
-                              weekdays: point.weekdays,
-                            },
-                          ],
+                        : [...current, toCartPoint(point)],
                     );
                     setPickupPoint(point.id);
                   }}
@@ -1036,9 +1018,7 @@ export function CartView({
         </p>
         {belowMinimum ? (
           <p className="mt-3 text-sm leading-relaxed text-[var(--adj-red)]">
-            {discountGrosze > 0
-              ? `Dodaj jeszcze produkt — po rabacie zamówienie musi mieć min. ${formatPrice(ORDER_MIN_GROSZE)}.`
-              : `Dodaj jeszcze coś — zamówienie musi mieć min. ${formatPrice(ORDER_MIN_GROSZE)}.`}
+            {belowMinimumMessage(minimumGrosze, discountGrosze > 0)}
           </p>
         ) : null}
         <p className="adj-ui mt-3 text-[14px] text-[var(--adj-ink-soft)]">
@@ -1077,6 +1057,13 @@ export function CartView({
           <Button type="button" size="lg" className="mt-5 w-full" disabled>
             Przejdź do płatności · {formatPrice(payableGrosze)}
           </Button>
+        ) : isBanned ? (
+          <div className="mt-5 space-y-3">
+            <p className={alertClass}>To konto jest zablokowane. Zadzwoń do piekarni.</p>
+            <Button type="button" size="lg" className="w-full" disabled>
+              Konto zablokowane
+            </Button>
+          </div>
         ) : isLoggedIn ? (
           <Button
             type="button"

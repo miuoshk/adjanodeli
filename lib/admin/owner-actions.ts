@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { PRICE_RE, priceToGrosze } from "@/lib/admin/catalog";
+import { ORDER_MIN_GROSZE } from "@/lib/loyalty/discount";
 import {
   parseProductOptionDrafts,
   type ProductOptionGroupDraft,
@@ -443,6 +444,7 @@ export type PickupPointPayload = {
   visibility: "public" | "restricted";
   accessCode: string;
   allowedEmailDomains: string[];
+  minOrder: string;
 };
 
 function parsePointPayload(payload: PickupPointPayload) {
@@ -478,7 +480,15 @@ function parsePointPayload(payload: PickupPointPayload) {
   if (!domains.ok) {
     return { ok: false as const, message: "Sprawdź format domen e-mail, np. mikolow.sr.gov.pl." };
   }
-  return { ok: true as const, accessCode, domains: domains.domains };
+  const minOrderRaw = payload.minOrder.trim() || "10,00";
+  if (!PRICE_RE.test(minOrderRaw)) {
+    return { ok: false as const, message: "Minimum dostawy jak 50,00." };
+  }
+  const minOrderGrosze = priceToGrosze(minOrderRaw);
+  if (minOrderGrosze < ORDER_MIN_GROSZE) {
+    return { ok: false as const, message: "Minimum dostawy to co najmniej 10,00 zł." };
+  }
+  return { ok: true as const, accessCode, domains: domains.domains, minOrderGrosze };
 }
 
 export async function createPickupPoint(payload: PickupPointPayload) {
@@ -507,6 +517,7 @@ export async function createPickupPoint(payload: PickupPointPayload) {
       visibility: payload.visibility,
       access_code: parsed.accessCode,
       allowed_email_domains: parsed.domains,
+      min_order_grosze: parsed.minOrderGrosze,
     })
     .select("id")
     .single();
@@ -547,6 +558,7 @@ export async function updatePickupPoint(id: string, payload: PickupPointPayload)
       visibility: payload.visibility,
       access_code: parsed.accessCode,
       allowed_email_domains: parsed.domains,
+      min_order_grosze: parsed.minOrderGrosze,
     })
     .eq("id", id);
 

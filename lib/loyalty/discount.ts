@@ -4,7 +4,24 @@ export const STRIPE_MIN_GROSZE = 200;
 /** Shop minimum after discount. Stays above the Stripe floor. */
 export const ORDER_MIN_GROSZE = 1000;
 
-export type VoucherType = "PCT10" | "PCT50" | "ONE_GROSZ";
+export type VoucherType = "PCT10" | "PCT30" | "PCT50" | "ONE_GROSZ";
+
+export function isVoucherType(type: string): type is VoucherType {
+  return type === "PCT10" || type === "PCT30" || type === "PCT50" || type === "ONE_GROSZ";
+}
+
+export function voucherPercent(type: VoucherType): number | null {
+  if (type === "PCT10") {
+    return 10;
+  }
+  if (type === "PCT30") {
+    return 30;
+  }
+  if (type === "PCT50") {
+    return 50;
+  }
+  return null;
+}
 
 export type DiscountItem = {
   unitPriceGrosze: number;
@@ -16,6 +33,10 @@ export function computeDiscount(type: VoucherType, items: DiscountItem[]): numbe
 
   if (type === "PCT10") {
     return Math.floor(subtotal / 10);
+  }
+
+  if (type === "PCT30") {
+    return Math.min(Math.floor((subtotal * 30) / 100), 4000);
   }
 
   if (type === "PCT50") {
@@ -35,6 +56,9 @@ export function computeDiscount(type: VoucherType, items: DiscountItem[]): numbe
 export function voucherLabel(type: VoucherType): string {
   if (type === "PCT10") {
     return "−10%";
+  }
+  if (type === "PCT30") {
+    return "−30%";
   }
   if (type === "PCT50") {
     return "−50%";

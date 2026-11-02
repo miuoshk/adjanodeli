@@ -3,9 +3,8 @@
 import { z } from "zod";
 
 import { getSession } from "@/lib/auth";
-import { formatPrice } from "@/lib/format";
-import { ORDER_MIN_GROSZE } from "@/lib/loyalty/discount";
 import { invoicePayload, isCompleteInvoice } from "@/lib/orders/invoice";
+import { belowMinimumMessage, minimumFromOrderError } from "@/lib/orders/order-minimum";
 import { payOrder } from "@/lib/orders/pay-order";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -53,6 +52,8 @@ export type PlaceOrderResult =
         | "VOUCHER_INVALID"
         | "DISCOUNT_INVALID"
         | "TOTAL_BELOW_MINIMUM"
+        | "PROFILE_INCOMPLETE"
+        | "CUSTOMER_BANNED"
         | "INVALID_INVOICE"
         | "OPTIONS_REQUIRED"
         | "OPTIONS_INVALID"
@@ -68,14 +69,15 @@ const errorMessages = {
   NOT_AUTHENTICATED: "Zaloguj się, żeby zamówić.",
   VOUCHER_INVALID: "Ten voucher już nie działa. Wybierz inny albo zamów bez.",
   DISCOUNT_INVALID: "Ten kod już nie działa. Sprawdź go albo zamów bez.",
-  TOTAL_BELOW_MINIMUM: `Zamówienie musi mieć min. ${formatPrice(ORDER_MIN_GROSZE)}. Dodaj jeszcze coś.`,
+  PROFILE_INCOMPLETE: "Podaj imię, nazwisko i telefon, zanim złożysz zamówienie.",
+  CUSTOMER_BANNED: "To konto jest zablokowane. Zadzwoń do piekarni.",
   INVALID_INVOICE: "Sprawdź NIP, nazwę i adres do faktury.",
   OPTIONS_REQUIRED: "Wybierz brakujący dodatek w koszyku.",
   OPTIONS_INVALID: "Te dodatki już nie pasują do produktu. Wybierz je jeszcze raz.",
   UNKNOWN: "Nie udało się złożyć zamówienia. Spróbuj jeszcze raz.",
 } as const;
 
-function parseRpcError(text: string): PlaceOrderResult {
+function parseRpcError(text: string, afterDiscount: boolean): PlaceOrderResult {
   const outOfStock = text.match(/OUT_OF_STOCK:([0-9a-f-]{36}):(\d+)/i);
   if (outOfStock) {
     return {
@@ -118,8 +120,18 @@ function parseRpcError(text: string): PlaceOrderResult {
   if (text.includes("DISCOUNT_INVALID")) {
     return { ok: false, code: "DISCOUNT_INVALID", message: errorMessages.DISCOUNT_INVALID };
   }
+  if (text.includes("PROFILE_INCOMPLETE")) {
+    return { ok: false, code: "PROFILE_INCOMPLETE", message: errorMessages.PROFILE_INCOMPLETE };
+  }
+  if (text.includes("CUSTOMER_BANNED")) {
+    return { ok: false, code: "CUSTOMER_BANNED", message: errorMessages.CUSTOMER_BANNED };
+  }
   if (text.includes("TOTAL_BELOW_MINIMUM")) {
-    return { ok: false, code: "TOTAL_BELOW_MINIMUM", message: errorMessages.TOTAL_BELOW_MINIMUM };
+    return {
+      ok: false,
+      code: "TOTAL_BELOW_MINIMUM",
+      message: belowMinimumMessage(minimumFromOrderError(text), afterDiscount),
+    };
   }
   const optionsRequired = text.match(/OPTIONS_REQUIRED:[0-9a-f-]{36}:(.+)/i);
   if (optionsRequired) {
@@ -176,7 +188,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
 
   if (error) {
     const text = [error.message, error.details, error.hint].filter(Boolean).join(" ");
-    return parseRpcError(text);
+    return parseRpcError(text, Boolean(parsed.data.discountCode || parsed.data.voucherId));
   }
 
   if (!data) {

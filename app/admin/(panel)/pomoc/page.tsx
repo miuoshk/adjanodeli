@@ -17,6 +17,7 @@ const TOC = [
   { href: "#wygasle", label: "Zapłaciła za wygasłe" },
   { href: "#specjalne", label: "Zamówienia specjalne" },
   { href: "#zespol", label: "Zespół" },
+  { href: "#klienci", label: "Klienci" },
   { href: "#kod-punktu", label: "Kod punktu" },
   { href: "#rabat-ilosc", label: "Rabat za ilość" },
   { href: "#przypomnienie", label: "Przypomnienie o 18:00" },
@@ -285,6 +286,15 @@ export default async function HelpPage() {
         </ol>
       </section>
 
+      <section id="klienci" className="help-section space-y-3">
+        <h2 className="font-heading text-2xl font-semibold">Klienci</h2>
+        <p>
+          Wejdź w <strong>Klienci</strong> (obok Statystyk). Widać, kto ile zamówił i za ile.
+          Sortowanie jest nad listą. <strong>Zablokuj</strong> odcina kolejne zamówienia. Stare
+          zostają. <strong>Odblokuj</strong> przywraca konto.
+        </p>
+      </section>
+
       <section id="kod-punktu" className="help-section space-y-3">
         <h2 className="font-heading text-2xl font-semibold">Kod punktu odbioru</h2>
         <p>
@@ -294,6 +304,10 @@ export default async function HelpPage() {
         <p>
           Odbiór w piekarni to zwykły punkt z kodem <strong>ADJANO</strong>. Załóż go w{" "}
           <strong>Punktach odbioru</strong>: nazwa, adres ul. Katowicka 120, godziny i dni, kod ADJANO.
+        </p>
+        <p>
+          Przy punkcie jest „Minimalna wartość dostawy”. To kwota jednego zamówienia, jednego paragonu.
+          Domyślnie 10,00 zł. Dla szpitala albo biura ustaw wyżej: ludzie zbierają się i klikają raz.
         </p>
         <p>
           W zamówieniu opłaconym albo w produkcji jest „Zmień punkt odbioru”. Wybierasz punkt, który działa

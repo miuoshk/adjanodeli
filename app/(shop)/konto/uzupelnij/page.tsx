@@ -1,6 +1,8 @@
 import { SectionHeading } from "@/components/brand/section-heading";
 import { ProfileForm } from "@/components/shop/profile-form";
+import { Button } from "@/components/ui/button";
 import { getProfile, requireUser } from "@/lib/auth";
+import { signOut } from "@/lib/auth-actions";
 import { safeNextPath } from "@/lib/safe-next";
 
 const cardClass =
@@ -22,7 +24,7 @@ export default async function CompleteProfilePage({
         as="h1"
         eyebrow="Konto"
         title="Jak się do Ciebie zwracać?"
-        description="Imię trafi na etykietę paczki. Telefon przyda się, gdyby coś się zmieniło z odbiorem."
+        description="Imię i nazwisko trafią na etykietę. Telefon jest potrzebny, gdyby coś się zmieniło z odbiorem."
       />
       <div className={cardClass}>
         <ProfileForm
@@ -31,8 +33,14 @@ export default async function CompleteProfilePage({
           marketingConsent={profile?.marketing_consent}
           next={next}
           submitLabel="Zapisz i dalej"
+          strict={profile?.role !== "staff" && profile?.role !== "owner"}
         />
       </div>
+      <form action={signOut} className="mt-4">
+        <Button type="submit" variant="outline" size="lg" className="w-full">
+          Wyloguj
+        </Button>
+      </form>
     </div>
   );
 }

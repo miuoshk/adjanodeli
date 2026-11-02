@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { contactComplete } from "@/lib/profile/contact";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -62,16 +63,42 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  function redirectTo(url: URL) {
+    const redirectResponse = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value);
+    });
+    return redirectResponse;
+  }
+
   if (!user && isProtectedPath(pathname)) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = isAdminPath(pathname) ? "/admin/logowanie" : "/logowanie";
     loginUrl.search = "";
     loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
-    const redirectResponse = NextResponse.redirect(loginUrl);
-    supabaseResponse.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie.name, cookie.value);
-    });
-    return redirectResponse;
+    return redirectTo(loginUrl);
+  }
+
+  const needsContact =
+    Boolean(user) &&
+    pathname !== "/konto/uzupelnij" &&
+    !isAdminPath(pathname) &&
+    !pathname.startsWith("/api/");
+
+  if (user && needsContact) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, phone, role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile && !contactComplete(profile)) {
+      const completeUrl = request.nextUrl.clone();
+      completeUrl.pathname = "/konto/uzupelnij";
+      completeUrl.search = "";
+      completeUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
+      return redirectTo(completeUrl);
+    }
   }
 
   return supabaseResponse;

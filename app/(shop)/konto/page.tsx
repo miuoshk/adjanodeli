@@ -65,6 +65,11 @@ export default async function AccountPage() {
       ) : null}
       <SectionHeading as="h1" eyebrow="Konto" title="Twoje konto" />
       {email ? <SignedInLine email={email} /> : null}
+      {profile?.is_banned ? (
+        <p className="mt-4 border-l-2 border-[var(--adj-red)] bg-[var(--adj-paper-light)] px-4 py-3 text-[15px] leading-relaxed">
+          To konto jest zablokowane. Zadzwoń do piekarni, zanim złożysz kolejne zamówienie.
+        </p>
+      ) : null}
       <AccountOrders groups={groups} hasOrders={orders.length > 0} />
       {loyalty ? (
         <div className="mt-12">
@@ -94,6 +99,7 @@ export default async function AccountPage() {
             marketingConsent={profile?.marketing_consent}
             next="/konto"
             submitLabel="Zapisz"
+            strict={profile?.role === "customer"}
           />
         </div>
       </section>

@@ -14,6 +14,7 @@ export type UnlockedPickupPoint = {
   pickup_from: string;
   pickup_to: string;
   weekdays: number[];
+  min_order_grosze: number;
 };
 
 export type UnlockPickupPointResult =
@@ -56,5 +57,6 @@ export async function unlockPickupPoint(code: string): Promise<UnlockPickupPoint
     pickup_from: point.pickup_from,
     pickup_to: point.pickup_to,
     weekdays: point.weekdays,
+    min_order_grosze: point.min_order_grosze,
   };
 }

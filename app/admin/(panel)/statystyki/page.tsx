@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { PageHeader } from "@/components/admin/page-header";
 import { StatsCharts } from "@/components/admin/stats-charts";
 import { StatsRangeForm } from "@/components/admin/stats-range-form";
@@ -59,6 +61,13 @@ export default async function AdminStatsPage({ searchParams }: PageProps) {
         <Tile label="Powracający" value={String(stats.summary.returningCustomers)} />
         <Tile label="Nieodebrane" value={String(stats.summary.uncollectedCount)} />
       </div>
+      <p className="text-sm">
+        Kto ile zamawia i kogo zablokować:{" "}
+        <Link href="/admin/klienci" className="underline underline-offset-4">
+          Klienci
+        </Link>
+        .
+      </p>
 
       <StatsCharts revenueByDay={stats.revenueByDay} ordersByWeekday={stats.ordersByWeekday} />
 
