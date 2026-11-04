@@ -162,6 +162,7 @@ export async function updateProfile(input: {
     .eq("id", session.user.id);
 
   if (error) {
+    console.error("[profil]", error.message);
     return { error: "Nie udało się zapisać danych. Spróbuj jeszcze raz." };
   }
 
